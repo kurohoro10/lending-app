@@ -26,6 +26,16 @@ Route::get('/', function () {
     return view('welcome');
 });
 
+// Public Application Routes (No Authentication Required)
+Route::get('apply', [ApplicationController::class, 'create'])->name('applications.create');
+Route::post('apply', [ApplicationController::class, 'store'])->name('applications.store');
+Route::get('privacy-policy', function () {
+    return view('pages.public.privacy-policy');
+})->name('privacy-policy');
+Route::get('terms-and-conditions', function () {
+    return view('pages.public.terms-and-conditions');
+})->name('terms-and-conditions');
+
 /*
 |--------------------------------------------------------------------------
 | Authenticated Client Routes
@@ -43,7 +53,11 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     })->name('dashboard');
 
     // Client Applications
-    Route::resource('applications', ApplicationController::class);
+    Route::get('applications', [ApplicationController::class, 'index'])->name('applications.index');
+    Route::get('applications/{application}', [ApplicationController::class, 'show'])->name('applications.show');
+    Route::get('applications/{application}/edit', [ApplicationController::class, 'edit'])->name('applications.edit');
+    Route::patch('applications/{application}', [ApplicationController::class, 'update'])->name('applications.update');
+    Route::delete('applications/{application}', [ApplicationController::class, 'destroy'])->name('applications.destroy');
     Route::post('applications/{application}/submit', [ApplicationController::class, 'submit'])
         ->name('applications.submit');
 

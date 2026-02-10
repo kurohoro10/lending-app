@@ -5,8 +5,11 @@ namespace App\Http\Controllers;
 use App\Models\Application;
 use App\Models\PersonalDetail;
 use App\Models\ActivityLog;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Auth;
 
 class ApplicationController extends Controller
 {
@@ -22,25 +25,81 @@ class ApplicationController extends Controller
 
     public function create()
     {
+        // This is now publicly accessible - no authentication required
         return view('applications.create');
     }
 
     public function store(Request $request)
     {
-        $validated = $request->validate([
+        $isAuthenticated = auth()->check();
+
+        $rules = [
+            // Application
             'loan_amount' => 'required|numeric|min:1000',
             'loan_purpose' => 'required|string',
             'loan_purpose_details' => 'nullable|string',
             'term_months' => 'required|integer|min:1|max:360',
             'security_type' => 'nullable|string',
-        ]);
+
+            // Consent
+            'privacy_consent' => 'required|accepted',
+            'terms_consent' => 'required|accepted',
+        ];
+
+        // Extra rules for guests
+        if (! $isAuthenticated) {
+            $rules = array_merge($rules, [
+                'name' => 'required|string|max:255',
+                'email' => 'required|email|unique:users,email',
+                'password' => 'required|string|min:8|confirmed',
+            ]);
+        }
+
+        $validated = $request->validate($rules);
 
         DB::beginTransaction();
+
         try {
-            $application = auth()->user()->applications()->create(array_merge(
-                $validated,
-                ['submission_ip' => $request->ip()]
-            ));
+            /** @var \App\Models\User $user */
+            if ($isAuthenticated) {
+                $user = auth()->user();
+            } else {
+                $user = User::create([
+                    'name' => $validated['name'],
+                    'email' => $validated['email'],
+                    'password' => Hash::make($validated['password']),
+                ]);
+
+                $user->assignRole('client');
+                Auth::login($user);
+            }
+
+            $application = $user->applications()->create([
+                'loan_amount' => $validated['loan_amount'],
+                'loan_purpose' => $validated['loan_purpose'],
+                'loan_purpose_details' => $validated['loan_purpose_details'] ?? null,
+                'term_months' => $validated['term_months'],
+                'security_type' => $validated['security_type'] ?? null,
+                'submission_ip' => $request->ip(),
+            ]);
+
+            // Declarations
+            $application->declarations()->createMany([
+                [
+                    'declaration_type' => 'privacy',
+                    'declaration_text' => 'I consent to my personal information being collected, used, and disclosed in accordance with the Privacy Policy.',
+                    'is_agreed' => true,
+                    'agreed_at' => now(),
+                    'agreement_ip' => $request->ip(),
+                ],
+                [
+                    'declaration_type' => 'terms',
+                    'declaration_text' => 'I have read, understood, and agree to the Terms and Conditions.',
+                    'is_agreed' => true,
+                    'agreed_at' => now(),
+                    'agreement_ip' => $request->ip(),
+                ],
+            ]);
 
             ActivityLog::logActivity(
                 'created',
@@ -52,12 +111,18 @@ class ApplicationController extends Controller
 
             return redirect()
                 ->route('applications.edit', $application)
-                ->with('success', 'Application created successfully. Please complete your details.');
-        } catch (\Exception $e) {
+                ->with('success', 'Your application has been created successfully.');
+
+        } catch (\Throwable $e) {
             DB::rollBack();
+
+            \Log::error('Application creation failed', [
+                'error' => $e->getMessage(),
+            ]);
+
             return back()
                 ->withInput()
-                ->with('error', 'Failed to create application. Please try again.');
+                ->with('error', 'Failed to create your application. Please try again.');
         }
     }
 
