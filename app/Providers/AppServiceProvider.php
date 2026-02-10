@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Application;
+use App\Policies\ApplicationPolicy;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -19,6 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        Gate::policy(Application::class, ApplicationPolicy::class);
+
+        // Grant all permissions to 'admin' role
+        Gate::before(function ($user, $ability) {
+            return $user->hasRole('admin') ? true : null;
+        });
     }
 }

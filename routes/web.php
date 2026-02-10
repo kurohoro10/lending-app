@@ -3,7 +3,18 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\PersonalDetailsController;
+use App\Http\Controllers\ResidentialAddressController;
+use App\Http\Controllers\EmploymentDetailsController;
+use App\Http\Controllers\LivingExpenseController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\DeclarationController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\CommentController;
+use App\Http\Controllers\Admin\TaskController;
+use App\Http\Controllers\Admin\CommunicationController;
+use App\Http\Controllers\Admin\CreditCheckController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,7 +34,7 @@ Route::get('/', function () {
 
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
 
-    // Dashboard
+    // Dashboard - Redirect based on role
     Route::get('/dashboard', function () {
         if (auth()->user()->canAccessAdmin()) {
             return redirect()->route('admin.dashboard');
@@ -36,17 +47,51 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
     Route::post('applications/{application}/submit', [ApplicationController::class, 'submit'])
         ->name('applications.submit');
 
-    // Application Components
+    // Personal Details
     Route::post('applications/{application}/personal-details', [PersonalDetailsController::class, 'store'])
         ->name('applications.personal-details.store');
 
-    // TODO: Add routes for other application components
-    // Route::resource('applications.residential-addresses', ResidentialAddressController::class);
-    // Route::resource('applications.employment-details', EmploymentDetailsController::class);
-    // Route::resource('applications.living-expenses', LivingExpenseController::class);
-    // Route::resource('applications.documents', DocumentController::class);
-    // Route::resource('applications.questions', QuestionController::class);
-    // Route::post('applications/{application}/declarations', [DeclarationController::class, 'store']);
+    // Residential Addresses
+    Route::post('applications/{application}/residential-addresses', [ResidentialAddressController::class, 'store'])
+        ->name('applications.residential-addresses.store');
+    Route::patch('applications/{application}/residential-addresses/{residentialAddress}', [ResidentialAddressController::class, 'update'])
+        ->name('applications.residential-addresses.update');
+    Route::delete('applications/{application}/residential-addresses/{residentialAddress}', [ResidentialAddressController::class, 'destroy'])
+        ->name('applications.residential-addresses.destroy');
+
+    // Employment Details
+    Route::post('applications/{application}/employment-details', [EmploymentDetailsController::class, 'store'])
+        ->name('applications.employment-details.store');
+    Route::patch('applications/{application}/employment-details/{employmentDetail}', [EmploymentDetailsController::class, 'update'])
+        ->name('applications.employment-details.update');
+    Route::delete('applications/{application}/employment-details/{employmentDetail}', [EmploymentDetailsController::class, 'destroy'])
+        ->name('applications.employment-details.destroy');
+
+    // Living Expenses
+    Route::post('applications/{application}/living-expenses', [LivingExpenseController::class, 'store'])
+        ->name('applications.living-expenses.store');
+    Route::patch('applications/{application}/living-expenses/{livingExpense}', [LivingExpenseController::class, 'update'])
+        ->name('applications.living-expenses.update');
+    Route::delete('applications/{application}/living-expenses/{livingExpense}', [LivingExpenseController::class, 'destroy'])
+        ->name('applications.living-expenses.destroy');
+
+    // Documents
+    Route::post('applications/{application}/documents', [DocumentController::class, 'store'])
+        ->name('applications.documents.store');
+    Route::get('documents/{document}/download', [DocumentController::class, 'download'])
+        ->name('documents.download');
+    Route::delete('applications/{application}/documents/{document}', [DocumentController::class, 'destroy'])
+        ->name('applications.documents.destroy');
+
+    // Questions (Client Answers)
+    Route::post('questions/{question}/answer', [QuestionController::class, 'answer'])
+        ->name('questions.answer');
+
+    // Declarations
+    Route::get('applications/{application}/declarations', [DeclarationController::class, 'index'])
+        ->name('applications.declarations.index');
+    Route::post('applications/{application}/declarations', [DeclarationController::class, 'store'])
+        ->name('applications.declarations.store');
 });
 
 /*
@@ -61,15 +106,7 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     ->group(function () {
 
     // Dashboard
-    Route::get('/dashboard', function () {
-        $stats = [
-            'total_applications' => \App\Models\Application::count(),
-            'pending_review' => \App\Models\Application::where('status', 'submitted')->count(),
-            'under_review' => \App\Models\Application::where('status', 'under_review')->count(),
-            'approved' => \App\Models\Application::where('status', 'approved')->count(),
-        ];
-        return view('admin.dashboard', compact('stats'));
-    })->name('dashboard');
+    Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
     // Applications
     Route::get('/applications', [AdminApplicationController::class, 'index'])
@@ -83,11 +120,56 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     Route::get('/applications/{application}/export-pdf', [AdminApplicationController::class, 'exportPdf'])
         ->name('applications.exportPdf');
 
-    // TODO: Add admin routes for other features
-    // Route::resource('applications.comments', CommentController::class);
-    // Route::resource('applications.tasks', TaskController::class);
-    // Route::post('applications/{application}/questions', [QuestionController::class, 'store']);
-    // Route::post('applications/{application}/communications', [CommunicationController::class, 'store']);
-    // Route::post('applications/{application}/credit-check', [CreditCheckController::class, 'request']);
-    // Route::patch('living-expenses/{livingExpense}/verify', [LivingExpenseController::class, 'verify']);
+    // Comments
+    Route::post('applications/{application}/comments', [CommentController::class, 'store'])
+        ->name('comments.store');
+    Route::patch('comments/{comment}', [CommentController::class, 'update'])
+        ->name('comments.update');
+    Route::delete('comments/{comment}', [CommentController::class, 'destroy'])
+        ->name('comments.destroy');
+    Route::post('comments/{comment}/toggle-pin', [CommentController::class, 'togglePin'])
+        ->name('comments.togglePin');
+
+    // Tasks
+    Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::post('applications/{application}/tasks', [TaskController::class, 'store'])
+        ->name('tasks.store');
+    Route::patch('tasks/{task}', [TaskController::class, 'update'])
+        ->name('tasks.update');
+    Route::post('tasks/{task}/complete', [TaskController::class, 'complete'])
+        ->name('tasks.complete');
+    Route::delete('tasks/{task}', [TaskController::class, 'destroy'])
+        ->name('tasks.destroy');
+
+    // Questions (Admin Asks)
+    Route::post('applications/{application}/questions', [QuestionController::class, 'store'])
+        ->name('questions.store');
+    Route::delete('questions/{question}', [QuestionController::class, 'destroy'])
+        ->name('questions.destroy');
+
+    // Communications
+    Route::get('applications/{application}/communications', [CommunicationController::class, 'index'])
+        ->name('communications.index');
+    Route::post('applications/{application}/send-email', [CommunicationController::class, 'sendEmail'])
+        ->name('communications.sendEmail');
+    Route::post('applications/{application}/send-sms', [CommunicationController::class, 'sendSms'])
+        ->name('communications.sendSms');
+    Route::get('communications/{communication}', [CommunicationController::class, 'show'])
+        ->name('communications.show');
+
+    // Credit Checks
+    Route::post('applications/{application}/credit-check', [CreditCheckController::class, 'request'])
+        ->name('creditChecks.request');
+    Route::patch('credit-checks/{creditCheck}', [CreditCheckController::class, 'update'])
+        ->name('creditChecks.update');
+    Route::get('credit-checks/{creditCheck}', [CreditCheckController::class, 'show'])
+        ->name('creditChecks.show');
+
+    // Living Expense Verification
+    Route::patch('living-expenses/{livingExpense}/verify', [LivingExpenseController::class, 'verify'])
+        ->name('livingExpenses.verify');
+
+    // Document Review
+    Route::patch('documents/{document}/status', [DocumentController::class, 'updateStatus'])
+        ->name('documents.updateStatus');
 });
