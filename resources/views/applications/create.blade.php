@@ -465,11 +465,14 @@
                                         <label for="loan_amount" class="form-label">Loan Amount Requested <span class="text-indigo-500">*</span></label>
                                         <div class="input-icon-wrapper">
                                             <span class="input-icon">$</span>
+
+                                            <!-- Loan Amount Field -->
                                             <input type="number" name="loan_amount" id="loan_amount" step="0.01" min="1000"
-                                                   value="{{ old('loan_amount') }}"
-                                                   placeholder="100,000"
-                                                   class="form-input input-with-icon @error('loan_amount') error @enderror"
-                                                   required>
+                                                value="{{ old('loan_amount', $calculatorValues['loan_amount']) }}"
+                                                placeholder="100,000"
+                                                class="form-input input-with-icon @error('loan_amount') error @enderror"
+                                                required>
+
                                         </div>
                                         @error('loan_amount')
                                             <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -509,10 +512,13 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
                                             <label for="term_months" class="form-label">Loan Term <span class="text-indigo-500">*</span></label>
+
+                                            <!-- Term Months Field -->
                                             <input type="number" name="term_months" id="term_months" min="1" max="360"
-                                                   value="{{ old('term_months', 60) }}"
-                                                   class="form-input @error('term_months') error @enderror"
-                                                   required>
+                                                value="{{ old('term_months', $calculatorValues['term_months']) }}"
+                                                class="form-input @error('term_months') error @enderror"
+                                                required>
+
                                             <p class="mt-1 text-xs text-gray-400">Months — typically 12–360</p>
                                             @error('term_months')
                                                 <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -622,6 +628,109 @@
 
                 <!-- Sidebar -->
                 <div class="lg:col-span-1 space-y-6 animate-slide-up" style="animation-delay: 0.25s;">
+
+                    <!-- Loan Calculator -->
+                    <div class="bg-white rounded-3xl shadow-xl p-6 card-hover">
+                        <div class="flex items-center justify-between mb-5">
+                            <h3 class="text-base font-bold text-gray-900">Loan Calculator</h3>
+                            <div class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
+                                Instant Quote
+                            </div>
+                        </div>
+
+                        <div class="space-y-6">
+                            <!-- Calculator Loan Amount -->
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Loan Amount</label>
+                                    <span class="text-xl font-bold text-indigo-600" id="calcLoanAmount">$100,000</span>
+                                </div>
+                                <div class="py-2 range-wrapper">
+                                    <div class="range-background"></div>
+                                    <div class="range-fill" id="calcLoanFill"></div>
+
+                                    <!-- Loan Amount Slider -->
+                                    <input type="range" min="10000" max="1000000"
+                                        value="{{ $calculatorValues['loan_amount'] }}"
+                                        step="10000" id="calcLoanSlider" class="w-full">
+
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-2">
+                                    <span>$10K</span>
+                                    <span>$1M</span>
+                                </div>
+                            </div>
+
+                            <!-- Calculator Term -->
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Loan Term</label>
+                                    <span class="text-lg font-bold text-indigo-600" id="calcLoanTerm">60 months</span>
+                                </div>
+                                <div class="py-2 range-wrapper">
+                                    <div class="range-background"></div>
+                                    <div class="range-fill" id="calcTermFill"></div>
+
+                                    <!-- Term Slider -->
+                                    <input type="range" min="12" max="84"
+                                        value="{{ $calculatorValues['term_months'] }}"
+                                        step="12" id="calcTermSlider" class="w-full">
+
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-2">
+                                    <span>12 months</span>
+                                    <span>84 months</span>
+                                </div>
+                            </div>
+
+                            <!-- Calculator Interest Rate -->
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Interest Rate</label>
+                                    <span class="text-lg font-bold text-indigo-600" id="calcInterestRate">8.5%</span>
+                                </div>
+                                <div class="py-2 range-wrapper">
+                                    <div class="range-background"></div>
+                                    <div class="range-fill" id="calcRateFill"></div>
+
+                                    <!-- Interest Rate Slider -->
+                                    <input type="range" min="5" max="15"
+                                        value="{{ $calculatorValues['interest_rate'] }}"
+                                        step="0.5" id="calcRateSlider" class="w-full">
+
+                                </div>
+                                <div class="flex justify-between text-xs text-gray-400 mt-2">
+                                    <span>5%</span>
+                                    <span>15%</span>
+                                </div>
+                            </div>
+
+                            <!-- Calculator Results -->
+                            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 mt-6">
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Monthly Payment</span>
+                                    <span class="text-2xl font-bold text-indigo-600" id="calcMonthlyPayment">$2,058</span>
+                                </div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <span class="text-xs text-gray-600">Total Interest</span>
+                                    <span class="text-base font-semibold text-gray-900" id="calcTotalInterest">$23,480</span>
+                                </div>
+                                <div class="flex justify-between items-center">
+                                    <span class="text-xs text-gray-600">Total Repayment</span>
+                                    <span class="text-base font-semibold text-gray-900" id="calcTotalRepayment">$123,480</span>
+                                </div>
+                            </div>
+
+                            <!-- Use These Values Button -->
+                            <button type="button" onclick="useCalculatorValues()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg transition transform hover:scale-105">
+                                Use These Values in Form →
+                            </button>
+
+                            <p class="text-xs text-gray-400 text-center leading-relaxed">
+                                * Rates shown are illustrative. Actual rates may vary based on creditworthiness.
+                            </p>
+                        </div>
+                    </div>
 
                     <!-- What Happens Next -->
                     <div class="bg-white rounded-3xl shadow-xl p-6 card-hover">
@@ -747,6 +856,120 @@
     </div>
 
     <script>
+        // ==========================================
+        // LOAN CALCULATOR LOGIC
+        // ==========================================
+        const calcLoanSlider = document.getElementById('calcLoanSlider');
+        const calcTermSlider = document.getElementById('calcTermSlider');
+        const calcRateSlider = document.getElementById('calcRateSlider');
+
+        const calcLoanFill = document.getElementById('calcLoanFill');
+        const calcTermFill = document.getElementById('calcTermFill');
+        const calcRateFill = document.getElementById('calcRateFill');
+
+        const calcLoanAmount = document.getElementById('calcLoanAmount');
+        const calcLoanTerm = document.getElementById('calcLoanTerm');
+        const calcInterestRate = document.getElementById('calcInterestRate');
+        const calcMonthlyPayment = document.getElementById('calcMonthlyPayment');
+        const calcTotalInterest = document.getElementById('calcTotalInterest');
+        const calcTotalRepayment = document.getElementById('calcTotalRepayment');
+
+        function formatCurrency(amount) {
+            return '$' + Math.round(amount).toLocaleString();
+        }
+
+        function updateSliderFill(slider, fill) {
+            const min = parseFloat(slider.min);
+            const max = parseFloat(slider.max);
+            const value = parseFloat(slider.value);
+            const percentage = ((value - min) / (max - min)) * 100;
+            fill.style.width = percentage + '%';
+        }
+
+        function calculateLoan() {
+            const principal = parseFloat(calcLoanSlider.value);
+            const termMonths = parseInt(calcTermSlider.value);
+            const annualRate = parseFloat(calcRateSlider.value);
+            const monthlyRate = annualRate / 100 / 12;
+
+            // Calculate monthly payment using loan payment formula
+            const monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
+            const totalRepayment = monthlyPayment * termMonths;
+            const totalInterest = totalRepayment - principal;
+
+            // Update displays
+            calcLoanAmount.textContent = formatCurrency(principal);
+            calcLoanTerm.textContent = termMonths + ' months';
+            calcInterestRate.textContent = annualRate + '%';
+            calcMonthlyPayment.textContent = formatCurrency(monthlyPayment);
+            calcTotalInterest.textContent = formatCurrency(totalInterest);
+            calcTotalRepayment.textContent = formatCurrency(totalRepayment);
+
+            // Update slider fills
+            updateSliderFill(calcLoanSlider, calcLoanFill);
+            updateSliderFill(calcTermSlider, calcTermFill);
+            updateSliderFill(calcRateSlider, calcRateFill);
+        }
+
+        // Event listeners
+        calcLoanSlider.addEventListener('input', calculateLoan);
+        calcTermSlider.addEventListener('input', calculateLoan);
+        calcRateSlider.addEventListener('input', calculateLoan);
+
+        // Initial calculation
+        calculateLoan();
+
+        // ==========================================
+        // USE CALCULATOR VALUES IN FORM
+        // ==========================================
+        function useCalculatorValues() {
+            const loanAmountInput = document.getElementById('loan_amount');
+            const termMonthsInput = document.getElementById('term_months');
+
+            if (loanAmountInput) {
+                loanAmountInput.value = calcLoanSlider.value;
+                // Add visual feedback
+                loanAmountInput.focus();
+                loanAmountInput.classList.add('ring-2', 'ring-green-400');
+                setTimeout(() => {
+                    loanAmountInput.classList.remove('ring-2', 'ring-green-400');
+                }, 1500);
+            }
+
+            if (termMonthsInput) {
+                termMonthsInput.value = calcTermSlider.value;
+                termMonthsInput.classList.add('ring-2', 'ring-green-400');
+                setTimeout(() => {
+                    termMonthsInput.classList.remove('ring-2', 'ring-green-400');
+                }, 1500);
+            }
+
+            // Scroll to form
+            document.querySelector('.lg\\:col-span-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // Show success message
+            const tempMessage = document.createElement('div');
+            tempMessage.className = 'fixed top-24 right-6 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in';
+            tempMessage.innerHTML = `
+                <div class="flex items-center gap-2">
+                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <span class="font-semibold">Values applied to form!</span>
+                </div>
+            `;
+            document.body.appendChild(tempMessage);
+
+            setTimeout(() => {
+                tempMessage.style.opacity = '0';
+                tempMessage.style.transform = 'translateY(-10px)';
+                setTimeout(() => tempMessage.remove(), 300);
+            }, 2000);
+        }
+
+        // ==========================================
+        // CONSENT CHECKBOXES ENABLE SUBMIT
+        // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
             const privacy = document.getElementById('privacy_consent');
             const terms = document.getElementById('terms_consent');
@@ -754,20 +977,25 @@
 
             function updateSubmitState() {
                 const enabled = privacy.checked && terms.checked;
-
                 submitBtn.disabled = !enabled;
-
                 submitBtn.classList.toggle('opacity-50', !enabled);
                 submitBtn.classList.toggle('cursor-not-allowed', !enabled);
-
-                submitBtn.classList.toggle('hover:scale-105', enabled);
             }
 
             privacy.addEventListener('change', updateSubmitState);
             terms.addEventListener('change', updateSubmitState);
-
-            // Initial state
             updateSubmitState();
+
+            // Initial calculation with passed values
+            calculateLoan();
+
+            // If values were passed from welcome page, show notification
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.has('amount')) {
+                setTimeout(() => {
+                    showSuccessToast('Calculator values loaded from welcome page!');
+                }, 500);
+            }
         });
     </script>
 </body>

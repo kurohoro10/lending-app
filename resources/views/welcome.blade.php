@@ -336,7 +336,7 @@
                             </div>
                         </div>
 
-                        <button onclick="alert('Redirecting to application...')" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition transform hover:scale-105">
+                        <button onclick="applyWithCalculatorValues()" class="w-full py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-lg hover:shadow-xl transition transform hover:scale-105">
                             Apply for This Loan
                         </button>
 
@@ -546,6 +546,16 @@
 
         // Initial calculation
         calculateLoan();
+
+        // Apply with calculator values
+        function applyWithCalculatorValues() {
+            const amount = document.getElementById('loanSlider').value;
+            const term = document.getElementById('termSlider').value;
+            const rate = document.getElementById('rateSlider').value;
+
+            // Redirect to application page with values
+            window.location.href = '{{ route("applications.create") }}?amount=' + amount + '&term=' + term + '&rate=' + rate;
+        }
     </script>
 </body>
 </html>
