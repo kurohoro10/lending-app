@@ -24,7 +24,7 @@ use App\Http\Controllers\Admin\CreditCheckController;
 
 Route::get('/', function () {
     return view('welcome');
-});
+})->name('welcome');
 
 // Public Application Routes (No Authentication Required)
 Route::get('apply', [ApplicationController::class, 'create'])->name('applications.create');

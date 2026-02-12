@@ -2,7 +2,7 @@
     <div class="p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Personal Details</h3>
 
-        <form method="POST" action="{{ route('applications.personal-details.store', $application) }}">
+        <form id="personal-details" method="POST" action="{{ route('applications.personal-details.store', $application) }}">
             @csrf
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -39,8 +39,10 @@
                 <div>
                     <label for="date_of_birth" class="block text-sm font-medium text-gray-700">Date of Birth</label>
                     <input type="date" name="date_of_birth" id="date_of_birth"
-                           value="{{ old('date_of_birth', $application->personalDetails?->date_of_birth->format('Y-m-d') ?? '') }}"
-                           class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                        value="{{ old('date_of_birth', $application->personalDetails?->date_of_birth->format('Y-m-d') ?? '') }}"
+                        class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md"
+                        aria-describedby="dob-error">
+                    <p id="dob-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                 </div>
 
                 <div>
@@ -109,3 +111,55 @@
         @endif
     </div>
 </div>
+
+<script>
+
+document.addEventListener('DOMContentLoaded', function () {
+    const personalDetails = document.getElementById('personal-details');
+    const dobInput = document.getElementById('date_of_birth');
+    const dobError = document.getElementById('dob-error');
+
+    personalDetails.addEventListener('submit', function (event) {
+        event.preventDefault();
+
+
+        dobError.classList.add('hidden');
+        dobInput.classList.remove('border-red-500');
+
+        if (!dobInput.value) {
+            // No DOB provided — let server decide if it's required
+            personalDetails.submit();
+            return;
+        }
+
+        const birthDate = new Date(dobInput.value);
+        const today = new Date();
+
+        let age = today.getFullYear() - birthDate.getFullYear();
+        const monthDiff = today.getMonth() - birthDate.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
+            age--;
+        }
+
+        if (age < 18) {
+            dobError.textContent = 'You must be at least 18 years old to apply.';
+            dobError.classList.remove('hidden');
+            dobInput.classList.add('border-red-500');
+            dobInput.setAttribute('aria-invalid', 'true');
+            dobInput.focus();
+            return;
+        }
+
+        // ✅ Valid — submit programmatically
+        personalDetails.submit();
+    });
+
+    dobInput.addEventListener('input', function () {
+        dobError.classList.add('hidden');
+        dobInput.classList.remove('border-red-500');
+        dobInput.removeAttribute('aria-invalid');
+    });
+});
+</script>
+
