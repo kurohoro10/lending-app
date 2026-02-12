@@ -160,6 +160,14 @@ class Application extends Model
                $this->employmentDetails()->exists();
     }
 
+    /**
+     * Check if application has required business info for auto-decline checks
+     */
+    public function hasBusinessInfo(): bool
+    {
+        return $this->employmentDetails()->count() > 0;
+    }
+
     public function getTotalLivingExpensesMonthly(): float
     {
         return $this->livingExpenses->sum(function ($expense) {

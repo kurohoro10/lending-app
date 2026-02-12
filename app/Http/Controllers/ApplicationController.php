@@ -16,6 +16,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
+use App\Services\AutoDeclineService;
+use App\Notifications\Application\ApplicationDeclined;
 
 class ApplicationController extends Controller
 {
@@ -268,6 +270,74 @@ class ApplicationController extends Controller
 
         if (!$application->canBeSubmitted()) {
             return back()->with('error', 'Please complete all required sections before submitting.');
+        }
+
+        // Validate signature is provided
+        if (!request()->has('signature') || empty(request()->input('signature'))) {
+            return back()->with('error', 'Electronic signature is required before submission.');
+        }
+
+        if (!request()->has('signature_agreement')) {
+            return back()->with('error', 'You must confirm the signature agreement before submission.');
+        }
+
+        // Auto-decline check based on criteria
+        $declineCheck = AutoDeclineService::checkDeclineCriteria($application);
+
+        if ($declineCheck['should_decline']) {
+            DB::beginTransaction();
+            try {
+                // Create final declaration with electronic signature
+                $application->declarations()->create([
+                    'declaration_type' => 'final_submission',
+                    'declaration_text' => 'I declare that all information provided in this application is true and accurate to the best of my knowledge. I understand that providing false or misleading information may result in rejection of this application or legal action.',
+                    'is_agreed' => true,
+                    'agreed_at' => now(),
+                    'agreement_ip' => request()->ip(),
+                    'signature_data' => request()->input('signature'),
+                    'signature_type' => request()->input('signature_type', 'typed'),
+                    'signatory_name' => auth()->user()->name,
+                    'signatory_position' => request()->input('signatory_position'),
+                    'signature_timestamp' => now(),
+                ]);
+
+                $application->update([
+                    'status' => 'submitted',
+                    'submitted_at' => now(),
+                    'submission_ip' => request()->ip(),
+                ]);
+
+                // Log the auto-decline reason
+                ActivityLog::logActivity(
+                    'auto_declined',
+                    'Application auto-declined: ' . $declineCheck['reason'],
+                    $application
+                );
+
+                // Add internal comment with decline reason
+                $application->comments()->create([
+                    'comment' => 'AUTO-DECLINE: ' . $declineCheck['reason'],
+                    'is_internal' => true,
+                    'is_client_visible' => false,
+                    'commenter_ip' => request()->ip(),
+                ]);
+
+                DB::commit();
+
+                // Send decline notification
+                try {
+                    $application->user->notify(new ApplicationDeclined($application, $declineCheck['reason']));
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send auto-decline email: ' . $e->getMessage());
+                }
+
+                return redirect()
+                    ->route('applications.show', $application)
+                    ->with('error', 'Your application does not meet our current lending criteria: ' . $declineCheck['reason']);
+            } catch (\Exception $e) {
+                DB::rollBack();
+                return back()->with('error', 'Failed to process application. Please try again.');
+            }
         }
 
         DB::beginTransaction();

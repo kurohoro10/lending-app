@@ -17,12 +17,19 @@ class Declaration extends Model
         'is_agreed',
         'agreed_at',
         'agreement_ip',
-        'signature',
+        'signature_data',
+        'signature_type',
+        'signatory_name',
+        'signatory_position',
+        'signature_timestamp',
     ];
 
     protected $casts = [
         'is_agreed' => 'boolean',
         'agreed_at' => 'datetime',
+        'is_agreed' => 'boolean',
+        'agreed_at' => 'datetime',
+        'signature_timestamp' => 'datetime',
     ];
 
     public function application(): BelongsTo

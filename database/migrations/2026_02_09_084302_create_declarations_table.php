@@ -11,12 +11,16 @@ return new class extends Migration
         Schema::create('declarations', function (Blueprint $table) {
             $table->id();
             $table->foreignId('application_id')->constrained()->onDelete('cascade');
-            $table->string('declaration_type'); // privacy, terms, accuracy, etc.
+            $table->string('declaration_type');
             $table->text('declaration_text');
             $table->boolean('is_agreed')->default(false);
             $table->timestamp('agreed_at')->nullable();
             $table->ipAddress('agreement_ip')->nullable();
-            $table->string('signature')->nullable(); // Electronic signature data
+            $table->text('signature_data')->nullable();
+            $table->string('signature_type')->default('typed');
+            $table->string('signatory_name')->nullable();
+            $table->string('signatory_position')->nullable();
+            $table->timestamp('signature_timestamp')->nullable();
             $table->timestamps();
 
             $table->index('application_id');

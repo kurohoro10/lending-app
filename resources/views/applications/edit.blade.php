@@ -244,6 +244,9 @@
             <!-- Documents Section -->
             @include('applications.partials.documents-upload', ['application' => $application])
 
+            <!-- Electronic Signature Section -->
+            @include('applications.partials.e-signature', ['application' => $application])
+
             <!-- Submit Application - Enhanced -->
             @if($application->canBeSubmitted())
             <div class="bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden shadow-xl sm:rounded-2xl border-2 border-green-200">
