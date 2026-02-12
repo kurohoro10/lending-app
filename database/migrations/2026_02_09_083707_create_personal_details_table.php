@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('application_id')->constrained()->onDelete('cascade');
             $table->string('full_name');
-            $table->string('mobile_phone')->unique();
+            $table->string('mobile_phone')->unique()->nullable();
             $table->string('email')->unique();
             $table->enum('marital_status', ['single', 'married', 'divorced', 'widowed', 'defacto']);
             $table->integer('number_of_dependants')->default(0);

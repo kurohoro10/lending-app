@@ -155,7 +155,7 @@ class Application extends Model
     public function canBeSubmitted(): bool
     {
         return $this->status === 'draft' &&
-               $this->personalDetails()->exists() &&
+               $this->hasCompletePersonalDetails() &&
                $this->residentialAddresses()->count() > 0 &&
                $this->employmentDetails()->exists();
     }
@@ -172,5 +172,21 @@ class Application extends Model
         return $this->employmentDetails->sum(function ($employment) {
             return $employment->getAnnualIncome();
         });
+    }
+
+    public function hasCompletePersonalDetails(): bool
+    {
+        if (!$this->personalDetails) {
+            return false;
+        }
+
+        $pd = $this->personalDetails;
+
+        return !empty($pd->full_name)
+            && !empty($pd->email)
+            && !empty($pd->mobile_phone)
+            && !empty($pd->date_of_birth)
+            && !empty($pd->gender)
+            && !empty($pd->marital_status);
     }
 }

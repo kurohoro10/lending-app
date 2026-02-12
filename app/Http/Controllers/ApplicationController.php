@@ -6,10 +6,16 @@ use App\Models\Application;
 use App\Models\PersonalDetail;
 use App\Models\ActivityLog;
 use App\Models\User;
+use App\Notifications\Application\ApplicationCreated;
+use App\Notifications\Application\ApplicationUpdated;
+use App\Notifications\Application\ApplicationSubmitted;
+use App\Notifications\Admin\NewApplicationSubmittedAdmin;
+use App\Notifications\NewUser\WelcomeNewUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Notification;
 
 class ApplicationController extends Controller
 {
@@ -93,6 +99,11 @@ class ApplicationController extends Controller
                 'submission_ip' => $request->ip(),
             ]);
 
+            $application->personalDetails()->create([
+                'email' => $user->email,
+                'full_name' => $user->name,
+            ]);
+
             // Create consent declarations
             $declarations = [
                 [
@@ -132,10 +143,19 @@ class ApplicationController extends Controller
                 Auth::login($user);
             }
 
-            // Send welcome email (TODO: implement email service)
-            // if (!$isAuthenticated) {
-            //     EmailService::sendWelcomeEmail($user, $application);
-            // }
+            // Send email notifications
+            try {
+                if (!$isAuthenticated) {
+                    // New user - send welcome email
+                    $user->notify(new WelcomeNewUser($application));
+                } else {
+                    // Existing user - send application created notification
+                    $user->notify(new ApplicationCreated($application));
+                }
+            } catch (\Exception $e) {
+                // Log email error but don't fail the request
+                \Log::error('Failed to send application created email: ' . $e->getMessage());
+            }
 
             $message = $isAuthenticated
                 ? 'Your application has been started! Please complete your details to continue.'
@@ -211,6 +231,15 @@ class ApplicationController extends Controller
         ]);
 
         $oldValues = $application->only(array_keys($validated));
+        $changes = [];
+
+        // Detect what actually changed
+        foreach ($validated as $key => $value) {
+            if ($oldValues[$key] != $value) {
+                $changes[$key] = $value;
+            }
+        }
+
         $application->update($validated);
 
         ActivityLog::logActivity(
@@ -220,6 +249,15 @@ class ApplicationController extends Controller
             $oldValues,
             $validated
         );
+
+        // Send email notification only if there were actual changes
+        if (!empty($changes)) {
+            try {
+                $application->user->notify(new ApplicationUpdated($application, $changes));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send application updated email: ' . $e->getMessage());
+            }
+        }
 
         return back()->with('success', 'Application updated successfully.');
     }
@@ -246,10 +284,19 @@ class ApplicationController extends Controller
                 $application
             );
 
-            // TODO: Send email notification to admin
-            // TODO: Send confirmation email to client
-
             DB::commit();
+
+            // Send email notifications
+            try {
+                // Notify the applicant
+                $application->user->notify(new ApplicationSubmitted($application));
+
+                // Notify admins
+                $admins = User::role('admin')->get();
+                Notification::send($admins, new NewApplicationSubmittedAdmin($application));
+            } catch (\Exception $e) {
+                \Log::error('Failed to send application submission emails: ' . $e->getMessage());
+            }
 
             return redirect()
                 ->route('applications.show', $application)

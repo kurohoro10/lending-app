@@ -1,21 +1,52 @@
-<div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-6">
+<!-- Employment & Income Details Section - Enhanced -->
+<div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
+    <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
+        <h3 class="text-lg font-bold text-white flex items-center">
+            <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
+            </svg>
+            Employment & Income Details
+        </h3>
+        <p class="text-indigo-100 text-sm mt-1">Tell us about your employment and income sources</p>
+    </div>
     <div class="p-6">
-        <h3 class="text-lg font-medium text-gray-900 mb-4">Employment & Income Details</h3>
-
         @if($application->employmentDetails->count() > 0)
-        <div class="mb-4 space-y-3">
+        <div class="mb-6 space-y-3">
+            <h4 class="text-sm font-semibold text-gray-700 mb-3">Your Employment History</h4>
             @foreach($application->employmentDetails as $employment)
-            <div class="border rounded-lg p-4">
+            <div class="p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition">
                 <div class="flex justify-between items-start">
-                    <div>
-                        <div class="font-medium text-gray-900">{{ strtoupper($employment->employment_type) }} - {{ $employment->employer_business_name }}</div>
-                        <div class="text-sm text-gray-600 mt-1">{{ $employment->position }}</div>
-                        <div class="text-sm font-semibold text-indigo-600 mt-1">Annual Income: ${{ number_format($employment->getAnnualIncome(), 2) }}</div>
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center">
+                                <svg class="h-6 w-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex items-center space-x-2 mb-2">
+                                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-semibold uppercase">
+                                    {{ $employment->employment_type }}
+                                </span>
+                            </div>
+                            <div class="font-semibold text-gray-900">{{ $employment->employer_business_name }}</div>
+                            <div class="text-sm text-gray-600 mt-1">{{ $employment->position }}</div>
+                            <div class="text-sm font-bold text-green-600 mt-2">
+                                Annual Income: ${{ number_format($employment->getAnnualIncome(), 2) }}
+                            </div>
+                        </div>
                     </div>
-                    <form method="POST" action="{{ route('applications.employment-details.destroy', [$application, $employment]) }}" onsubmit="return confirm('Are you sure?');">
+                    <form method="POST" action="{{ route('applications.employment-details.destroy', [$application, $employment]) }}" onsubmit="return confirm('Are you sure you want to delete this employment record?');">
                         @csrf
                         @method('DELETE')
-                        <button type="submit" class="text-red-600 hover:text-red-900 text-sm">Delete</button>
+                        <button type="submit" class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition">
+                            <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                            Delete
+                        </button>
                     </form>
                 </div>
             </div>
@@ -23,81 +54,90 @@
         </div>
         @endif
 
-        <form method="POST" action="{{ route('applications.employment-details.store', $application) }}" class="mt-4">
+        <form method="POST" action="{{ route('applications.employment-details.store', $application) }}" class="mt-6">
             @csrf
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Employment Type *</label>
-                    <select name="employment_type" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="payg">PAYG (Employee)</option>
-                        <option value="self_employed">Self Employed</option>
-                        <option value="company_director">Company Director</option>
-                        <option value="contract">Contract</option>
-                        <option value="casual">Casual</option>
-                        <option value="retired">Retired</option>
-                        <option value="unemployed">Unemployed</option>
-                    </select>
-                </div>
+            <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100 mb-6">
+                <h4 class="text-sm font-semibold text-gray-900 mb-4">Add Employment Details</h4>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Employer / Business Name *</label>
-                    <input type="text" name="employer_business_name" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Position / Role *</label>
-                    <input type="text" name="position" required class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">ABN (if applicable)</label>
-                    <input type="text" name="abn" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Employment Start Date</label>
-                    <input type="date" name="employment_start_date" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Employer Phone</label>
-                    <input type="tel" name="employer_phone" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
-                </div>
-
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Base Income *</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 sm:text-sm">$</span>
-                        </div>
-                        <input type="number" name="base_income" step="0.01" min="0" required class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Employment Type *</label>
+                        <select name="employment_type" required class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select employment type...</option>
+                            <option value="payg">PAYG (Employee)</option>
+                            <option value="self_employed">Self Employed</option>
+                            <option value="company_director">Company Director</option>
+                            <option value="contract">Contract</option>
+                            <option value="casual">Casual</option>
+                            <option value="retired">Retired</option>
+                            <option value="unemployed">Unemployed</option>
+                        </select>
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Additional Income</label>
-                    <div class="mt-1 relative rounded-md shadow-sm">
-                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                            <span class="text-gray-500 sm:text-sm">$</span>
-                        </div>
-                        <input type="number" name="additional_income" step="0.01" min="0" value="0" class="focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-7 sm:text-sm border-gray-300 rounded-md">
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Employer / Business Name *</label>
+                        <input type="text" name="employer_business_name" required class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
                     </div>
-                </div>
 
-                <div>
-                    <label class="block text-sm font-medium text-gray-700">Income Frequency *</label>
-                    <select name="income_frequency" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                        <option value="weekly">Weekly</option>
-                        <option value="fortnightly">Fortnightly</option>
-                        <option value="monthly">Monthly</option>
-                        <option value="annual">Annual</option>
-                    </select>
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Position / Role *</label>
+                        <input type="text" name="position" required class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">ABN (if applicable)</label>
+                        <input type="text" name="abn" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Employment Start Date</label>
+                        <input type="date" name="employment_start_date" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Employer Phone</label>
+                        <input type="tel" name="employer_phone" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Base Income *</label>
+                        <div class="mt-1 relative rounded-xl shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-lg font-semibold">$</span>
+                            </div>
+                            <input type="number" name="base_income" step="0.01" min="0" required class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Income</label>
+                        <div class="mt-1 relative rounded-xl shadow-sm">
+                            <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                <span class="text-gray-500 text-lg font-semibold">$</span>
+                            </div>
+                            <input type="number" name="additional_income" step="0.01" min="0" value="0" class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">Income Frequency *</label>
+                        <select name="income_frequency" required class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select frequency...</option>
+                            <option value="weekly">Weekly</option>
+                            <option value="fortnightly">Fortnightly</option>
+                            <option value="monthly">Monthly</option>
+                            <option value="annual">Annual</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
-            <div class="mt-6 flex justify-end">
-                <button type="submit" class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-indigo-700">
+            <div class="flex justify-end">
+                <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105">
+                    <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                        <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
+                    </svg>
                     Add Employment
                 </button>
             </div>
