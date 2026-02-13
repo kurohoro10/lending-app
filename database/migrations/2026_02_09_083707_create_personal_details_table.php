@@ -10,10 +10,10 @@ return new class extends Migration
     {
         Schema::create('personal_details', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('application_id')->constrained()->onDelete('cascade');
+            $table->foreignId('application_id')->unique()->constrained()->onDelete('cascade');
             $table->string('full_name');
-            $table->string('mobile_phone')->unique()->nullable();
-            $table->string('email')->unique();
+            $table->string('mobile_phone')->nullable();
+            $table->string('email');
             $table->enum('citizenship_status', [
                 'australian_citizen',
                 'permanent_resident',

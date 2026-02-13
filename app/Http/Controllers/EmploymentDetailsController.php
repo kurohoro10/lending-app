@@ -6,6 +6,7 @@ use App\Models\Application;
 use App\Models\EmploymentDetail;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use App\Rules\LegalWorkingAge;
 
 class EmploymentDetailsController extends Controller
 {
@@ -13,13 +14,24 @@ class EmploymentDetailsController extends Controller
     {
         $this->authorize('update', $application);
 
+        if (!$application->personalDetails || !$application->personalDetails->date_of_birth) {
+            return back()->withErrors([
+                'employment_start_date' => 'Please complete Personal Details (Date of Birth) first.'
+            ]);
+        }
+
+
         $validated = $request->validate([
             'employment_type' => 'required|in:payg,self_employed,company_director,contract,casual,retired,unemployed',
             'employer_business_name' => 'nullable|required_unless:employment_type,retired,unemployed|string|max:255',
             'abn' => 'nullable|string|max:20',
             'employment_role' => 'nullable|string|max:255',
             'position' => 'nullable|string|max:255',
-            'employment_start_date' => 'nullable|date|before_or_equal:today',
+            'employment_start_date' => [
+                'required',
+                'date',
+                new LegalWorkingAge($application->personalDetails->date_of_birth),
+            ],
             'base_income' => 'required|numeric|min:0',
             'additional_income' => 'nullable|numeric|min:0',
             'income_frequency' => 'required|in:weekly,fortnightly,monthly,annual',

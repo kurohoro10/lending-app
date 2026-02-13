@@ -3,6 +3,8 @@
 namespace App\Services;
 
 use App\Models\Application;
+use App\Helpers\AgeCalculator;
+use Carbon\Carbon;
 
 class AutoDeclineService
 {
@@ -44,20 +46,47 @@ class AutoDeclineService
     }
 
     /**
-     * Check if business has been trading for at least 1 year
+     * File: app/Services/AutoDeclineService.php
+     *
+     * Determines whether the applicant has at least 12 months
+     * of legally valid trading history.
      */
     private static function hasSufficientTradingHistory(Application $application): bool
     {
-        $employment = $application->employmentDetails()
-            ->where('employment_type', 'self_employed')
-            ->orWhere('employment_type', 'company_director')
-            ->first();
+        $personal = $application->personalDetails;
 
-        if (!$employment || !$employment->employment_start_date) {
+        // ❌ Missing DOB = cannot verify legality
+        if (!$personal || !$personal->date_of_birth) {
             return false;
         }
 
-        $monthsTrading = now()->diffInMonths($employment->employment_start_date);
+        $employment = $application->employmentDetails()
+            ->whereIn('employment_type', [
+                'self_employed',
+                'company_director',
+            ])
+            ->whereNotNull('employment_start_date')
+            ->orderByDesc('employment_start_date')
+            ->first();
+
+        // ❌ No qualifying employment
+        if (!$employment) {
+            return false;
+        }
+
+        $dob = Carbon::parse($personal->date_of_birth);
+        $employmentStart = Carbon::parse($employment->employment_start_date);
+
+        // Legal working age
+        $legalWorkingDate = $dob->copy()->addYears(18);
+
+        // ❌ Employment before legal age → only count from legal age
+        $effectiveStart = $employmentStart->lt($legalWorkingDate)
+            ? $legalWorkingDate
+            : $employmentStart;
+
+        $monthsTrading = $effectiveStart->diffInMonths(now());
+
         return $monthsTrading >= 12;
     }
 

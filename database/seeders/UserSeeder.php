@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
@@ -22,6 +23,16 @@ class UserSeeder extends Seeder
         ]);
         $admin->assignRole('admin');
         $this->command->info('✓ Created Admin: allan@commercialloan.com');
+
+        // Create Admin User (Allan - Lead Developer)
+        $admin = User::create([
+            'name' => 'System',
+            'email' => 'system@internal.local',
+            'password' => Hash::make(Str::random(40)),
+            'email_verified_at' => now(),
+        ]);
+        $admin->assignRole('system');
+        $this->command->info('✓ Created System: system@internal.local');
 
         // Create Assessor Users
         $assessor1 = User::create([

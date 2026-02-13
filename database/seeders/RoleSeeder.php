@@ -58,17 +58,34 @@ class RoleSeeder extends Seeder
         ];
 
         foreach ($permissions as $permission) {
-            Permission::create(['name' => $permission]);
+            Permission::firstOrCreate([
+                'name' => $permission,
+                'guard_name' => 'web'
+            ]);
         }
 
         // Create roles and assign permissions
 
         // Admin Role - Full access
-        $adminRole = Role::create(['name' => 'admin']);
+        $adminRole = Role::firstOrCreate([
+            'name' => 'admin',
+            'guard_name' => 'web',
+        ]);
+
         $adminRole->givePermissionTo(Permission::all());
 
+        // System Role - For automated system actions
+        Role::firstOrCreate([
+            'name' => 'system',
+            'guard_name' => 'web',
+        ]);
+
         // Assessor Role - Review and assessment
-        $assessorRole = Role::create(['name' => 'assessor']);
+        $assessorRole = Role::firstOrCreate([
+            'name' => 'assessor',
+            'guard_name' => 'web',
+        ]);
+
         $assessorRole->givePermissionTo([
             'view applications',
             'review applications',
@@ -90,7 +107,10 @@ class RoleSeeder extends Seeder
         ]);
 
         // Client Role - Limited to own applications
-        $clientRole = Role::create(['name' => 'client']);
+        $clientRole = Role::firstOrCreate([
+            'name' => 'client',
+            'guard_name' => 'web',
+        ]);
         $clientRole->givePermissionTo([
             'view applications',
             'create applications',

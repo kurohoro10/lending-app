@@ -254,109 +254,232 @@
             <!-- Documents Section -->
             @include('applications.partials.documents-upload', ['application' => $application])
 
-            <!-- Electronic Signature Section -->
-            @include('applications.partials.e-signature', ['application' => $application])
+            <form method="POST" action="{{ route('applications.submit', $application) }}" onsubmit="return confirm('Are you sure you want to submit this application? You will not be able to edit it after submission.');">
+                @csrf
+                <!-- Hidden inputs -->
+                <input type="hidden" name="signature" id="signature-data">
+                <input type="hidden" name="signature_type" id="signature-type" value="typed">
 
-            <!-- Submit Application - Enhanced -->
-            @if($application->canBeSubmitted())
-            <div class="bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden shadow-xl sm:rounded-2xl border-2 border-green-200">
-                <div class="p-8">
-                    <div class="flex items-start">
-                        <div class="flex-shrink-0">
-                            <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
-                                <svg class="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
+                <!-- Electronic Signature Section -->
+                @include('applications.partials.e-signature', ['application' => $application])
+
+                <!-- Submit Application - Enhanced -->
+                @if($application->canBeSubmitted())
+                <div class="bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden shadow-xl sm:rounded-2xl border-2 border-green-200">
+                    <div class="p-8">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100">
+                                    <svg class="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                    </svg>
+                                </div>
                             </div>
-                        </div>
-                        <div class="ml-6 flex-1">
-                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Ready to Submit!</h3>
-                            <p class="text-gray-700 mb-6">
-                                Your application is complete and ready to submit. Once submitted, our team will review your application and contact you if additional information is needed.
-                            </p>
-                            <div class="bg-white rounded-xl p-4 mb-6 border border-green-200">
-                                <h4 class="font-semibold text-gray-900 mb-3">What happens next?</h4>
-                                <ul class="space-y-2 text-sm text-gray-600">
-                                    <li class="flex items-start">
-                                        <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span>Our team will review your application within 24-48 hours</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span>You'll receive an email confirmation immediately</span>
-                                    </li>
-                                    <li class="flex items-start">
-                                        <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                        </svg>
-                                        <span>We'll contact you if we need any additional information</span>
-                                    </li>
-                                </ul>
-                            </div>
-                            <form method="POST" action="{{ route('applications.submit', $application) }}" onsubmit="return confirm('Are you sure you want to submit this application? You will not be able to edit it after submission.');">
-                                @csrf
-                                <button type="submit" class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg uppercase tracking-wide hover:shadow-2xl transition transform hover:scale-105">
+                            <div class="ml-6 flex-1">
+                                <h3 class="text-2xl font-bold text-gray-900 mb-2">Ready to Submit!</h3>
+                                <p class="text-gray-700 mb-6">
+                                    Your application is complete and ready to submit. Once submitted, our team will review your application and contact you if additional information is needed.
+                                </p>
+                                <div class="bg-white rounded-xl p-4 mb-6 border border-green-200">
+                                    <h4 class="font-semibold text-gray-900 mb-3">What happens next?</h4>
+                                    <ul class="space-y-2 text-sm text-gray-600">
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span>Our team will review your application within 24-48 hours</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span>You'll receive an email confirmation immediately</span>
+                                        </li>
+                                        <li class="flex items-start">
+                                            <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                            </svg>
+                                            <span>We'll contact you if we need any additional information</span>
+                                        </li>
+                                    </ul>
+                                </div>
+                                <button type="submit" id="submit-application-btn"
+                                    class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-bold text-lg uppercase tracking-wide transition opacity-50 cursor-not-allowed"
+                                    disabled>
                                     <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
                                     </svg>
                                     Submit Application for Review
                                 </button>
-                            </form>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            @else
-            <div class="bg-gradient-to-br from-yellow-50 to-amber-50 border-l-4 border-yellow-400 rounded-xl p-6 shadow-lg">
-                <div class="flex items-start">
-                    <div class="flex-shrink-0">
-                        <svg class="h-8 w-8 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-4 flex-1">
-                        <h3 class="text-lg font-bold text-yellow-800 mb-2">Complete Required Sections</h3>
-                        <p class="text-sm text-yellow-700 mb-4">
-                            Please complete all required sections before submitting your application.
-                        </p>
-                        <div class="bg-white rounded-lg p-4 border border-yellow-200">
-                            <h4 class="font-semibold text-gray-900 mb-3 text-sm">Still needed:</h4>
-                            <ul class="space-y-2 text-sm">
-                                @if(!$application->hasCompletePersonalDetails())
-                                    <li class="flex items-center text-gray-700">
-                                        <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                        </svg>
-                                        Personal Details (Complete all required fields)
-                                    </li>
-                                @endif
-                                @if($application->residentialAddresses->count() == 0)
-                                    <li class="flex items-center text-gray-700">
-                                        <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                        </svg>
-                                        At least one Residential Address
-                                    </li>
-                                @endif
-                                @if($application->employmentDetails->count() == 0)
-                                    <li class="flex items-center text-gray-700">
-                                        <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                                        </svg>
-                                        Employment Details
-                                    </li>
-                                @endif
-                            </ul>
+                @else
+                <div class="bg-gradient-to-br from-yellow-50 to-amber-50 border-l-4 border-yellow-400 rounded-xl p-6 shadow-lg">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <svg class="h-8 w-8 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                            </svg>
+                        </div>
+                        <div class="ml-4 flex-1">
+                            <h3 class="text-lg font-bold text-yellow-800 mb-2">Complete Required Sections</h3>
+                            <p class="text-sm text-yellow-700 mb-4">
+                                Please complete all required sections before submitting your application.
+                            </p>
+                            <div class="bg-white rounded-lg p-4 border border-yellow-200">
+                                <h4 class="font-semibold text-gray-900 mb-3 text-sm">Still needed:</h4>
+                                <ul class="space-y-2 text-sm">
+                                    @if(!$application->hasCompletePersonalDetails())
+                                        <li class="flex items-center text-gray-700">
+                                            <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Personal Details (Complete all required fields)
+                                        </li>
+                                    @endif
+                                    @if($application->residentialAddresses->count() == 0)
+                                        <li class="flex items-center text-gray-700">
+                                            <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            At least one Residential Address
+                                        </li>
+                                    @endif
+                                    @if($application->employmentDetails->count() == 0)
+                                        <li class="flex items-center text-gray-700">
+                                            <svg class="w-5 h-5 text-yellow-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                                            </svg>
+                                            Employment Details
+                                        </li>
+                                    @endif
+                                </ul>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
-            @endif
-
+                @endif
+            </form>
         </div>
     </div>
+
+    <script>
+        // Enable/disable submit button based on signature and agreement
+        function updateSubmitButton() {
+            const signatureData = document.getElementById('signature-data')?.value;
+            const agreementChecked = document.getElementById('signature-agreement')?.checked;
+            const submitBtn = document.getElementById('submit-application-btn');
+
+            if (submitBtn) {
+                const isValid = signatureData && signatureData.trim() !== '' && agreementChecked;
+                submitBtn.disabled = !isValid;
+
+                if (isValid) {
+                    submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+                    submitBtn.classList.add('hover:shadow-2xl', 'transform', 'hover:scale-105');
+                } else {
+                    submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+                    submitBtn.classList.remove('hover:shadow-2xl', 'transform', 'hover:scale-105');
+                }
+            }
+        }
+
+        // Call on page load
+        document.addEventListener('DOMContentLoaded', updateSubmitButton);
+
+        // Update when signature changes
+        document.getElementById('typed-signature-input')?.addEventListener('input', updateSubmitButton);
+        document.getElementById('signature-agreement')?.addEventListener('change', updateSubmitButton);
+
+        // Update after canvas drawing
+        const originalSaveCanvasData = saveCanvasData;
+        saveCanvasData = function() {
+            originalSaveCanvasData();
+            updateSubmitButton();
+        };
+
+        // Form submission validation
+        document.addEventListener('DOMContentLoaded', function() {
+            const submitForm = document.querySelector('form[action*="submit"]');
+            if (submitForm) {
+                submitForm.addEventListener('submit', function(e) {
+                    const signatureData = document.getElementById('signature-data').value;
+                    const agreementChecked = document.getElementById('signature-agreement')?.checked;
+
+                    if (!signatureData || signatureData.trim() === '') {
+                        e.preventDefault();
+                        alert('⚠️ Please provide your signature before submitting.\n\nScroll down to the "Electronic Signature Required" section to sign.');
+                        document.getElementById('signature-typed').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        return false;
+                    }
+
+                    if (!agreementChecked) {
+                        e.preventDefault();
+                        alert('⚠️ Please confirm your signature agreement before submitting.\n\nCheck the box to confirm you are authorized to sign this application.');
+                        document.getElementById('signature-agreement').scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        document.getElementById('signature-agreement').focus();
+                        return false;
+                    }
+
+                    // Show loading state
+                    const submitBtn = e.target.querySelector('button[type="submit"]');
+                    if (submitBtn) {
+                        submitBtn.disabled = true;
+                        submitBtn.innerHTML = '<svg class="animate-spin h-5 w-5 mr-2 inline" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Submitting...';
+                    }
+                });
+            }
+
+            const dobInput = document.getElementById('date_of_birth');
+            const employmentDateInputs = document.querySelectorAll(
+                'input[name="employment_start_date"]'
+            );
+
+            function addYears(date, years) {
+                const d = new Date(date);
+                d.setFullYear(d.getFullYear() + years);
+                return d;
+            }
+
+            function getOrCreateHint(input) {
+                let hint = input.nextElementSibling;
+
+                if (!hint || !hint.classList.contains('employment-hint')) {
+                    hint = document.createElement('p');
+                    hint.className = 'employment-hint text-xs text-red-600 mt-1 hidden';
+                    hint.setAttribute('aria-live', 'polite');
+                    input.after(hint);
+                }
+
+                return hint;
+            }
+
+            employmentDateInputs.forEach(input => {
+                input.addEventListener('input', () => {
+                    if (!dobInput.value || !input.value) return;
+
+                    const dob = new Date(dobInput.value);
+                    const employmentStart = new Date(input.value);
+                    const legalAgeDate = addYears(dob, 18);
+                    const hint = getOrCreateHint(input);
+
+                    if (employmentStart < legalAgeDate) {
+                        hint.textContent =
+                            `Employment history will be counted from ${legalAgeDate.toLocaleDateString()} (legal working age).`;
+                        hint.classList.remove('hidden');
+                    } else {
+                        hint.textContent = '';
+                        hint.classList.add('hidden');
+                    }
+                });
+            });
+
+            // Also re-evaluate employment dates if DOB changes
+            dobInput?.addEventListener('input', () => {
+                employmentDateInputs.forEach(input => input.dispatchEvent(new Event('input')));
+            });
+        });
+    </script>
 </x-app-layout>

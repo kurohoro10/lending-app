@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
-use App\Models\PersonalDetail;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -21,12 +20,18 @@ class PersonalDetailsController extends Controller
                 'string',
                 'max:20',
                 Rule::unique('personal_details', 'mobile_phone')
+                    ->where(fn ($query) =>
+                        $query->where('application_id', $application->id)
+                    )
                     ->ignore($application->personalDetails?->id)
             ],
             'email' => [
                 'required',
                 'email',
                 Rule::unique('personal_details', 'email')
+                    ->where(fn ($query) =>
+                        $query->where('application_id', $application->id)
+                    )
                     ->ignore($application->personalDetails?->id)
             ],
             'marital_status' => 'required|in:single,married,divorced,widowed,defacto',

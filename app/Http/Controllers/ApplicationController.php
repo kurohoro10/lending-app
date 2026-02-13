@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Models\Application;
-use App\Models\PersonalDetail;
 use App\Models\ActivityLog;
 use App\Models\User;
 use App\Notifications\Application\ApplicationCreated;
@@ -101,10 +100,13 @@ class ApplicationController extends Controller
                 'submission_ip' => $request->ip(),
             ]);
 
-            $application->personalDetails()->create([
-                'email' => $user->email,
-                'full_name' => $user->name,
-            ]);
+            $application->personalDetails()->updateOrCreate(
+                ['application_id' => $application->id],
+                [
+                    'email' => $user->email,
+                    'full_name' => $user->name,
+                ]
+            );
 
             // Create consent declarations
             $declarations = [
@@ -277,18 +279,11 @@ class ApplicationController extends Controller
             return back()->with('error', 'Electronic signature is required before submission.');
         }
 
-        if (!request()->has('signature_agreement')) {
+        if (!request()->has('signature_agreement') || !request()->input('signature_agreement')) {
             return back()->with('error', 'You must confirm the signature agreement before submission.');
         }
 
-        // Auto-decline check based on criteria
-        $declineCheck = AutoDeclineService::checkDeclineCriteria($application);
-
-        if ($declineCheck['should_decline']) {
-            DB::beginTransaction();
-            try {
-                // Create final declaration with electronic signature
-                $application->declarations()->create([
+        $application->declarations()->create([
                     'declaration_type' => 'final_submission',
                     'declaration_text' => 'I declare that all information provided in this application is true and accurate to the best of my knowledge. I understand that providing false or misleading information may result in rejection of this application or legal action.',
                     'is_agreed' => true,
@@ -301,8 +296,14 @@ class ApplicationController extends Controller
                     'signature_timestamp' => now(),
                 ]);
 
+        // Auto-decline check based on criteria
+        $declineCheck = AutoDeclineService::checkDeclineCriteria($application);
+
+        if ($declineCheck['should_decline']) {
+            DB::beginTransaction();
+            try {
                 $application->update([
-                    'status' => 'submitted',
+                    'status' => 'declined',
                     'submitted_at' => now(),
                     'submission_ip' => request()->ip(),
                 ]);
@@ -314,8 +315,11 @@ class ApplicationController extends Controller
                     $application
                 );
 
+                $systemUser = User::where('email', 'system@internal.local')->first();
+
                 // Add internal comment with decline reason
                 $application->comments()->create([
+                    'user_id' => $systemUser->id,
                     'comment' => 'AUTO-DECLINE: ' . $declineCheck['reason'],
                     'is_internal' => true,
                     'is_client_visible' => false,
