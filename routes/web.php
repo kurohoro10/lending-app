@@ -41,7 +41,6 @@ Route::get('terms-and-conditions', function () {
 | Authenticated Client Routes
 |--------------------------------------------------------------------------
 */
-
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
 
     // Dashboard - Redirect based on role
@@ -66,6 +65,9 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         ->name('applications.personal-details.store');
 
     // Residential Addresses
+    Route::get('/api/suburbs/{state}', function ($state) {
+        return response()->json(\App\Helpers\AustralianSuburbs::getSuburbsByState($state));
+    })->name('api.suburbs');
     Route::post('applications/{application}/residential-addresses', [ResidentialAddressController::class, 'store'])
         ->name('applications.residential-addresses.store');
     Route::patch('applications/{application}/residential-addresses/{residentialAddress}', [ResidentialAddressController::class, 'update'])
@@ -108,12 +110,25 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified']
         ->name('applications.declarations.store');
 });
 
+
+/*
+|--------------------------------------------------------------------------
+| Authenticated API Routes
+|--------------------------------------------------------------------------
+*/
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])->group(function () {
+    // Residential Addresses
+    Route::get('/api/suburbs/{state}', function ($state) {
+        return response()->json(\App\Helpers\AustralianSuburbs::getSuburbsByState($state));
+    })->name('api.suburbs');
+});
+
+
 /*
 |--------------------------------------------------------------------------
 | Admin/Assessor Routes
 |--------------------------------------------------------------------------
 */
-
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified', 'role:admin|assessor'])
     ->prefix('admin')
     ->name('admin.')

@@ -17,7 +17,6 @@ class ResidentialAddress extends Model
         'suburb',
         'state',
         'postcode',
-        'country',
         'start_date',
         'end_date',
         'months_at_address',

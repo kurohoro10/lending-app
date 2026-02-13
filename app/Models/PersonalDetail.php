@@ -20,6 +20,7 @@ class PersonalDetail extends Model
         'spouse_name',
         'date_of_birth',
         'gender',
+        'citizenship_status',
     ];
 
     protected $casts = [

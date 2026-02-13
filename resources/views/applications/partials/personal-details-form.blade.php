@@ -109,6 +109,18 @@
                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl" required>
                 </div>
 
+                <div>
+                    <label for="citizenship_status" class="block text-sm font-semibold text-gray-700 mb-2">Citizenship Status *</label>
+
+                    <select name="citizenship_status" id="citizenship_status" class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
+                        <option value="">Select...</option>
+                        <option value="australian_citizen" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'australian_citizen' ? 'selected' : '' }}>Australian Citizen</option>
+                        <option value="permanent_resident" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'permanent_resident' ? 'selected' : '' }}>Permanent Resident</option>
+                        <option value="temporary_resident" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'temporary_resident' ? 'selected' : '' }}>Temporary Resident</option>
+                        <option value="nz_citizen" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'nz_citizen' ? 'selected' : '' }}>NZ Citizen</option>
+                    </select>
+                </div>
+
                 <div class="col-span-2">
                     <label for="spouse_name" class="block text-sm font-semibold text-gray-700 mb-2">Spouse Name (if married)</label>
                     <input type="text" name="spouse_name" id="spouse_name"

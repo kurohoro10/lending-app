@@ -14,13 +14,19 @@ return new class extends Migration
             $table->enum('address_type', ['current', 'previous_1', 'previous_2', 'previous_3']);
             $table->string('street_address');
             $table->string('suburb');
-            $table->string('state');
+            $table->enum('state', ['NSW', 'VIC', 'QLD', 'SA', 'WA', 'TAS', 'NT', 'ACT'])->nullable();
+            $table->enum('residential_status', [
+                'owner_no_mortgage',
+                'owner_with_mortgage',
+                'renting',
+                'boarding',
+                'living_with_parents',
+                'other'
+            ])->nullable();
             $table->string('postcode');
-            $table->string('country')->default('Australia');
             $table->date('start_date');
             $table->date('end_date')->nullable();
             $table->integer('months_at_address')->nullable();
-            $table->enum('residential_status', ['own', 'rent', 'boarding', 'living_with_parents'])->nullable();
             $table->timestamps();
 
             $table->index('application_id');

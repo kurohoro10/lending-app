@@ -14,6 +14,12 @@ return new class extends Migration
             $table->string('full_name');
             $table->string('mobile_phone')->unique()->nullable();
             $table->string('email')->unique();
+            $table->enum('citizenship_status', [
+                'australian_citizen',
+                'permanent_resident',
+                'temporary_resident',
+                'nz_citizen'
+            ])->nullable();
             $table->enum('marital_status', ['single', 'married', 'divorced', 'widowed', 'defacto']);
             $table->integer('number_of_dependants')->default(0);
             $table->string('spouse_name')->nullable();

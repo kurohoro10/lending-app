@@ -145,6 +145,16 @@
                 </div>
             </div>
 
+             @if ($errors->any())
+                <div class="bg-red-50 border border-red-200 text-red-800 rounded-xl p-4 mb-4">
+                    <ul>
+                        @foreach ($errors->all() as $error)
+                            <li>{{ $error }}</li>
+                        @endforeach
+                    </ul>
+                </div>
+            @endif
+
             <!-- Loan Details Section - Enhanced -->
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
                 <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
