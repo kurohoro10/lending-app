@@ -15,11 +15,23 @@ class EmploymentDetailsController extends Controller
         $this->authorize('update', $application);
 
         if (!$application->personalDetails || !$application->personalDetails->date_of_birth) {
+            $errorMessage = 'Please complete Personal Details (Date of Birth) first.';
+
+            // Check if the request expects JSON (AJAX request)
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employment details added successfully.',
+                    'employment' => $employment,
+                    'type' => 'employment',
+                    'trigger_progress_update' => true
+                ], 201);
+            }
+
             return back()->withErrors([
-                'employment_start_date' => 'Please complete Personal Details (Date of Birth) first.'
+                'employment_start_date' => $errorMessage
             ]);
         }
-
 
         $validated = $request->validate([
             'employment_type' => 'required|in:payg,self_employed,company_director,contract,casual,retired,unemployed',
@@ -45,6 +57,10 @@ class EmploymentDetailsController extends Controller
             $employment->calculateEmploymentLength();
         }
 
+        // Calculate annual income for response
+        $employment->load('application');
+        $employment->annual_income = $employment->getAnnualIncome();
+
         ActivityLog::logActivity(
             'created',
             'Added employment details',
@@ -52,6 +68,17 @@ class EmploymentDetailsController extends Controller
             null,
             $validated
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Employment details added successfully.',
+                'employment' => $employment,
+                'type' => 'employment',
+                'trigger_progress_update' => true
+            ], 201);
+        }
 
         return back()->with('success', 'Employment details added successfully.');
     }
@@ -81,6 +108,9 @@ class EmploymentDetailsController extends Controller
             $employmentDetail->calculateEmploymentLength();
         }
 
+        // Calculate annual income for response
+        $employmentDetail->annual_income = $employmentDetail->getAnnualIncome();
+
         ActivityLog::logActivity(
             'updated',
             'Updated employment details',
@@ -89,13 +119,25 @@ class EmploymentDetailsController extends Controller
             $validated
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Employment details updated successfully.',
+                'employment' => $employmentDetail,
+                'type' => 'employment',
+                'trigger_progress_update' => true
+            ], 200);
+        }
+
         return back()->with('success', 'Employment details updated successfully.');
     }
 
-    public function destroy(Application $application, EmploymentDetail $employmentDetail)
+    public function destroy(Request $request, Application $application, EmploymentDetail $employmentDetail)
     {
         $this->authorize('update', $application);
 
+        $employmentId = $employmentDetail->id;
         $employmentDetail->delete();
 
         ActivityLog::logActivity(
@@ -103,6 +145,17 @@ class EmploymentDetailsController extends Controller
             'Deleted employment details',
             $application
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Employment details deleted successfully.',
+                'deleted_id' => $employmentId,
+                'type' => 'employment',
+                'trigger_progress_update' => true
+            ], 200);
+        }
 
         return back()->with('success', 'Employment details deleted successfully.');
     }
