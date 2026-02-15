@@ -1,6 +1,7 @@
 /**
  * File: resources/js/applications/application.edit.js
  * Purpose: Application edit page behavior with client-side progress tracking
+ *          and dynamic submit section rendering
  */
 
 (() => {
@@ -21,6 +22,7 @@
         employmentDates: document.querySelectorAll('input[name="employment_start_date"]'),
         signature: document.getElementById('signature-data'),
         agreement: document.getElementById('signature-agreement'),
+        submitContainer: document.getElementById('submit-application-container'),
         progressSteps: {
             loanDetails: document.getElementById('step-loan-details'),
             personal: document.getElementById('step-personal'),
@@ -59,7 +61,7 @@
             // Complete state
             circle.className = 'rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg';
             circle.innerHTML = `
-                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                 </svg>
             `;
@@ -181,27 +183,222 @@
         state.progress.expenses = checkExpensesComplete();
 
         renderProgress();
-        updateSubmitState();
+        renderSubmitSection();
+    }
+
+    // Submit section rendering functions
+    function canBeSubmitted() {
+        return Object.values(state.progress).every(Boolean);
+    }
+
+    function getMissingRequirements() {
+        const missing = [];
+        
+        if (!state.progress.personalDetails) {
+            missing.push({
+                text: 'Personal Details (Complete all required fields)',
+                icon: 'cross'
+            });
+        }
+        if (!state.progress.addresses) {
+            missing.push({
+                text: 'At least one Residential Address',
+                icon: 'cross'
+            });
+        }
+        if (!state.progress.employment) {
+            missing.push({
+                text: 'Employment Details',
+                icon: 'cross'
+            });
+        }
+        
+        return missing;
+    }
+
+    function renderSubmitSection() {
+        if (!els.submitContainer) return;
+
+        const canSubmit = canBeSubmitted();
+        
+        const existingContent = els.submitContainer.firstElementChild;
+
+        if (existingContent) {
+            existingContent.classList.add('fade-out');
+            setTimeout(() => {
+                els.submitContainer.innerHTML = canSubmit
+                    ? renderReadyToSubmit()
+                    : renderIncomplete();
+
+                const newContent = els.submitContainer.firstElementChild;
+                if (newContent) {
+                    newContent.classList.add('fade-in');
+                }
+
+                attachSubmitButtonListener();
+                announceSubmitStatus(canSubmit);
+            }, 300);
+
+        } else {
+            // First render - no animation needed
+            els.submitContainer.innerHTML = canSubmit ? 
+                renderReadyToSubmit() : 
+                renderIncomplete();
+            
+            // Re-attach submit button listener after rendering
+            attachSubmitButtonListener();
+        }
+    }
+
+    function renderReadyToSubmit() {
+        return `
+            <div class="bg-gradient-to-br from-green-50 to-emerald-50 overflow-hidden shadow-xl sm:rounded-2xl border-2 border-green-200" role="region" aria-label="Submit application">
+                <div class="p-8">
+                    <div class="flex items-start">
+                        <div class="flex-shrink-0">
+                            <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100" aria-hidden="true">
+                                <svg class="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                            </div>
+                        </div>
+                        <div class="ml-6 flex-1">
+                            <h3 class="text-2xl font-bold text-gray-900 mb-2">Ready to Submit!</h3>
+                            <p class="text-gray-700 mb-6">
+                                Your application is complete and ready to submit. Once submitted, our team will review your application and contact you if additional information is needed.
+                            </p>
+                            <div class="bg-white rounded-xl p-4 mb-6 border border-green-200">
+                                <h4 class="font-semibold text-gray-900 mb-3">What happens next?</h4>
+                                <ul class="space-y-2 text-sm text-gray-600">
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span>Our team will review your application within 24-48 hours</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span>You'll receive an email confirmation immediately</span>
+                                    </li>
+                                    <li class="flex items-start">
+                                        <svg class="w-5 h-5 text-green-500 mr-2 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        <span>We'll contact you if we need any additional information</span>
+                                    </li>
+                                </ul>
+                            </div>
+                            <button type="submit" id="submit-application-btn"
+                                class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-lg uppercase tracking-wide transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300 opacity-50 cursor-not-allowed"
+                                disabled
+                                aria-label="Submit application for review">
+                                <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
+                                </svg>
+                                Submit Application for Review
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function renderIncomplete() {
+        const missing = getMissingRequirements();
+        const missingHTML = missing.map(item => `
+            <li class="flex items-center text-gray-700">
+                <svg class="w-5 h-5 text-yellow-500 mr-2 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                </svg>
+                <span>${item.text}</span>
+            </li>
+        `).join('');
+
+        return `
+            <div class="bg-gradient-to-br from-yellow-50 to-amber-50 border-l-4 border-yellow-400 rounded-xl p-6 shadow-lg" role="region" aria-label="Application incomplete">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-8 w-8 text-yellow-400" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                    </div>
+                    <div class="ml-4 flex-1">
+                        <h3 class="text-lg font-bold text-yellow-800 mb-2">Complete Required Sections</h3>
+                        <p class="text-sm text-yellow-700 mb-4">
+                            Please complete all required sections before submitting your application.
+                        </p>
+                        <div class="bg-white rounded-lg p-4 border border-yellow-200">
+                            <h4 class="font-semibold text-gray-900 mb-3 text-sm">Still needed:</h4>
+                            <ul class="space-y-2 text-sm">
+                                ${missingHTML}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+
+    function announceSubmitStatus(canSubmit) {
+        const announcer = document.getElementById('submit-announcer') || createSubmitAnnouncer();
+        if (canSubmit) {
+            announcer.textContent = 'Application is now ready to submit. All required sections are complete.';
+        } else {
+            const missing = getMissingRequirements();
+            announcer.textContent = `Application cannot be submitted yet. Please complete: ${missing.map(m => m.text).join(', ')}`;
+        }
+    }
+
+    function createSubmitAnnouncer() {
+        const announcer = document.createElement('div');
+        announcer.id = 'submit-announcer';
+        announcer.className = 'sr-only';
+        announcer.setAttribute('role', 'status');
+        announcer.setAttribute('aria-live', 'polite');
+        announcer.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(announcer);
+        return announcer;
     }
 
     // Submit button state management
     function updateSubmitState() {
-        if (!els.submitBtn) return;
+        const submitBtn = document.getElementById('submit-application-btn');
+        if (!submitBtn) return;
 
-        const allSectionsComplete = Object.values(state.progress).every(Boolean);
         const signatureValid = els.signature?.value?.trim() && els.agreement?.checked;
+        const valid = canBeSubmitted() && signatureValid;
 
-        const valid = allSectionsComplete && signatureValid;
-
-        els.submitBtn.disabled = !valid;
-        els.submitBtn.classList.toggle('opacity-50', !valid);
-        els.submitBtn.classList.toggle('cursor-not-allowed', !valid);
+        submitBtn.disabled = !valid;
         
         if (valid) {
-            els.submitBtn.classList.add('hover:shadow-lg', 'hover:scale-105');
+            submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
+            submitBtn.classList.add('hover:shadow-lg', 'hover:scale-105');
         } else {
-            els.submitBtn.classList.remove('hover:shadow-lg', 'hover:scale-105');
+            submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
+            submitBtn.classList.remove('hover:shadow-lg', 'hover:scale-105');
         }
+    }
+
+    function attachSubmitButtonListener() {
+        // Update submit button state when signature changes
+        const signatureInput = document.getElementById('signature-data');
+        const agreementCheckbox = document.getElementById('signature-agreement');
+        
+        if (signatureInput) {
+            signatureInput.removeEventListener('input', updateSubmitState);
+            signatureInput.addEventListener('input', updateSubmitState);
+        }
+        
+        if (agreementCheckbox) {
+            agreementCheckbox.removeEventListener('change', updateSubmitState);
+            agreementCheckbox.addEventListener('change', updateSubmitState);
+        }
+        
+        // Initial state update
+        updateSubmitState();
     }
 
     // Employment date validation
@@ -293,13 +490,10 @@
         updateProgressState();
         attachEmploymentValidation();
         attachPersonalDetailsListeners();
+        attachSubmitButtonListener();
         
         // Watch for dynamic changes
         observeFormChanges();
-
-        // Listen for signature changes
-        els.signature?.addEventListener('input', updateSubmitState);
-        els.agreement?.addEventListener('change', updateSubmitState);
 
         // Listen for successful AJAX form submissions
         document.addEventListener('ajaxSuccess', (e) => {

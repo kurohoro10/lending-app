@@ -1,8 +1,8 @@
-# Commercial Loan CRM System
+# Business Loan CRM System
 
 ## 🎯 Project Overview
 
-A comprehensive Commercial Loan Client Information Management (CIM) System built with Laravel 12, featuring:
+A comprehensive Business Loan Client Information Management (CIM) System built with Laravel 12, featuring:
 
 - ✅ **14 Normalized Database Tables** - No single big table, properly separated data
 - ✅ **Complete Audit Trail** - IP tracking on all submissions and actions
@@ -13,20 +13,14 @@ A comprehensive Commercial Loan Client Information Management (CIM) System built
 - ✅ **Task Management** - ID checks, living expense verification, declarations
 - ✅ **Role-Based Access** - Admin, Assessor, Client roles with permissions
 - ✅ **Electronic Signatures** - Declaration tracking with IP addresses
-- ✅ **Credit Check Integration** - Ready for Credit Sense API
+- ✅ **Credit Check Integration** - Ready for Credit Service API
 - ✅ **PDF Export** - Compliance-ready exports
-
-## 👥 Development Team
-
-- **Allan** - Lead Developer
-- **Aurelio** - Support Developer (API Integration)
-- **Jeffrey** - Support Developer
 
 ## 📋 Requirements Met
 
-### From 09 Feb 2026 Meeting Notes:
+### From Project Requirements:
 ✅ Email and mobile phone uniqueness validation
-✅ Declaration support (provided by John)
+✅ Declaration support (provided by stakeholder)
 ✅ Application form electronic sign-off on submit
 ✅ Living expense figures with client/assessor verification
 ✅ IP address tracking on all submissions
@@ -35,7 +29,7 @@ A comprehensive Commercial Loan Client Information Management (CIM) System built
 ✅ SMS in/out logging
 ✅ Comment system with timestamps
 ✅ PDF export for compliance
-✅ Credit Sense API integration ready
+✅ Credit Service API integration ready
 ✅ Task system (ID check, living expense check, declarations)
 
 ## 🗄️ Database Architecture
@@ -71,7 +65,7 @@ Node.js >= 18
 
 1. **Clone and Install Dependencies**
 ```bash
-cd commercial-loan-crm
+cd business-loan-crm
 composer install
 npm install
 ```
@@ -84,7 +78,7 @@ php artisan key:generate
 
 3. **Configure Database** (in `.env`)
 ```env
-DB_DATABASE=commercial_loan_crm
+DB_DATABASE=business_loan_crm
 DB_USERNAME=your_username
 DB_PASSWORD=your_password
 ```
@@ -92,7 +86,7 @@ DB_PASSWORD=your_password
 4. **Create Database**
 ```bash
 mysql -u root -p
-CREATE DATABASE commercial_loan_crm;
+CREATE DATABASE business_loan_crm;
 exit;
 ```
 
@@ -133,24 +127,31 @@ Visit: http://localhost:8000
 
 After seeding:
 
+### System Account
+- Email: system@internal.local
+- Password: Auto-generated (40-character random string)
+- Role: System
+- Purpose: Internal automated processes, API integrations, system-generated actions
+- Note: This account is not meant for human login
+
 ### Admin Account
-- Email: allan@commercialloan.com
+- Email: admin@example.com
 - Password: password
 
 ### Assessor Accounts
-- Email: aurelio@commercialloan.com (API Integration)
-- Email: jeffrey@commercialloan.com
-- Email: cindy@commercialloan.com (Living Expenses)
+- Email: assessor1@example.com (API Integration)
+- Email: assessor2@example.com
+- Email: assessor3@example.com (Living Expenses)
 - Password: password (for all)
 
 ### Test Client
-- Email: john.smith@example.com
+- Email: client.demo@example.com
 - Password: password
 
 ## 📁 Project Structure
 
 ```
-commercial-loan-crm/
+business-loan-crm/
 ├── app/
 │   ├── Http/Controllers/
 │   │   ├── ApplicationController.php ✅
@@ -215,9 +216,11 @@ commercial-loan-crm/
 - Send emails/SMS (logged automatically)
 - Export applications to PDF
 - View complete audit trail
+- System account for automated workflows and API-triggered actions
 
 ### Security & Compliance
-- Role-based access control (Admin/Assessor/Client)
+- Role-based access control (System/Admin/Assessor/Client)
+- System account for automated processes and API actions
 - Email uniqueness validation
 - Phone number uniqueness validation
 - IP address tracking on all critical actions
@@ -251,10 +254,10 @@ TWILIO_TOKEN=your_twilio_token
 TWILIO_FROM=your_twilio_number
 ```
 
-### Credit Sense API (`.env`)
+### Credit Service API (`.env`)
 ```env
-CREDIT_SENSE_API_KEY=your_api_key
-CREDIT_SENSE_API_URL=https://api.creditsense.com.au
+CREDIT_API_KEY=your_api_key
+CREDIT_API_URL=https://api.creditservice.example.com
 ```
 
 ### Queue Setup (for emails/SMS)
@@ -290,7 +293,7 @@ php artisan queue:work
 - [ ] Communication logging
 
 ### Phase 4 - Advanced
-- [ ] Credit Sense API integration (Aurelio)
+- [ ] Credit Service API integration (Developer B)
 - [ ] PDF export templates
 - [ ] Electronic signature flow
 - [ ] Living expense verification workflow
@@ -390,7 +393,7 @@ This is a proprietary commercial project. Access restricted to the development t
 
 ## 📄 License
 
-Proprietary - Commercial Loan CRM System
+Proprietary - Business Loan CRM System
 
 ---
 

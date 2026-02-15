@@ -16,13 +16,13 @@ class UserSeeder extends Seeder
     {
         // Create Admin User (Allan - Lead Developer)
         $admin = User::create([
-            'name' => 'Allan (Admin)',
-            'email' => 'allan@commercialloan.com',
+            'name' => 'Admin',
+            'email' => 'admin@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
         $admin->assignRole('admin');
-        $this->command->info('✓ Created Admin: allan@commercialloan.com');
+        $this->command->info('✓ Created Admin: admin@example.com');
 
         // Create Admin User (Allan - Lead Developer)
         $admin = User::create([
@@ -36,51 +36,51 @@ class UserSeeder extends Seeder
 
         // Create Assessor Users
         $assessor1 = User::create([
-            'name' => 'Aurelio (Assessor - API)',
-            'email' => 'aurelio@commercialloan.com',
+            'name' => 'Assessor 1',
+            'email' => 'assessor1@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
         $assessor1->assignRole('assessor');
-        $this->command->info('✓ Created Assessor: aurelio@commercialloan.com');
+        $this->command->info('✓ Created Assessor: assessor1@example.com');
 
         $assessor2 = User::create([
-            'name' => 'Jeffrey (Assessor)',
-            'email' => 'jeffrey@commercialloan.com',
+            'name' => 'Assesso 2',
+            'email' => 'assessor2@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
         $assessor2->assignRole('assessor');
-        $this->command->info('✓ Created Assessor: jeffrey@commercialloan.com');
+        $this->command->info('✓ Created Assessor: assessor2@example.com');
 
         // Create additional assessor
         $assessor3 = User::create([
-            'name' => 'Cindy (Assessor - Living Expenses)',
-            'email' => 'cindy@commercialloan.com',
+            'name' => 'Assessor 3',
+            'email' => 'assessor3@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
         $assessor3->assignRole('assessor');
-        $this->command->info('✓ Created Assessor: cindy@commercialloan.com');
+        $this->command->info('✓ Created Assessor: assessor3@example.com');
 
         // Create Test Clients
         $client1 = User::create([
-            'name' => 'John Smith',
-            'email' => 'john.smith@example.com',
+            'name' => 'Client 1',
+            'email' => 'client1@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
         $client1->assignRole('client');
-        $this->command->info('✓ Created Test Client: john.smith@example.com');
+        $this->command->info('✓ Created Test Client: client1@example.com');
 
         $client2 = User::create([
-            'name' => 'Jane Doe',
-            'email' => 'jane.doe@example.com',
+            'name' => 'Client 2',
+            'email' => 'client2@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),
         ]);
         $client2->assignRole('client');
-        $this->command->info('✓ Created Test Client: jane.doe@example.com');
+        $this->command->info('✓ Created Test Client: client2@example.com');
 
         $this->command->info('');
         $this->command->info('=================================');
