@@ -31,6 +31,15 @@ class LivingExpenseController extends Controller
             $validated
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Living expense added successfully.',
+                'expense' => $expense
+            ], 201);
+        }
+
         return back()->with('success', 'Living expense added successfully.');
     }
 
@@ -57,14 +66,24 @@ class LivingExpenseController extends Controller
             $validated
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Living expense updated successfully.',
+                'expense' => $livingExpense
+            ], 200);
+        }
+
         return back()->with('success', 'Living expense updated successfully.');
     }
 
-    public function destroy(Application $application, LivingExpense $livingExpense)
+    public function destroy(Request $request, Application $application, LivingExpense $livingExpense)
     {
         $this->authorize('update', $application);
 
         $expenseName = $livingExpense->expense_name;
+        $expenseId = $livingExpense->id;
         $livingExpense->delete();
 
         ActivityLog::logActivity(
@@ -72,6 +91,15 @@ class LivingExpenseController extends Controller
             "Deleted living expense: {$expenseName}",
             $application
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Living expense deleted successfully.',
+                'deleted_id' => $expenseId
+            ], 200);
+        }
 
         return back()->with('success', 'Living expense deleted successfully.');
     }
@@ -101,6 +129,15 @@ class LivingExpenseController extends Controller
             $oldValues,
             $validated
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Living expense verified successfully.',
+                'expense' => $livingExpense
+            ], 200);
+        }
 
         return back()->with('success', 'Living expense verified successfully.');
     }

@@ -68,6 +68,16 @@ class PersonalDetailsController extends Controller
             $validated
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => $message,
+                'data' => $application->personalDetails
+            ], 200);
+        }
+
+        // Traditional form submission redirect
         return back()->with('success', $message);
     }
 }

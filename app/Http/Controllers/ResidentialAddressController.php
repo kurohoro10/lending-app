@@ -41,6 +41,15 @@ class ResidentialAddressController extends Controller
             $application
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Address added successfully.',
+                'address' => $address
+            ], 201);
+        }
+
         return back()->with('success', 'Address added successfully.');
     }
 
@@ -72,14 +81,24 @@ class ResidentialAddressController extends Controller
             $validated
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Address updated successfully.',
+                'address' => $residentialAddress
+            ], 200);
+        }
+
         return back()->with('success', 'Address updated successfully.');
     }
 
-    public function destroy(Application $application, ResidentialAddress $residentialAddress)
+    public function destroy(Request $request, Application $application, ResidentialAddress $residentialAddress)
     {
         $this->authorize('update', $application);
 
         $addressType = $residentialAddress->address_type;
+        $addressId = $residentialAddress->id;
         $residentialAddress->delete();
 
         ActivityLog::logActivity(
@@ -87,6 +106,15 @@ class ResidentialAddressController extends Controller
             "Deleted {$addressType} address",
             $application
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Address deleted successfully.',
+                'deleted_id' => $addressId
+            ], 200);
+        }
 
         return back()->with('success', 'Address deleted successfully.');
     }

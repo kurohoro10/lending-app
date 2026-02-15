@@ -1,4 +1,4 @@
-<!-- Personal Details Section - Enhanced -->
+<!-- Personal Details Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
         <h3 class="text-lg font-bold text-white flex items-center">
@@ -26,6 +26,9 @@
         </div>
         @endif
 
+        <!-- Success/Error Messages Container -->
+        <div id="form-messages" class="mb-4"></div>
+
         <form id="personal-details" method="POST" action="{{ route('applications.personal-details.store', $application) }}">
             @csrf
 
@@ -35,9 +38,7 @@
                     <input type="text" name="full_name" id="full_name"
                            value="{{ old('full_name', $application->personalDetails->full_name ?? '') }}"
                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl @error('full_name') border-red-500 @enderror" required>
-                    @error('full_name')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <p id="full_name-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div>
@@ -50,9 +51,7 @@
                         readonly
                         aria-readonly="true"
                         title="Email is linked to your account and cannot be changed here.">
-                    @error('email')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <p id="email-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div>
@@ -60,18 +59,17 @@
                     <input type="tel" name="mobile_phone" id="mobile_phone"
                            value="{{ old('mobile_phone', $application->personalDetails->mobile_phone ?? '') }}"
                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl @error('mobile_phone') border-red-500 @enderror" required>
-                    @error('mobile_phone')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <p id="mobile_phone-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div>
-                    <label for="date_of_birth" class="block text-sm font-semibold text-gray-700 mb-2">Date of Birth</label>
+                    <label for="date_of_birth" class="block text-sm font-semibold text-gray-700 mb-2">Date of Birth *</label>
                     <input type="date" name="date_of_birth" id="date_of_birth"
                         value="{{ old('date_of_birth', optional($application->personalDetails?->date_of_birth)->format('Y-m-d')) }}"
                         class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl"
-                        aria-describedby="dob-error">
-                    <p id="dob-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                        required
+                        aria-describedby="date_of_birth-error">
+                    <p id="date_of_birth-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                 </div>
 
                 <div>
@@ -84,6 +82,7 @@
                         <option value="other" {{ old('gender', $application->personalDetails->gender ?? '') == 'other' ? 'selected' : '' }}>Other</option>
                         <option value="prefer_not_to_say" {{ old('gender', $application->personalDetails->gender ?? '') == 'prefer_not_to_say' ? 'selected' : '' }}>Prefer not to say</option>
                     </select>
+                    <p id="gender-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div>
@@ -97,9 +96,7 @@
                         <option value="divorced" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'divorced' ? 'selected' : '' }}>Divorced</option>
                         <option value="widowed" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'widowed' ? 'selected' : '' }}>Widowed</option>
                     </select>
-                    @error('marital_status')
-                        <p class="mt-2 text-sm text-red-600">{{ $message }}</p>
-                    @enderror
+                    <p id="marital_status-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div>
@@ -107,11 +104,11 @@
                     <input type="number" name="number_of_dependants" id="number_of_dependants" min="0"
                            value="{{ old('number_of_dependants', $application->personalDetails->number_of_dependants ?? '0') }}"
                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl" required>
+                    <p id="number_of_dependants-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div>
                     <label for="citizenship_status" class="block text-sm font-semibold text-gray-700 mb-2">Citizenship Status *</label>
-
                     <select name="citizenship_status" id="citizenship_status" class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
                         <option value="">Select...</option>
                         <option value="australian_citizen" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'australian_citizen' ? 'selected' : '' }}>Australian Citizen</option>
@@ -119,6 +116,7 @@
                         <option value="temporary_resident" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'temporary_resident' ? 'selected' : '' }}>Temporary Resident</option>
                         <option value="nz_citizen" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'nz_citizen' ? 'selected' : '' }}>NZ Citizen</option>
                     </select>
+                    <p id="citizenship_status-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
 
                 <div class="col-span-2">
@@ -126,66 +124,20 @@
                     <input type="text" name="spouse_name" id="spouse_name"
                            value="{{ old('spouse_name', $application->personalDetails->spouse_name ?? '') }}"
                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                    <p id="spouse_name-error" class="mt-2 text-sm text-red-600 hidden"></p>
                 </div>
             </div>
 
             <div class="mt-6 flex justify-end">
-                <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105">
+                <button type="submit" id="submit-button" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
                     <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                     </svg>
-                    {{ $application->personalDetails ? 'Update' : 'Save' }} Personal Details
+                    <span id="submit-button-text">{{ $application->personalDetails ? 'Update' : 'Save' }} Personal Details</span>
                 </button>
             </div>
         </form>
     </div>
 </div>
 
-<script>
-document.addEventListener('DOMContentLoaded', function () {
-    const personalDetails = document.getElementById('personal-details');
-    const dobInput = document.getElementById('date_of_birth');
-    const dobError = document.getElementById('dob-error');
-
-    personalDetails.addEventListener('submit', function (event) {
-        event.preventDefault();
-
-        dobError.classList.add('hidden');
-        dobInput.classList.remove('border-red-500');
-
-        if (!dobInput.value) {
-            // No DOB provided — let server decide if it's required
-            personalDetails.submit();
-            return;
-        }
-
-        const birthDate = new Date(dobInput.value);
-        const today = new Date();
-
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
-        if (age < 18) {
-            dobError.textContent = 'You must be at least 18 years old to apply.';
-            dobError.classList.remove('hidden');
-            dobInput.classList.add('border-red-500');
-            dobInput.setAttribute('aria-invalid', 'true');
-            dobInput.focus();
-            return;
-        }
-
-        // ✅ Valid — submit programmatically
-        personalDetails.submit();
-    });
-
-    dobInput.addEventListener('input', function () {
-        dobError.classList.add('hidden');
-        dobInput.classList.remove('border-red-500');
-        dobInput.removeAttribute('aria-invalid');
-    });
-});
-</script>
+@vite('resources/js/applications/personalDetails.js')

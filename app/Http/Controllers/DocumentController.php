@@ -55,6 +55,15 @@ class DocumentController extends Controller
             ]
         );
 
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Document uploaded successfully.',
+                'document' => $document
+            ], 201);
+        }
+
         return back()->with('success', 'Document uploaded successfully.');
     }
 
@@ -75,11 +84,12 @@ class DocumentController extends Controller
         return Storage::download($document->file_path, $document->original_filename);
     }
 
-    public function destroy(Application $application, Document $document)
+    public function destroy(Request $request, Application $application, Document $document)
     {
         $this->authorize('update', $application);
 
         $filename = $document->original_filename;
+        $documentId = $document->id;
 
         if (Storage::exists($document->file_path)) {
             Storage::delete($document->file_path);
@@ -92,6 +102,15 @@ class DocumentController extends Controller
             "Deleted document: {$filename}",
             $application
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Document deleted successfully.',
+                'deleted_id' => $documentId
+            ], 200);
+        }
 
         return back()->with('success', 'Document deleted successfully.');
     }
@@ -119,6 +138,15 @@ class DocumentController extends Controller
             ['status' => $oldStatus],
             $validated
         );
+
+        // Check if the request expects JSON (AJAX request)
+        if ($request->expectsJson() || $request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Document status updated successfully.',
+                'document' => $document
+            ], 200);
+        }
 
         return back()->with('success', 'Document status updated successfully.');
     }
