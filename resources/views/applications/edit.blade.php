@@ -32,7 +32,7 @@
                     <div class="relative">
                         <div class="flex items-center justify-between">
                             <!-- Step 1: Loan Details -->
-                            <div class="flex flex-col items-center relative z-10">
+                            <div id="step-loan-details" class="flex flex-col items-center relative z-10">
                                 <div class="rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg">
                                     <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
                                         <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
@@ -45,7 +45,7 @@
                             <div class="flex-1 h-1 mx-2 rounded {{ $application->hasCompletePersonalDetails() ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-300' }} transition-all duration-500"></div>
 
                             <!-- Step 2: Personal Details -->
-                            <div class="flex flex-col items-center relative z-10">
+                            <div id="step-personal" class="flex flex-col items-center relative z-10">
                                 @if($application->hasCompletePersonalDetails())
                                     <div class="rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg">
                                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -65,7 +65,7 @@
                             <div class="flex-1 h-1 mx-2 rounded {{ $application->residentialAddresses->count() > 0 ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-300' }} transition-all duration-500"></div>
 
                             <!-- Step 3: Addresses -->
-                            <div class="flex flex-col items-center relative z-10">
+                            <div id="step-addresses" class="flex flex-col items-center relative z-10">
                                 @if($application->residentialAddresses->count() > 0)
                                     <div class="rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg">
                                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -85,7 +85,7 @@
                             <div class="flex-1 h-1 mx-2 rounded {{ $application->employmentDetails->count() > 0 ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-300' }} transition-all duration-500"></div>
 
                             <!-- Step 4: Employment -->
-                            <div class="flex flex-col items-center relative z-10">
+                            <div id="step-employment" class="flex flex-col items-center relative z-10">
                                 @if($application->employmentDetails->count() > 0)
                                     <div class="rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg">
                                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -105,7 +105,7 @@
                             <div class="flex-1 h-1 mx-2 rounded {{ $application->livingExpenses->count() > 0 ? 'bg-gradient-to-r from-indigo-600 to-purple-600' : 'bg-gray-300' }} transition-all duration-500"></div>
 
                             <!-- Step 5: Expenses -->
-                            <div class="flex flex-col items-center relative z-10">
+                            <div data-step="expenses" class="flex flex-col items-center relative z-10">
                                 @if($application->livingExpenses->count() > 0)
                                     <div class="rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg">
                                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
@@ -124,7 +124,7 @@
                     </div>
 
                     <!-- Progress Percentage -->
-                    @php
+                     @php
                         $completedSteps = 1; // Loan details always completed at this point
                         if($application->hasCompletePersonalDetails()) $completedSteps++;
                         if($application->residentialAddresses->count() > 0) $completedSteps++;
@@ -138,8 +138,14 @@
                             <span class="text-sm font-semibold text-gray-700">{{ $completedSteps }} of 5 sections completed</span>
                             <span class="text-sm font-bold text-indigo-600">{{ number_format($percentage, 0) }}%</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden">
-                            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out" style="width: {{ $percentage }}%"></div>
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden" 
+                            role="progressbar" 
+                            aria-valuemin="0" 
+                            aria-valuemax="100"
+                            aria-label="Application completion progress">
+                            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out" 
+                                style="width: {{ $percentage }}%"
+                                aria-valuenow="{{ $percentage }}"></div>
                         </div>
                     </div>
                 </div>
@@ -156,88 +162,7 @@
             @endif
 
             <!-- Loan Details Section - Enhanced -->
-            <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
-                <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-                    <h3 class="text-lg font-bold text-white flex items-center">
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                            <path d="M4 4a2 2 0 00-2 2v1h16V6a2 2 0 00-2-2H4z"/>
-                            <path fill-rule="evenodd" d="M18 9H2v5a2 2 0 002 2h12a2 2 0 002-2V9zM4 13a1 1 0 011-1h1a1 1 0 110 2H5a1 1 0 01-1-1zm5-1a1 1 0 100 2h1a1 1 0 100-2H9z" clip-rule="evenodd"/>
-                        </svg>
-                        Loan Details
-                    </h3>
-                </div>
-                <div class="p-6">
-                    <form method="POST" action="{{ route('applications.update', $application) }}">
-                        @csrf
-                        @method('PATCH')
-
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div class="col-span-2">
-                                <label for="loan_amount" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Loan Amount Requested *
-                                </label>
-                                <div class="mt-1 relative rounded-xl shadow-sm">
-                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <span class="text-gray-500 text-lg font-semibold">$</span>
-                                    </div>
-                                    <input type="number" name="loan_amount" id="loan_amount" step="0.01" min="1000"
-                                           value="{{ old('loan_amount', $application->loan_amount) }}"
-                                           class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 py-3 text-lg border-gray-300 rounded-xl" required>
-                                </div>
-                                <p class="mt-2 text-xs text-gray-500">Minimum: $1,000</p>
-                            </div>
-
-                            <div class="col-span-2">
-                                <label for="loan_purpose" class="block text-sm font-semibold text-gray-700 mb-2">Loan Purpose *</label>
-                                <select name="loan_purpose" id="loan_purpose" required
-                                        class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="business_expansion" {{ old('loan_purpose', $application->loan_purpose) == 'business_expansion' ? 'selected' : '' }}>Business Expansion</option>
-                                    <option value="equipment_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'equipment_purchase' ? 'selected' : '' }}>Equipment Purchase</option>
-                                    <option value="working_capital" {{ old('loan_purpose', $application->loan_purpose) == 'working_capital' ? 'selected' : '' }}>Working Capital</option>
-                                    <option value="property_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'property_purchase' ? 'selected' : '' }}>Property Purchase</option>
-                                    <option value="debt_consolidation" {{ old('loan_purpose', $application->loan_purpose) == 'debt_consolidation' ? 'selected' : '' }}>Debt Consolidation</option>
-                                    <option value="other" {{ old('loan_purpose', $application->loan_purpose) == 'other' ? 'selected' : '' }}>Other</option>
-                                </select>
-                            </div>
-
-                            <div class="col-span-2">
-                                <label for="loan_purpose_details" class="block text-sm font-semibold text-gray-700 mb-2">Purpose Details</label>
-                                <textarea name="loan_purpose_details" id="loan_purpose_details" rows="3"
-                                          class="mt-1 shadow-sm focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 border-gray-300 rounded-xl"
-                                          placeholder="Provide additional details about your loan purpose...">{{ old('loan_purpose_details', $application->loan_purpose_details) }}</textarea>
-                            </div>
-
-                            <div>
-                                <label for="term_months" class="block text-sm font-semibold text-gray-700 mb-2">Loan Term (Months) *</label>
-                                <input type="number" name="term_months" id="term_months" min="1" max="360"
-                                       value="{{ old('term_months', $application->term_months) }}"
-                                       class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl" required>
-                            </div>
-
-                            <div>
-                                <label for="security_type" class="block text-sm font-semibold text-gray-700 mb-2">Security Type</label>
-                                <select name="security_type" id="security_type"
-                                        class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                    <option value="">Select security type...</option>
-                                    <option value="property" {{ old('security_type', $application->security_type) == 'property' ? 'selected' : '' }}>Property</option>
-                                    <option value="equipment" {{ old('security_type', $application->security_type) == 'equipment' ? 'selected' : '' }}>Equipment</option>
-                                    <option value="vehicle" {{ old('security_type', $application->security_type) == 'vehicle' ? 'selected' : '' }}>Vehicle</option>
-                                    <option value="unsecured" {{ old('security_type', $application->security_type) == 'unsecured' ? 'selected' : '' }}>Unsecured</option>
-                                </select>
-                            </div>
-                        </div>
-
-                        <div class="mt-6 flex justify-end">
-                            <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105">
-                                <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
-                                </svg>
-                                Update Loan Details
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
+            @include('applications.partials.loan-details', ['applications' => $application])
 
             <!-- Personal Details Section -->
             @include('applications.partials.personal-details-form', ['application' => $application])
@@ -377,11 +302,9 @@
 
    <script>
     Object.assign(window.APP_STATE, {
-        progress: @json($progressState),
-        legalAge: 18
+        progress: @json($progressState)
     });
     </script>
-
 
     @vite('resources/js/applications/application.edit.js')
 

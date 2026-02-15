@@ -36,7 +36,9 @@ class LivingExpenseController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Living expense added successfully.',
-                'expense' => $expense
+                'expense' => $expense,
+                'type' => 'expense',
+                'trigger_progress_update' => true
             ], 201);
         }
 
@@ -71,7 +73,9 @@ class LivingExpenseController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Living expense updated successfully.',
-                'expense' => $livingExpense
+                'expense' => $livingExpense,
+                'type' => 'expense',
+                'trigger_progress_update' => true
             ], 200);
         }
 
@@ -97,7 +101,9 @@ class LivingExpenseController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Living expense deleted successfully.',
-                'deleted_id' => $expenseId
+                'deleted_id' => $expenseId,
+                'type' => 'expense',
+                'trigger_progress_update' => true
             ], 200);
         }
 

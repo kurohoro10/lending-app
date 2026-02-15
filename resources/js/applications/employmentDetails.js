@@ -3,6 +3,11 @@
     const messagesContainer = document.getElementById('employment-messages');
     const submitButton = document.getElementById('submit-employment-button');
     const submitButtonText = document.getElementById('submit-employment-text');
+    const employmentDetailsAccordionBtn = document.getElementById('employment-details-btn');
+
+    employmentDetailsAccordionBtn.addEventListener('click', () => {
+        toggleAccordion('employment-details');
+    });
 
     // Helper functions
     function clearErrors() {
@@ -112,6 +117,10 @@
                 if (data.employment) {
                     addEmploymentToList(data.employment);
                     updateEmploymentCount();
+
+                    document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                        detail: { type: 'employment' }
+                    }));
                 }
             } else {
                 // Validation errors
@@ -152,7 +161,7 @@
                             1 Employment(s)
                         </span>
                     </div>
-                    <div id="employment-list"></div>
+                    <div id="employment-list" data-employment-section></div>
                 </div>
             `;
         }
@@ -166,7 +175,7 @@
         const annualIncome = calculateAnnualIncome(employment.base_income, employment.additional_income || 0, employment.income_frequency);
 
         return `
-            <div class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="${employment.id}">
+            <div data-employment-card class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="${employment.id}">
                 <div class="flex justify-between items-start">
                     <div class="flex items-start space-x-4">
                         <div class="flex-shrink-0">
@@ -190,8 +199,9 @@
                         </div>
                     </div>
                     <button type="button"
-                            onclick="deleteEmployment(${employment.application_id}, ${employment.id})"
-                            class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition">
+                            data-employment-id="${employment.id}"
+                            aria-label="Delete employment record ${employment.employment_type.replace(/_/g, ' ')}"
+                            class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition delete-employment-btn">
                         <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
                         </svg>
@@ -236,7 +246,7 @@
         }
 
         const messagesContainer = document.getElementById('employment-messages');
-        const deleteUrl = `/applications/${applicationId}/employment-details/${employmentId}`;
+        const deleteUrl = EMPLOYMENT_CONFIG.deleteRoute.replace(':id', employmentId);
 
         try {
             const response = await fetch(deleteUrl, {
@@ -244,6 +254,7 @@
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                     'Accept': 'application/json',
+                    'Content-Type': 'application/json',
                 }
             });
 
@@ -255,6 +266,12 @@
                 if (employmentElement) {
                     employmentElement.remove();
                 }
+
+                updateEmploymentCount();
+
+                document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                    detail: { type: 'employment' }
+                }));
 
                 // Update count
                 const badge = document.getElementById('employment-count-badge');
@@ -303,10 +320,11 @@
     }
 
     document.addEventListener('click', e => {
-        const btn = e.target.closest('.delete-document-btn');
+        const btn = e.target.closest('.delete-employment-btn');
         if (!btn) return;
 
-        const documentId = btn.dataset.documentId;
-        deleteDocument(EMPLOYMENT_CONFIG.applicationId, documentId);
+        const employment_id = btn.dataset.employmentId;
+        
+        deleteEmployment(EMPLOYMENT_CONFIG.applicationId, employment_id);
     });
 })();

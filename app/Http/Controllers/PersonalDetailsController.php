@@ -73,7 +73,9 @@ class PersonalDetailsController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => $message,
-                'data' => $application->personalDetails
+                'data' => $application->personalDetails,
+                'type' => 'personal',
+                'trigger_progress_update' => true
             ], 200);
         }
 

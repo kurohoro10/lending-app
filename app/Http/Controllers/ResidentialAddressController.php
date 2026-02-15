@@ -46,7 +46,9 @@ class ResidentialAddressController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Address added successfully.',
-                'address' => $address
+                'address' => $address,
+                'type' => 'address',
+                'trigger_progress_update' => true
             ], 201);
         }
 
@@ -86,7 +88,9 @@ class ResidentialAddressController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Address updated successfully.',
-                'address' => $residentialAddress
+                'address' => $residentialAddress,
+                'type' => 'address',
+                'trigger_progress_update' => true
             ], 200);
         }
 
@@ -112,7 +116,9 @@ class ResidentialAddressController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Address deleted successfully.',
-                'deleted_id' => $addressId
+                'deleted_id' => $addressId,
+                'type' => 'address',
+                'trigger_progress_update' => true
             ], 200);
         }
 

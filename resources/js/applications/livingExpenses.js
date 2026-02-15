@@ -3,6 +3,11 @@
     const messagesContainer = document.getElementById('expense-messages');
     const submitButton = document.getElementById('submit-expense-button');
     const submitButtonText = document.getElementById('submit-expense-text');
+    const livingExpensesAccordionBtn = document.getElementById('living-expenses-btn');
+    
+    livingExpensesAccordionBtn.addEventListener('click', () => {
+        toggleAccordion('living-expenses');
+    });
 
     // Helper functions
     function clearErrors() {
@@ -132,6 +137,10 @@
                 if (data.expense) {
                     addExpenseToTable(data.expense);
                     updateTotalExpenses();
+
+                    document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                        detail: { type: 'expense' }
+                    }));
                 }
             } else {
                 // Validation errors
@@ -166,7 +175,7 @@
         if (!tbody) {
             tableContainer.innerHTML = `
                 <div class="mb-6 overflow-hidden rounded-xl border border-gray-200">
-                    <div class="overflow-x-auto">
+                    <div data-expenses-section class="overflow-x-auto">
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
                                 <tr>
@@ -201,7 +210,7 @@
         const monthlyAmount = calculateMonthlyAmount(expense.client_declared_amount, expense.frequency);
 
         return `
-            <tr class="expense-row hover:bg-gray-50 transition" data-expense-id="${expense.id}" data-monthly-amount="${monthlyAmount}">
+            <tr data-expense-row class="expense-row hover:bg-gray-50 transition" data-expense-id="${expense.id}" data-monthly-amount="${monthlyAmount}">
                 <td class="px-6 py-4 whitespace-nowrap">
                     <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
                         ${expense.expense_category.charAt(0).toUpperCase() + expense.expense_category.slice(1)}
@@ -213,8 +222,9 @@
                 <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">$${monthlyAmount.toFixed(2)}</td>
                 <td class="px-6 py-4 text-right whitespace-nowrap">
                     <button type="button"
-                            onclick="deleteExpense(${expense.application_id}, ${expense.id})"
-                            class="text-red-600 hover:text-red-900 text-sm font-medium">
+                            data-expense-id="${expense.id}"
+                            aria-label="Delete expense record ${expense.expense_name}"
+                            class="text-red-600 hover:text-red-900 text-sm font-medium delete-expense-btn">
                         Delete
                     </button>
                 </td>
@@ -245,7 +255,7 @@
         }
 
         const messagesContainer = document.getElementById('expense-messages');
-        const deleteUrl = `/applications/${applicationId}/living-expenses/${expenseId}`;
+        const deleteUrl = EXPENSES_CONFIG.deleteRoute.replace(':id', expenseId);
 
         try {
             const response = await fetch(deleteUrl, {
@@ -266,8 +276,11 @@
                     expenseRow.remove();
                 }
 
-                // Update total
                 updateTotalExpenses();
+
+                document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                    detail: { type: 'expense' }
+                }));
 
                 // Show success message
                 messagesContainer.innerHTML = `
@@ -323,4 +336,12 @@
             totalElement.textContent = `$${total.toFixed(2)}`;
         }
     }
+
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.delete-expense-btn')
+        if (!btn) return;
+
+        const expense_id = btn.dataset.expenseId;
+        deleteExpense(EXPENSES_CONFIG.applicationId, expense_id);
+    });
 })();

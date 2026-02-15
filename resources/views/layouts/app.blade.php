@@ -15,6 +15,7 @@
         window.APP_STATE = window.APP_STATE || {};
         window.RESIDENTIAL_CONFIG = window.RESIDENTIAL_CONFIG || {};
         window.EMPLOYMENT_CONFIG = window.EMPLOYMENT_CONFIG || {};
+        window.EXPENSES_CONFIG = window.EXPENSES_CONFIG || {};
     </script>
 
     <!-- Scripts -->

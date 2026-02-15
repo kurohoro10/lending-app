@@ -1,4 +1,13 @@
 (() => {
+    const typedTab = document.getElementById('tab-typed');
+    const drawnTab = document.getElementById('tab-drawn');
+    const clearBtn = document.getElementById('clear-signature-btn');
+    const eSignatureAccordionBtn = document.getElementById('e-signature-btn');
+    
+    eSignatureAccordionBtn.addEventListener('click', () => {
+        toggleAccordion('e-signature');
+    });
+
     function showSignatureType(type) {
         document.querySelectorAll('.signature-panel').forEach(panel => panel.classList.add('hidden'));
         document.getElementById('signature-' + type).classList.remove('hidden');
@@ -94,5 +103,15 @@
         canvas.addEventListener('touchstart', start, { passive: false });
         canvas.addEventListener('touchmove', move, { passive: false });
         canvas.addEventListener('touchend', stop);
-    }
+
+        typedTab?.addEventListener('click', () => {
+            showSignatureType('typed');
+        });
+
+        drawnTab?.addEventListener('click', () => {
+            showSignatureType('drawn');
+        });
+
+        clearBtn?.addEventListener('click', clearCanvas);
+            }
 })();

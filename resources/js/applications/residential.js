@@ -1,4 +1,5 @@
 (() => {
+    const residentialAccordionBtn = document.getElementById('residential-addresses-btn');
     const form = document.getElementById('residential-address-form');
     const typeSelect = document.getElementById('address-type-select');
     const startDateInput = document.getElementById('start-date-input');
@@ -8,6 +9,11 @@
     const submitButtonText = document.getElementById('submit-address-text');
     const suburbSelect = document.getElementById('suburb-selector');
     const manualInput = document.getElementById('suburb-manual');
+    const stateSelect = document.getElementById('state-selector');
+
+    residentialAccordionBtn.addEventListener('click', () => {
+        toggleAccordion('residential-addresses');
+    });
 
     // Helper functions
     function clearErrors() {
@@ -111,7 +117,7 @@
     }
 
     // Suburb dropdown functionality
-    window.updateSuburbs = function(state) {
+    function updateSuburbs(state) {
         if (!state) {
             suburbSelect.disabled = true;
             suburbSelect.innerHTML = '<option value="">Select state first...</option>';
@@ -129,6 +135,11 @@
             suburbSelect.appendChild(option);
         });
     };
+
+    stateSelect?.addEventListener('change', function (e) {
+        updateSuburbs(e.target.value);
+    });
+    
 
     // Manual suburb entry logic
     manualInput?.addEventListener('input', function(e) {
@@ -203,6 +214,10 @@
                 if (data.address) {
                     addAddressToList(data.address);
                     updateAddressCount();
+
+                    document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                        detail: { type: 'address' }
+                    }));
                 }
             } else {
                 // Validation errors
@@ -243,7 +258,7 @@
                             1 Address(es)
                         </span>
                     </div>
-                    <div id="address-list" class="space-y-3"></div>
+                    <div id="address-list" class="space-y-3" data-addresses-section></div>
                 </div>
             `;
         }
@@ -258,7 +273,7 @@
         const endDate = address.end_date ? new Date(address.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present';
 
         return `
-            <div class="address-item p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 hover:shadow-lg hover:border-indigo-200 transition-all" data-address-id="${address.id}">
+            <div data-address-card class="address-item p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 hover:shadow-lg hover:border-indigo-200 transition-all" data-address-id="${address.id}">
                 <div class="flex justify-between items-start">
                     <div class="flex items-start space-x-4 flex-1">
                         <div class="flex-shrink-0">
@@ -293,6 +308,7 @@
                     </div>
                     <button type="button"
                             data-address-id="${address.id}"
+                            aria-label="Delete address record ${address.address_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}"
                             class="ml-4 inline-flex items-center px-4 py-2 bg-red-50 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition-all hover:shadow-md delete-address-btn">
                         <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
                             <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
@@ -340,6 +356,12 @@
                 if (addressElement) {
                     addressElement.remove();
                 }
+
+                updateAddressCount();
+
+                document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                    detail: { type: 'address' }
+                }));
 
                 // Update count
                 const badge = document.getElementById('address-count-badge');

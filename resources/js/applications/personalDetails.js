@@ -1,9 +1,14 @@
 (() => {
+    const personalDetailsAccordionBtn = document.getElementById('personal-details-btn');
     const form = document.getElementById('personal-details');
     const dobInput = document.getElementById('date_of_birth');
     const submitButton = document.getElementById('submit-button');
     const submitButtonText = document.getElementById('submit-button-text');
     const messagesContainer = document.getElementById('form-messages');
+
+    personalDetailsAccordionBtn.addEventListener('click', () => {
+        toggleAccordion('personal-details');
+    });
 
     // Helper function to clear all error messages
     function clearErrors() {

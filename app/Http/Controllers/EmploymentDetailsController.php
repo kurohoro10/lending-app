@@ -20,12 +20,12 @@ class EmploymentDetailsController extends Controller
             // Check if the request expects JSON (AJAX request)
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
-                    'success' => false,
-                    'message' => $errorMessage,
-                    'errors' => [
-                        'employment_start_date' => [$errorMessage]
-                    ]
-                ], 422);
+                    'success' => true,
+                    'message' => 'Employment details added successfully.',
+                    'employment' => $employment,
+                    'type' => 'employment',
+                    'trigger_progress_update' => true
+                ], 201);
             }
 
             return back()->withErrors([
@@ -74,7 +74,9 @@ class EmploymentDetailsController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Employment details added successfully.',
-                'employment' => $employment
+                'employment' => $employment,
+                'type' => 'employment',
+                'trigger_progress_update' => true
             ], 201);
         }
 
@@ -122,7 +124,9 @@ class EmploymentDetailsController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Employment details updated successfully.',
-                'employment' => $employmentDetail
+                'employment' => $employmentDetail,
+                'type' => 'employment',
+                'trigger_progress_update' => true
             ], 200);
         }
 
@@ -147,7 +151,9 @@ class EmploymentDetailsController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Employment details deleted successfully.',
-                'deleted_id' => $employmentId
+                'deleted_id' => $employmentId,
+                'type' => 'employment',
+                'trigger_progress_update' => true
             ], 200);
         }
 

@@ -23,6 +23,11 @@
     const messagesContainer = document.getElementById('document-messages');
     const submitButton = document.getElementById('submit-document-button');
     const submitButtonText = document.getElementById('submit-document-text');
+    const documentsAccordionBtn = document.getElementById('documents-btn');
+    
+    documentsAccordionBtn.addEventListener('click', () => {
+        toggleAccordion('documents');
+    });
 
     const allowedTypes = [
         'application/pdf',
