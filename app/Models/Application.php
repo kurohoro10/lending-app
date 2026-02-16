@@ -154,10 +154,41 @@ class Application extends Model
 
     public function canBeSubmitted(): bool
     {
-        return $this->status === 'draft' &&
-               $this->hasCompletePersonalDetails() &&
-               $this->residentialAddresses()->count() > 0 &&
-               $this->employmentDetails()->exists();
+        // Check all requirements
+        $hasPersonalDetails = $this->personalDetails !== null;
+        $hasResidentialAddresses = $this->residentialAddresses()->count() > 0;
+        $hasEmploymentDetails = $this->employmentDetails()->count() > 0;
+        $hasLivingExpenses = $this->livingExpenses()->count() > 0;
+        $hasFinalSignature = $this->hasFinalSignature();
+        $isDraft = $this->status === 'draft';
+
+        $checks = [
+            'status_is_draft' => $isDraft,
+            'has_personal_details' => $hasPersonalDetails,
+            'has_residential_addresses' => $hasResidentialAddresses,
+            'has_employment_details' => $hasEmploymentDetails,
+            'has_living_expenses' => $hasLivingExpenses,
+            'has_final_signature' => $hasFinalSignature,
+        ];
+
+        // Log what's missing
+        $missing = array_keys(array_filter($checks, fn($value) => !$value));
+
+        if (!empty($missing)) {
+            \Log::warning('Application cannot be submitted - missing requirements', [
+                'application_id' => $this->id,
+                'missing' => $missing,
+                'checks' => $checks,
+            ]);
+        }
+
+        // Return true only if ALL checks pass
+        return $isDraft
+            && $hasPersonalDetails
+            && $hasResidentialAddresses
+            && $hasEmploymentDetails
+            && $hasLivingExpenses
+            && $hasFinalSignature;
     }
 
     /**
@@ -196,5 +227,17 @@ class Application extends Model
             && !empty($pd->date_of_birth)
             && !empty($pd->gender)
             && !empty($pd->marital_status);
+    }
+
+    /**
+     * Check if application has final submission signature
+     */
+    public function hasFinalSignature(): bool
+    {
+        return $this->declarations()
+            ->where('declaration_type', 'final_submission')
+            ->where('is_agreed', true)
+            ->whereNotNull('signature_data')
+            ->exists();
     }
 }

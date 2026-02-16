@@ -17,6 +17,8 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Notification;
 use App\Services\AutoDeclineService;
 use App\Notifications\Application\ApplicationDeclined;
+use App\Jobs\SendSMSMessage;
+use App\Actions\Application\SubmitApplication;
 
 class ApplicationController extends Controller
 {
@@ -147,18 +149,46 @@ class ApplicationController extends Controller
                 Auth::login($user);
             }
 
-            // Send email notifications
+            // Send email and SMS notifications
             try {
+                $twilio = app(\App\Services\TwilioService::class);
+
                 if (!$isAuthenticated) {
                     // New user - send welcome email
                     $user->notify(new WelcomeNewUser($application));
+
+                    // Send welcome SMS/WhatsApp if phone available
+                    if ($application->personalDetails?->mobile_phone) {
+                        try {
+                            $twilio->sendWhatsApp(
+                                $application->personalDetails->mobile_phone,
+                                "Welcome to LoanFlow! Your loan application #{$application->application_number} has been created. Complete your details to submit.",
+                                $application
+                            );
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to send welcome SMS: ' . $e->getMessage());
+                        }
+                    }
                 } else {
                     // Existing user - send application created notification
                     $user->notify(new ApplicationCreated($application));
+
+                    // Send SMS notification
+                    if ($application->personalDetails?->mobile_phone) {
+                        try {
+                            $twilio->sendWhatsApp(
+                                $application->personalDetails->mobile_phone,
+                                "Your loan application #{$application->application_number} has been created successfully.",
+                                $application
+                            );
+                        } catch (\Exception $e) {
+                            \Log::error('Failed to send creation SMS: ' . $e->getMessage());
+                        }
+                    }
                 }
             } catch (\Exception $e) {
-                // Log email error but don't fail the request
-                \Log::error('Failed to send application created email: ' . $e->getMessage());
+                // Log error but don't fail the request
+                \Log::error('Failed to send notifications: ' . $e->getMessage());
             }
 
             $message = $isAuthenticated
@@ -254,129 +284,96 @@ class ApplicationController extends Controller
             $validated
         );
 
-        // Send email notification only if there were actual changes
+        // Send email and SMS notification only if there were actual changes
         if (!empty($changes)) {
             try {
                 $application->user->notify(new ApplicationUpdated($application, $changes));
+
+                // Send SMS notification
+                if ($application->personalDetails?->mobile_phone) {
+                    $changesList = implode(', ', array_keys($changes));
+                    try {
+                        app(\App\Services\TwilioService::class)->sendWhatsApp(
+                            $application->personalDetails->mobile_phone,
+                            "Your loan application #{$application->application_number} has been updated. Changes: {$changesList}",
+                            $application
+                        );
+                    } catch (\Exception $e) {
+                        \Log::error('Failed to send update SMS: ' . $e->getMessage());
+                    }
+                }
             } catch (\Exception $e) {
-                \Log::error('Failed to send application updated email: ' . $e->getMessage());
+                \Log::error('Failed to send update notifications: ' . $e->getMessage());
             }
         }
 
         return back()->with('success', 'Application updated successfully.');
     }
 
-    public function submit(Application $application)
+    public function submit(Application $application, SubmitApplication $action)
     {
         $this->authorize('update', $application);
 
-        if (!$application->canBeSubmitted()) {
-            return back()->with('error', 'Please complete all required sections before submitting.');
-        }
+        // Validate signature first
+        $validated = request()->validate([
+            'signature' => ['required', 'string'],
+            'signature_agreement' => ['accepted'],
+            'signature_type' => ['nullable', 'string'],
+            'signatory_position' => ['nullable', 'string'],
+        ]);
 
-        // Validate signature is provided
-        if (!request()->has('signature') || empty(request()->input('signature'))) {
-            return back()->with('error', 'Electronic signature is required before submission.');
-        }
+        \Log::info('Signature validated', [
+            'has_signature' => !empty($validated['signature']),
+            'signature_length' => strlen($validated['signature']),
+        ]);
 
-        if (!request()->has('signature_agreement') || !request()->input('signature_agreement')) {
-            return back()->with('error', 'You must confirm the signature agreement before submission.');
-        }
-
-        $application->declarations()->create([
-                    'declaration_type' => 'final_submission',
-                    'declaration_text' => 'I declare that all information provided in this application is true and accurate to the best of my knowledge. I understand that providing false or misleading information may result in rejection of this application or legal action.',
-                    'is_agreed' => true,
-                    'agreed_at' => now(),
-                    'agreement_ip' => request()->ip(),
-                    'signature_data' => request()->input('signature'),
-                    'signature_type' => request()->input('signature_type', 'typed'),
-                    'signatory_name' => auth()->user()->name,
-                    'signatory_position' => request()->input('signatory_position'),
-                    'signature_timestamp' => now(),
-                ]);
-
-        // Auto-decline check based on criteria
-        $declineCheck = AutoDeclineService::checkDeclineCriteria($application);
-
-        if ($declineCheck['should_decline']) {
-            DB::beginTransaction();
-            try {
-                $application->update([
-                    'status' => 'declined',
-                    'submitted_at' => now(),
-                    'submission_ip' => request()->ip(),
-                ]);
-
-                // Log the auto-decline reason
-                ActivityLog::logActivity(
-                    'auto_declined',
-                    'Application auto-declined: ' . $declineCheck['reason'],
-                    $application
-                );
-
-                $systemUser = User::where('email', 'system@internal.local')->first();
-
-                // Add internal comment with decline reason
-                $application->comments()->create([
-                    'user_id' => $systemUser->id,
-                    'comment' => 'AUTO-DECLINE: ' . $declineCheck['reason'],
-                    'is_internal' => true,
-                    'is_client_visible' => false,
-                    'commenter_ip' => request()->ip(),
-                ]);
-
-                DB::commit();
-
-                // Send decline notification
-                try {
-                    $application->user->notify(new ApplicationDeclined($application, $declineCheck['reason']));
-                } catch (\Exception $e) {
-                    \Log::error('Failed to send auto-decline email: ' . $e->getMessage());
-                }
-
-                return redirect()
-                    ->route('applications.show', $application)
-                    ->with('error', 'Your application does not meet our current lending criteria: ' . $declineCheck['reason']);
-            } catch (\Exception $e) {
-                DB::rollBack();
-                return back()->with('error', 'Failed to process application. Please try again.');
-            }
-        }
-
+        // Create signature BEFORE canBeSubmitted check
         DB::beginTransaction();
         try {
-            $application->update([
-                'status' => 'submitted',
-                'submitted_at' => now(),
-                'submission_ip' => request()->ip(),
+            $declaration = $application->declarations()->create([
+                'declaration_type'   => 'final_submission',
+                'declaration_text'   => 'I declare that all information provided in this application is true and accurate to the best of my knowledge. I understand that providing false or misleading information may result in rejection of this application or legal action.',
+                'is_agreed'          => true,
+                'agreed_at'          => now(),
+                'agreement_ip'       => request()->ip(),
+                'signature_data'     => $validated['signature'],
+                'signature_type'     => $validated['signature_type'] ?? 'typed',
+                'signatory_name'     => auth()->user()->name,
+                'signatory_position' => $validated['signatory_position'] ?? null,
+                'signature_timestamp'=> now(),
             ]);
 
-            ActivityLog::logActivity(
-                'submitted',
-                'Application submitted for review',
-                $application
-            );
+            \Log::info('Signature created', [
+                'declaration_id' => $declaration->id,
+            ]);
+
+            // NOW check if can be submitted (signature exists now)
+            if (!$application->canBeSubmitted()) {
+                DB::rollBack();
+                \Log::warning('Submit validation failed after signature creation');
+                return back()->with('error', 'Please complete all required sections before submitting.');
+            }
 
             DB::commit();
 
-            // Send email notifications
-            try {
-                // Notify the applicant
-                $application->user->notify(new ApplicationSubmitted($application));
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to create signature', [
+                'error' => $e->getMessage()
+            ]);
+            return back()->with('error', 'Failed to process signature. Please try again.');
+        }
 
-                // Notify admins
-                $admins = User::role('admin')->get();
-                Notification::send($admins, new NewApplicationSubmittedAdmin($application));
-            } catch (\Exception $e) {
-                \Log::error('Failed to send application submission emails: ' . $e->getMessage());
-            }
+        // Now process the submission
+        try {
+            $action->handle($application, $validated);
 
             return redirect()
                 ->route('applications.show', $application)
-                ->with('success', 'Application submitted successfully. You will receive a confirmation email shortly.');
+                ->with('success', 'Application submitted successfully.');
         } catch (\Exception $e) {
-            DB::rollBack();
+            \Log::error('Application submission failed: ' . $e->getMessage());
+
             return back()->with('error', 'Failed to submit application. Please try again.');
         }
     }
@@ -400,5 +397,25 @@ class ApplicationController extends Controller
         return redirect()
             ->route('applications.index')
             ->with('success', 'Application deleted successfully.');
+    }
+
+    /**
+     * Send SMS notification for application event
+     */
+    protected function sendApplicationSMS(Application $application, string $message): void
+    {
+        if (!$application->personalDetails?->mobile_phone) {
+            return;
+        }
+
+        try {
+            SendSMSMessage::dispatch(
+                $application->personalDetails->mobile_phone,
+                $message,
+                $application->id
+            );
+        } catch (\Exception $e) {
+            \Log::error('Failed to queue SMS: ' . $e->getMessage());
+        }
     }
 }

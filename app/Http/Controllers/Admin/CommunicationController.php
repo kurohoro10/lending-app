@@ -7,6 +7,7 @@ use App\Models\Application;
 use App\Models\Communication;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use App\Services\TwilioService;
 
 class CommunicationController extends Controller
 {
@@ -64,43 +65,25 @@ class CommunicationController extends Controller
         return back()->with('success', 'Email sent successfully.');
     }
 
-    public function sendSms(Request $request, Application $application)
+    public function sendSms(Request $request, Application $application, TwilioService $twilio)
     {
         $validated = $request->validate([
-            'to_address' => 'required|string|max:20',
-            'body' => 'required|string|max:160',
+            'message' => 'required|string|max:1000',
         ]);
 
-        // Create communication record
-        $communication = $application->communications()->create([
-            'user_id' => $application->user_id,
-            'type' => 'sms_out',
-            'direction' => 'outbound',
-            'from_address' => config('services.twilio.from'),
-            'to_address' => $validated['to_address'],
-            'body' => $validated['body'],
-            'status' => 'pending',
-            'sender_ip' => $request->ip(),
-        ]);
+        $phone = $application->personalDetails->mobile_phone;
 
-        // TODO: Queue actual SMS sending job
-        // dispatch(new SendSmsNotification($communication));
+        if (!$phone) {
+            return back()->with('error', 'No phone number found for this applicant.');
+        }
 
-        // For now, mark as sent
-        $communication->update([
-            'status' => 'sent',
-            'sent_at' => now(),
-        ]);
+        try {
+            $twilio->sendSMS($phone, $validated['message'], $application);
 
-        ActivityLog::logActivity(
-            'sent_sms',
-            "Sent SMS to {$validated['to_address']}",
-            $communication,
-            null,
-            ['to' => $validated['to_address']]
-        );
-
-        return back()->with('success', 'SMS sent successfully.');
+            return back()->with('success', 'SMS sent successfully to ' . $phone);
+        } catch (\Exception $e) {
+            return back()->with('error', 'Failed to send SMS: ' . $e->getMessage());
+        }
     }
 
     public function show(Communication $communication)

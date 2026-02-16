@@ -2,6 +2,7 @@
 
 namespace App\Notifications\Application;
 
+use App\Jobs\SendSMSMessage;
 use App\Models\Application;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;

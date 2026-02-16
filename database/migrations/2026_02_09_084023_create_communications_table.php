@@ -12,13 +12,13 @@ return new class extends Migration
             $table->id();
             $table->foreignId('application_id')->nullable()->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->nullable()->constrained()->onDelete('set null');
-            $table->enum('type', ['email_in', 'email_out', 'sms_in', 'sms_out', 'system_notification']);
-            $table->string('direction'); // inbound, outbound
+            $table->enum('type', ['email_in', 'email_out', 'sms_in', 'sms_out', 'whatsapp', 'system_notification']);
+            $table->enum('direction', ['inbound', 'outbound']);
             $table->string('from_address')->nullable();
             $table->string('to_address')->nullable();
             $table->string('subject')->nullable();
             $table->text('body');
-            $table->json('metadata')->nullable(); // For storing additional data like SMS provider response
+            $table->json('metadata')->nullable();
             $table->enum('status', ['pending', 'sent', 'delivered', 'failed', 'read'])->default('pending');
             $table->timestamp('sent_at')->nullable();
             $table->timestamp('delivered_at')->nullable();
