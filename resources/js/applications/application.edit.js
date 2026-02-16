@@ -1,7 +1,7 @@
 /**
  * File: resources/js/applications/application.edit.js
  * Purpose: Application edit page behavior with client-side progress tracking
- *          and dynamic submit section rendering
+ *          and dynamic submit section rendering - ENHANCED BUTTON VERSION
  */
 
 (() => {
@@ -58,7 +58,6 @@
         const label = stepEl.querySelector('span');
 
         if (isComplete) {
-            // Complete state
             circle.className = 'rounded-full h-14 w-14 flex items-center justify-center bg-gradient-to-br from-indigo-600 to-purple-600 text-white font-bold border-4 border-white shadow-lg';
             circle.innerHTML = `
                 <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
@@ -67,7 +66,6 @@
             `;
             label.className = 'text-xs font-semibold text-indigo-600 mt-3 text-center';
         } else {
-            // Incomplete state
             const stepNumbers = {
                 loanDetails: '1',
                 personal: '2',
@@ -80,7 +78,6 @@
             label.className = 'text-xs font-medium text-gray-500 mt-3 text-center';
         }
 
-        // Update accessibility
         stepEl.setAttribute('aria-current', isComplete ? 'step' : 'false');
     }
 
@@ -98,17 +95,15 @@
     function renderProgress() {
         const progress = calculateProgress();
 
-        // Update progress bar
         const bar = document.querySelector('.bg-gradient-to-r.from-indigo-600.to-purple-600.h-3');
         if (bar) {
             bar.style.width = progress.percentage + '%';
             bar.setAttribute('aria-valuenow', progress.percentage);
         }
 
-        // Update progress text
         const completedText = document.querySelector('.text-sm.font-semibold.text-gray-700');
         const percentText = document.querySelector('.text-sm.font-bold.text-indigo-600');
-        
+
         if (completedText) {
             completedText.textContent = `${progress.completed} of ${progress.total} sections completed`;
         }
@@ -116,20 +111,17 @@
             percentText.textContent = `${progress.percentage}%`;
         }
 
-        // Update step visuals
         updateStepVisual('loanDetails', state.progress.loanDetails);
         updateStepVisual('personal', state.progress.personalDetails);
         updateStepVisual('addresses', state.progress.addresses);
         updateStepVisual('employment', state.progress.employment);
         updateStepVisual('expenses', state.progress.expenses);
 
-        // Update connector lines
         updateConnectorLine(0, state.progress.personalDetails);
         updateConnectorLine(1, state.progress.addresses);
         updateConnectorLine(2, state.progress.employment);
         updateConnectorLine(3, state.progress.expenses);
 
-        // Announce to screen readers
         announceProgress(progress);
     }
 
@@ -149,7 +141,6 @@
         return announcer;
     }
 
-    // Check progress state based on form data
     function checkPersonalDetailsComplete() {
         const fields = [
             'full_name', 'mobile_phone', 'email', 'marital_status',
@@ -186,14 +177,13 @@
         renderSubmitSection();
     }
 
-    // Submit section rendering functions
     function canBeSubmitted() {
         return Object.values(state.progress).every(Boolean);
     }
 
     function getMissingRequirements() {
         const missing = [];
-        
+
         if (!state.progress.personalDetails) {
             missing.push({
                 text: 'Personal Details (Complete all required fields)',
@@ -212,7 +202,7 @@
                 icon: 'cross'
             });
         }
-        
+
         return missing;
     }
 
@@ -220,7 +210,6 @@
         if (!els.submitContainer) return;
 
         const canSubmit = canBeSubmitted();
-        
         const existingContent = els.submitContainer.firstElementChild;
 
         if (existingContent) {
@@ -240,12 +229,10 @@
             }, 300);
 
         } else {
-            // First render - no animation needed
-            els.submitContainer.innerHTML = canSubmit ? 
-                renderReadyToSubmit() : 
+            els.submitContainer.innerHTML = canSubmit ?
+                renderReadyToSubmit() :
                 renderIncomplete();
-            
-            // Re-attach submit button listener after rendering
+
             attachSubmitButtonListener();
         }
     }
@@ -267,7 +254,7 @@
                             <p class="text-gray-700 mb-6">
                                 Your application is complete and ready to submit. Once submitted, our team will review your application and contact you if additional information is needed.
                             </p>
-                            <div class="bg-white rounded-xl p-4 mb-6 border border-green-200">
+                            <div class="bg-white rounded-xl p-4 mb-8 border border-green-200">
                                 <h4 class="font-semibold text-gray-900 mb-3">What happens next?</h4>
                                 <ul class="space-y-2 text-sm text-gray-600">
                                     <li class="flex items-start">
@@ -291,14 +278,17 @@
                                 </ul>
                             </div>
                             <button type="submit" id="submit-application-btn"
-                                class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-bold text-lg uppercase tracking-wide transition-all duration-200 hover:shadow-lg hover:scale-105 focus:outline-none focus:ring-4 focus:ring-green-300 opacity-50 cursor-not-allowed"
+                                class="inline-flex items-center justify-center px-10 py-5 text-white rounded-xl font-bold text-lg uppercase tracking-wide transition-all duration-300 transform focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed w-full"
                                 disabled
                                 aria-label="Submit application for review">
-                                <svg class="w-6 h-6 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
                                 </svg>
-                                Submit Application for Review
+                                <span>Submit Application for Review</span>
                             </button>
+                            <p class="mt-4 text-sm text-center" id="submit-status-text">
+                                <span class="font-semibold text-yellow-700">⚠️ Complete signature below to enable submit button</span>
+                            </p>
                         </div>
                     </div>
                 </div>
@@ -363,45 +353,46 @@
         return announcer;
     }
 
-    // Submit button state management
     function updateSubmitState() {
         const submitBtn = document.getElementById('submit-application-btn');
+        const statusText = document.getElementById('submit-status-text');
         if (!submitBtn) return;
 
         const signatureValid = els.signature?.value?.trim() && els.agreement?.checked;
         const valid = canBeSubmitted() && signatureValid;
 
         submitBtn.disabled = !valid;
-        
+
         if (valid) {
             submitBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-            submitBtn.classList.add('hover:shadow-lg', 'hover:scale-105');
+            if (statusText) {
+                statusText.innerHTML = `<span class="font-bold text-green-700">✓ Ready to submit!</span>`;
+            }
         } else {
             submitBtn.classList.add('opacity-50', 'cursor-not-allowed');
-            submitBtn.classList.remove('hover:shadow-lg', 'hover:scale-105');
+            if (statusText) {
+                statusText.innerHTML = `<span class="font-semibold text-yellow-700">⚠️ Complete signature below to enable submit button</span>`;
+            }
         }
     }
 
     function attachSubmitButtonListener() {
-        // Update submit button state when signature changes
         const signatureInput = document.getElementById('signature-data');
         const agreementCheckbox = document.getElementById('signature-agreement');
-        
+
         if (signatureInput) {
             signatureInput.removeEventListener('input', updateSubmitState);
             signatureInput.addEventListener('input', updateSubmitState);
         }
-        
+
         if (agreementCheckbox) {
             agreementCheckbox.removeEventListener('change', updateSubmitState);
             agreementCheckbox.addEventListener('change', updateSubmitState);
         }
-        
-        // Initial state update
+
         updateSubmitState();
     }
 
-    // Employment date validation
     function legalAgeDate(dob, years = 18) {
         const d = new Date(dob);
         d.setFullYear(d.getFullYear() + years);
@@ -440,7 +431,6 @@
         return hint;
     }
 
-    // Listen for dynamic content changes (addresses, employment, expenses)
     function observeFormChanges() {
         const observer = new MutationObserver(() => {
             debouncedUpdate();
@@ -464,7 +454,6 @@
         return observer;
     }
 
-    // Listen for form input changes in personal details
     function attachPersonalDetailsListeners() {
         const personalForm = document.querySelector('form[action*="personal-details"]');
         if (!personalForm) return;
@@ -484,27 +473,21 @@
         }, 100);
     }
 
-    // Initialize
     document.addEventListener('DOMContentLoaded', () => {
-        // Initial render
         updateProgressState();
         attachEmploymentValidation();
         attachPersonalDetailsListeners();
         attachSubmitButtonListener();
-        
-        // Watch for dynamic changes
         observeFormChanges();
 
-        // Listen for successful AJAX form submissions
         document.addEventListener('ajaxSuccess', (e) => {
-            if (e.detail?.type === 'address' || 
-                e.detail?.type === 'employment' || 
+            if (e.detail?.type === 'address' ||
+                e.detail?.type === 'employment' ||
                 e.detail?.type === 'expense') {
                 debouncedUpdate();
             }
         });
     });
 
-    // Expose update function for external use
     window.updateApplicationProgress = updateProgressState;
 })();

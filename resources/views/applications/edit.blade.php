@@ -138,13 +138,13 @@
                             <span class="text-sm font-semibold text-gray-700">{{ $completedSteps }} of 5 sections completed</span>
                             <span class="text-sm font-bold text-indigo-600">{{ number_format($percentage, 0) }}%</span>
                         </div>
-                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden" 
-                            role="progressbar" 
-                            aria-valuemin="0" 
+                        <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden"
+                            role="progressbar"
+                            aria-valuemin="0"
                             aria-valuemax="100"
                             aria-valuenow="{{ $percentage }}"
                             aria-label="Application completion progress">
-                            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out" 
+                            <div class="bg-gradient-to-r from-indigo-600 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out"
                                 style="width: {{ $percentage }}%"></div>
                         </div>
                     </div>
@@ -297,6 +297,21 @@
 
         .fade-out {
             animation: fadeOut 0.3s ease-out;
+        }
+
+        #submit-application-btn:not(:disabled) {
+            background: linear-gradient(135deg, #059669 0%, #10b981 100%);
+        }
+
+        #submit-application-btn:not(:disabled):hover {
+            background: linear-gradient(135deg, #047857 0%, #059669 100%);
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px -5px rgba(16, 185, 129, 0.4);
+        }
+
+        #submit-application-btn:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
         }
     </style>
 </x-app-layout>
