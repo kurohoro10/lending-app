@@ -7,7 +7,7 @@ use App\Http\Controllers\ResidentialAddressController;
 use App\Http\Controllers\EmploymentDetailsController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\Question\QuestionController as QuestionController;
 use App\Http\Controllers\DeclarationController;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -274,25 +274,25 @@ Route::post('/webhooks/twilio/status', function (\Illuminate\Http\Request $reque
 //     });
 // });
 
-Route::get('/debug-submit/{application}', function(\App\Models\Application $application) {
-    $checks = [
-        'id' => $application->id,
-        'status' => $application->status,
-        'personal_details' => $application->personalDetails !== null,
-        'personal_details_data' => $application->personalDetails,
-        'residential_count' => $application->residentialAddresses()->count(),
-        'residential_data' => $application->residentialAddresses,
-        'employment_count' => $application->employmentDetails()->count(),
-        'employment_data' => $application->employmentDetails,
-        'living_expenses_count' => $application->livingExpenses()->count(),
-        'living_expenses_data' => $application->livingExpenses,
-        'declarations_count' => $application->declarations()->count(),
-        'final_signature' => $application->declarations()
-            ->where('declaration_type', 'final_submission')
-            ->first(),
-        'has_final_signature' => $application->hasFinalSignature(),
-        'can_be_submitted' => $application->canBeSubmitted(),
-    ];
+// Route::get('/debug-submit/{application}', function(\App\Models\Application $application) {
+//     $checks = [
+//         'id' => $application->id,
+//         'status' => $application->status,
+//         'personal_details' => $application->personalDetails !== null,
+//         'personal_details_data' => $application->personalDetails,
+//         'residential_count' => $application->residentialAddresses()->count(),
+//         'residential_data' => $application->residentialAddresses,
+//         'employment_count' => $application->employmentDetails()->count(),
+//         'employment_data' => $application->employmentDetails,
+//         'living_expenses_count' => $application->livingExpenses()->count(),
+//         'living_expenses_data' => $application->livingExpenses,
+//         'declarations_count' => $application->declarations()->count(),
+//         'final_signature' => $application->declarations()
+//             ->where('declaration_type', 'final_submission')
+//             ->first(),
+//         'has_final_signature' => $application->hasFinalSignature(),
+//         'can_be_submitted' => $application->canBeSubmitted(),
+//     ];
 
-    return response()->json($checks, 200, [], JSON_PRETTY_PRINT);
-})->middleware('auth');
+//     return response()->json($checks, 200, [], JSON_PRETTY_PRINT);
+// })->middleware('auth');

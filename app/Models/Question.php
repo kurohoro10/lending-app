@@ -13,6 +13,7 @@ class Question extends Model
     protected $fillable = [
         'application_id',
         'asked_by',
+        'asked_at',
         'question',
         'question_type',
         'options',
@@ -25,8 +26,9 @@ class Question extends Model
     ];
 
     protected $casts = [
-        'options' => 'array',
-        'answered_at' => 'datetime',
+        'options'      => 'array',
+        'asked_at'     => 'datetime',
+        'answered_at'  => 'datetime',
         'is_mandatory' => 'boolean',
     ];
 

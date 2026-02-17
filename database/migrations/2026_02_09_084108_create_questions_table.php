@@ -12,6 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('application_id')->constrained()->onDelete('cascade');
             $table->foreignId('asked_by')->constrained('users')->onDelete('cascade');
+            $table->timestamp('asked_at')->nullable();
             $table->text('question');
             $table->enum('question_type', ['structured', 'free_text', 'document_request', 'clarification']);
             $table->json('options')->nullable(); // For structured questions
