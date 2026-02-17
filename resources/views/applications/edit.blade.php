@@ -162,22 +162,22 @@
             @endif
 
             <!-- Loan Details Section - Enhanced -->
-            @include('applications.partials.loan-details', ['applications' => $application])
+            @include('applications.partials.edit.loan-details', ['applications' => $application])
 
             <!-- Personal Details Section -->
-            @include('applications.partials.personal-details-form', ['application' => $application])
+            @include('applications.partials.edit.personal-details-form', ['application' => $application])
 
             <!-- Residential Addresses Section -->
-            @include('applications.partials.residential-addresses-form', ['application' => $application])
+            @include('applications.partials.edit.residential-addresses-form', ['application' => $application])
 
             <!-- Employment Details Section -->
-            @include('applications.partials.employment-details-form', ['application' => $application])
+            @include('applications.partials.edit.employment-details-form', ['application' => $application])
 
             <!-- Living Expenses Section -->
-            @include('applications.partials.living-expenses-form', ['application' => $application])
+            @include('applications.partials.edit.living-expenses-form', ['application' => $application])
 
             <!-- Documents Section -->
-            @include('applications.partials.documents-upload', ['application' => $application])
+            @include('applications.partials.edit.documents-upload', ['application' => $application])
 
             <form method="POST" action="{{ route('applications.submit', $application) }}" onsubmit="return confirm('Are you sure you want to submit this application? You will not be able to edit it after submission.');">
                 @csrf
@@ -186,7 +186,7 @@
                 <input type="hidden" name="signature_type" id="signature-type" value="typed">
 
                 <!-- Electronic Signature Section -->
-                @include('applications.partials.e-signature', ['application' => $application])
+                @include('applications.partials.edit.e-signature', ['application' => $application])
 
                 <!-- Submit Application Container - Dynamically shown/hidden -->
                 <div id="submit-application-container">

@@ -11,13 +11,12 @@ use Illuminate\Http\Request;
 class QuestionController extends Controller
 {
     /**
-     * Admin asks a question (already exists in admin routes)
+     * Admin asks a question
      */
     public function store(Request $request, Application $application)
     {
-        // $this->authorize('update', $application);
         if (!auth()->user()->hasAnyRole(['admin', 'assessor'])) {
-            abort(403);
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
@@ -33,13 +32,25 @@ class QuestionController extends Controller
             'asked_at'     => now(),
         ]);
 
-        ActivityLog::logActivity(
-            'question_asked',
-            'Question asked to client',
-            $application
-        );
+        $question->load('askedBy');
 
-        return back()->with('success', 'Question sent to client.');
+        ActivityLog::logActivity('question_asked', 'Question asked to client', $application);
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'Question sent to client.',
+            'question' => [
+                'id'           => $question->id,
+                'question'     => $question->question,
+                'is_mandatory' => $question->is_mandatory,
+                'status'       => $question->status,
+                'asked_by'     => $question->askedBy->name,
+                'asked_at'     => $question->asked_at->format('d M Y H:i'),
+                'answer'       => null,
+                'answered_at'  => null,
+                'answer_ip'    => null,
+            ],
+        ]);
     }
 
     /**
@@ -47,11 +58,10 @@ class QuestionController extends Controller
      */
     public function answer(Request $request, Question $question)
     {
-        // Check if user owns the application
         $application = $question->application;
 
         if ($application->user_id !== auth()->id()) {
-            abort(403, 'Unauthorized');
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
         }
 
         $validated = $request->validate([
@@ -66,13 +76,8 @@ class QuestionController extends Controller
             'answer_ip'   => $request->ip(),
         ]);
 
-        ActivityLog::logActivity(
-            'question_answered',
-            'Client answered question',
-            $application
-        );
+        ActivityLog::logActivity('question_answered', 'Client answered question', $application);
 
-        // Send notification to admin
         try {
             $admins = \App\Models\User::role('admin')->get();
             foreach ($admins as $admin) {
@@ -82,7 +87,14 @@ class QuestionController extends Controller
             \Log::error('Failed to send question answered notification: ' . $e->getMessage());
         }
 
-        return back()->with('success', 'Your answer has been submitted successfully.');
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Your answer has been submitted successfully.',
+            'question_id' => $question->id,
+            'answer'      => $question->answer,
+            'answered_at' => $question->answered_at->format('d M Y H:i'),
+            'answer_ip'   => $question->answer_ip,
+        ]);
     }
 
     /**
@@ -91,16 +103,18 @@ class QuestionController extends Controller
     public function destroy(Question $question)
     {
         $application = $question->application;
-        $this->authorize('update', $application);
+
+        if (!auth()->user()->hasAnyRole(['admin', 'assessor'])) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
 
         $question->delete();
 
-        ActivityLog::logActivity(
-            'question_deleted',
-            'Question deleted',
-            $application
-        );
+        ActivityLog::logActivity('question_deleted', 'Question deleted', $application);
 
-        return back()->with('success', 'Question deleted.');
+        return response()->json([
+            'success' => true,
+            'message' => 'Question deleted.',
+        ]);
     }
 }

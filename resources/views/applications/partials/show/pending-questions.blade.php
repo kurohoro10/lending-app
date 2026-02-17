@@ -1,4 +1,4 @@
-<div class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
+<div id="pending-questions-warning" class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
     <div class="flex">
         <div class="flex-shrink-0">
             <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
@@ -6,7 +6,9 @@
             </svg>
         </div>
         <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">You have {{ $application->questions->where('status', 'pending')->count() }} pending question(s)</h3>
+            <h3 class="text-sm font-medium text-yellow-800">
+                You have {{ $application->questions->where('status', 'pending')->count() }} pending question(s)
+            </h3>
             <p class="mt-2 text-sm text-yellow-700">Please scroll down to answer the questions from our assessment team.</p>
         </div>
     </div>
