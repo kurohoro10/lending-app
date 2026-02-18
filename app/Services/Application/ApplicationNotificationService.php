@@ -49,7 +49,6 @@ class ApplicationNotificationService
             $admins = User::role('admin')->get();
             if ($admins->isNotEmpty()) {
                 Notification::send($admins, new NewApplicationSubmittedAdmin($application));
-                Log::info('Admin notifications sent successfully');
             }
         } catch (\Exception $e) {
             Log::error('Admin notification failed: ' . $e->getMessage());
@@ -105,18 +104,10 @@ class ApplicationNotificationService
             return;
         }
 
-        Log::info('Sending SMS immediately', [
-            'phone' => $phone,
-            'message_preview' => substr($message, 0, 50) . '...',
-        ]);
-
         try {
             // Send SMS synchronously using WhatsApp (since you're using sandbox)
-            $result = $this->twilioService->sendWhatsApp($phone, $message, $application);
+            $this->twilioService->sendSMS($phone, $message, $application);
 
-            Log::info('SMS sent successfully', [
-                'result' => $result,
-            ]);
         } catch (\Exception $e) {
             Log::error('Failed to send SMS', [
                 'phone' => $phone,

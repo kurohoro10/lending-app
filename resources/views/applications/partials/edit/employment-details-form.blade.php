@@ -1,6 +1,6 @@
 <!-- Employment & Income Details Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
-    <button type="button" 
+    <button type="button"
             class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             id="employment-details-btn"
             aria-expanded="true"
@@ -23,7 +23,7 @@
         </div>
     </button>
 
-    <div id="employment-details-content" 
+    <div id="employment-details-content"
          class="transition-all duration-300 ease-in-out p-6"
          aria-labelledby="employment-details-header">
         <div class="p-6">
@@ -33,14 +33,14 @@
             <!-- Employment List Container -->
             <div id="employment-list-container">
                 @if($application->employmentDetails->count() > 0)
-                <div class="mb-6 space-y-3">
+                <div class="mb-6">
                     <div class="flex items-center justify-between mb-3">
                         <h4 class="text-sm font-semibold text-gray-700">Your Employment History</h4>
                         <span id="employment-count-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
                             {{ $application->employmentDetails->count() }} Employment(s)
                         </span>
                     </div>
-                    <div id="employment-list" data-employment-section>
+                    <div id="employment-list" data-employment-section class="space-y-3">
                         @foreach($application->employmentDetails as $employment)
                         <div data-employment-card class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="{{ $employment->id }}">
                             <div class="flex justify-between items-start">

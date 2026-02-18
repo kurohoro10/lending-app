@@ -1,6 +1,6 @@
 <!-- Documents Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
-    <button type="button" 
+    <button type="button"
             class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             id="documents-btn"
             aria-expanded="true"
@@ -22,7 +22,7 @@
         </div>
     </button>
 
-    <div id="documents-content" 
+    <div id="documents-content"
          class="transition-all duration-300 ease-in-out p-6"
          aria-labelledby="documents-header">
         <div class="p-6">
@@ -39,7 +39,7 @@
                             {{ $application->documents->count() }} Document(s)
                         </span>
                     </div>
-                    <div id="documents-list">
+                    <div id="documents-list" class="space-y-3">
                         @foreach($application->documents as $document)
                         <div class="document-item flex items-center justify-between p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-document-id="{{ $document->id }}">
                             <div class="flex items-center space-x-4">

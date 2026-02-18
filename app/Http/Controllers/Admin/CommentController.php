@@ -7,22 +7,39 @@ use App\Models\Application;
 use App\Models\Comment;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
+use Illuminate\Http\RedirectResponse;
 
+/**
+ * Class CommentController
+ *
+ * Manages the creation, modification, and visibility of comments
+ * attached to loan applications, supporting both internal staff notes
+ * and client-facing communications.
+ *
+ * @package App\Http\Controllers\Admin
+ */
 class CommentController extends Controller
 {
-    public function store(Request $request, Application $application)
+    /**
+     * Store a newly created comment in storage.
+     *
+     * @param Request     $request
+     * @param Application $application
+     * @return RedirectResponse
+     */
+    public function store(Request $request, Application $application): RedirectResponse
     {
         $validated = $request->validate([
-            'comment' => 'required|string',
-            'type' => 'required|in:internal,client_visible',
+            'comment'   => 'required|string',
+            'type'      => 'required|in:internal,client_visible',
             'is_pinned' => 'boolean',
         ]);
 
         $comment = $application->comments()->create([
-            'user_id' => auth()->id(),
-            'comment' => $validated['comment'],
-            'type' => $validated['type'],
-            'is_pinned' => $validated['is_pinned'] ?? false,
+            'user_id'    => auth()->id(),
+            'comment'    => $validated['comment'],
+            'type'       => $validated['type'],
+            'is_pinned'  => $validated['is_pinned'] ?? false,
             'ip_address' => $request->ip(),
         ]);
 
@@ -34,15 +51,23 @@ class CommentController extends Controller
             ['comment_preview' => substr($validated['comment'], 0, 50)]
         );
 
-        // TODO: Send notification if client_visible
+        // Implementation Note: In the future, trigger a notification
+        // if ($validated['type'] === 'client_visible') ...
 
         return back()->with('success', 'Comment added successfully.');
     }
 
-    public function update(Request $request, Comment $comment)
+    /**
+     * Update the specified comment in storage.
+     *
+     * @param Request $request
+     * @param Comment $comment
+     * @return RedirectResponse
+     */
+    public function update(Request $request, Comment $comment): RedirectResponse
     {
         $validated = $request->validate([
-            'comment' => 'required|string',
+            'comment'   => 'required|string',
             'is_pinned' => 'boolean',
         ]);
 
@@ -60,20 +85,34 @@ class CommentController extends Controller
         return back()->with('success', 'Comment updated successfully.');
     }
 
-    public function destroy(Comment $comment)
+    /**
+     * Remove the specified comment from storage.
+     *
+     * @param Comment $comment
+     * @return RedirectResponse
+     */
+    public function destroy(Comment $comment): RedirectResponse
     {
+        $application = $comment->application;
+
         $comment->delete();
 
         ActivityLog::logActivity(
             'deleted',
             'Deleted comment',
-            $comment->application
+            $application
         );
 
         return back()->with('success', 'Comment deleted successfully.');
     }
 
-    public function togglePin(Comment $comment)
+    /**
+     * Toggle the pinned status of a comment.
+     *
+     * @param Comment $comment
+     * @return RedirectResponse
+     */
+    public function togglePin(Comment $comment): RedirectResponse
     {
         $comment->update(['is_pinned' => !$comment->is_pinned]);
 

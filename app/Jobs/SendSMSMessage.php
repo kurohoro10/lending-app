@@ -6,7 +6,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Services\TwilioService;
+use Illuminate\Support\Facades\Log;
+use App\Services\MessagingService;
 use App\Models\Application;
 
 class SendSMSMessage implements ShouldQueue
@@ -16,9 +17,6 @@ class SendSMSMessage implements ShouldQueue
     public $tries = 3;
     public $timeout = 30;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         public string $phone,
         public string $message,
@@ -26,48 +24,32 @@ class SendSMSMessage implements ShouldQueue
     ) {}
 
     /**
-     * Execute the job.
+     * Inject MessagingService instead of TwilioService.
+     * Only update App/Services/MessagingService.php - not this file
      */
-    public function handle(TwilioService $twilio): void
+    public function handle(MessagingService $messaging): void
     {
-        Log::info('SendSMSMessage job executing', [
-            'phone' => $this->phone,
-            'application_id' => $this->applicationId,
-        ]);
-
         try {
             $application = $this->applicationId
                 ? Application::find($this->applicationId)
                 : null;
 
-            Log::info('Calling TwilioService->sendSMS', [
-                'phone' => $this->phone,
-                'has_application' => $application !== null,
-            ]);
+            $messaging->send($this->phone, $this->message, $application);
 
-            $result = $twilio->sendSMS($this->phone, $this->message, $application);
-
-            Log::info('SMS sent successfully', [
-                'result' => $result,
-            ]);
         } catch (\Exception $e) {
-            Log::error('SendSMSMessage job failed in handle', [
+            Log::error('SendSMSMessage job failed', [
                 'phone' => $this->phone,
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString()
             ]);
             throw $e;
         }
     }
 
-    /**
-     * Handle a job failure.
-     */
     public function failed(\Throwable $exception): void
     {
-        \Log::error('SendSMSMessage job failed', [
+        Log::error('SendSMSMessage job permanently failed', [
             'phone' => $this->phone,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 }

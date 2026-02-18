@@ -2,8 +2,22 @@
 
 namespace App\Helpers;
 
+/**
+ * Class AustralianSuburbs
+ *
+ * A utility helper providing localized data for Australian geographic regions
+ * and residential classifications, typically used for form population.
+ *
+ * @package App\Helpers
+ */
 class AustralianSuburbs
 {
+    /**
+     * Retrieve a list of major suburbs/cities for a specific Australian state.
+     *
+     * @param string $state The ISO 3166-2:AU state code (e.g., 'NSW', 'VIC').
+     * @return array<int, string> A list of suburb names, or an empty array if the state is not found.
+     */
     public static function getSuburbsByState(string $state): array
     {
         $suburbs = [
@@ -47,29 +61,39 @@ class AustralianSuburbs
         return $suburbs[$state] ?? [];
     }
 
+    /**
+     * Get a key-value mapping of all Australian States and Territories.
+     *
+     * @return array<string, string> An associative array where key is the code and value is the full name.
+     */
     public static function getAllStates(): array
     {
         return [
             'NSW' => 'New South Wales',
             'VIC' => 'Victoria',
             'QLD' => 'Queensland',
-            'SA' => 'South Australia',
-            'WA' => 'Western Australia',
+            'SA'  => 'South Australia',
+            'WA'  => 'Western Australia',
             'TAS' => 'Tasmania',
-            'NT' => 'Northern Territory',
+            'NT'  => 'Northern Territory',
             'ACT' => 'Australian Capital Territory',
         ];
     }
 
+    /**
+     * Get the standardized residential status options for the application workflow.
+     *
+     * @return array<string, string> Associative array of internal status keys to human-readable labels.
+     */
     public static function getResidentialStatuses(): array
     {
         return [
-            'owner_no_mortgage' => 'Owner (No Mortgage)',
+            'owner_no_mortgage'   => 'Owner (No Mortgage)',
             'owner_with_mortgage' => 'Owner (With Mortgage)',
-            'renting' => 'Renting',
-            'boarding' => 'Boarding',
+            'renting'             => 'Renting',
+            'boarding'            => 'Boarding',
             'living_with_parents' => 'Living with Parents/Relatives',
-            'other' => 'Other',
+            'other'               => 'Other',
         ];
     }
 }

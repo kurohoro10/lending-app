@@ -4,7 +4,7 @@
     const submitButton = document.getElementById('submit-expense-button');
     const submitButtonText = document.getElementById('submit-expense-text');
     const livingExpensesAccordionBtn = document.getElementById('living-expenses-btn');
-    
+
     livingExpensesAccordionBtn.addEventListener('click', () => {
         toggleAccordion('living-expenses');
     });
@@ -217,9 +217,9 @@
                     </span>
                 </td>
                 <td class="px-6 py-4 text-sm font-medium text-gray-900">${expense.expense_name}</td>
-                <td class="px-6 py-4 text-sm text-right text-gray-700">$${parseFloat(expense.client_declared_amount).toFixed(2)}</td>
+                <td class="px-6 py-4 text-sm text-right text-gray-700">$${parseFloat(expense.client_declared_amount).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td class="px-6 py-4 text-sm text-gray-600">${expense.frequency.charAt(0).toUpperCase() + expense.frequency.slice(1)}</td>
-                <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">$${monthlyAmount.toFixed(2)}</td>
+                <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">$${monthlyAmount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                 <td class="px-6 py-4 text-right whitespace-nowrap">
                     <button type="button"
                             data-expense-id="${expense.id}"
@@ -230,22 +230,6 @@
                 </td>
             </tr>
         `;
-    }
-
-    // Update total expenses
-    function updateTotalExpenses() {
-        const expenseRows = document.querySelectorAll('.expense-row');
-        let total = 0;
-
-        expenseRows.forEach(row => {
-            const monthlyAmount = parseFloat(row.dataset.monthlyAmount || 0);
-            total += monthlyAmount;
-        });
-
-        const totalElement = document.getElementById('total-monthly-expenses');
-        if (totalElement) {
-            totalElement.textContent = `$${total.toFixed(2)}`;
-        }
     }
 
     // Global delete function
@@ -333,7 +317,7 @@
 
         const totalElement = document.getElementById('total-monthly-expenses');
         if (totalElement) {
-            totalElement.textContent = `$${total.toFixed(2)}`;
+            totalElement.textContent = `$${total.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
         }
     }
 

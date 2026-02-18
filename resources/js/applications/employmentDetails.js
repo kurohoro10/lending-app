@@ -194,7 +194,7 @@
                             <div class="font-semibold text-gray-900">${employment.employer_business_name || 'N/A'}</div>
                             <div class="text-sm text-gray-600 mt-1">${employment.position || 'N/A'}</div>
                             <div class="text-sm font-bold text-green-600 mt-2">
-                                Annual Income: $${annualIncome.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                Annual Income: $${annualIncome.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </div>
                         </div>
                     </div>
@@ -324,7 +324,7 @@
         if (!btn) return;
 
         const employment_id = btn.dataset.employmentId;
-        
+
         deleteEmployment(EMPLOYMENT_CONFIG.applicationId, employment_id);
     });
 })();

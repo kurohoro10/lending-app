@@ -1,6 +1,6 @@
 <!-- Residential Addresses Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
-    <button type="button" 
+    <button type="button"
             class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             id="residential-addresses-btn"
             aria-expanded="true"
@@ -23,7 +23,7 @@
         </div>
     </button>
 
-    <div id="residential-addresses-content" 
+    <div id="residential-addresses-content"
          class="transition-all duration-300 ease-in-out p-6"
          aria-labelledby="residential-addresses-header">
         <div class="p-6">

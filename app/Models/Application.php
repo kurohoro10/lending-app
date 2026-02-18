@@ -25,6 +25,9 @@ class Application extends Model
         'submitted_at',
         'completed_at',
         'submission_ip',
+        'return_reason',
+        'returned_at',
+        'returned_by',
         'electronic_signature_id',
         'signature_signed_at',
         'signature_ip',
@@ -32,10 +35,11 @@ class Application extends Model
     ];
 
     protected $casts = [
-        'loan_amount' => 'decimal:2',
-        'submitted_at' => 'datetime',
-        'completed_at' => 'datetime',
+        'loan_amount'         => 'decimal:2',
+        'submitted_at'        => 'datetime',
+        'completed_at'        => 'datetime',
         'signature_signed_at' => 'datetime',
+        'returned_at'         => 'datetime',
     ];
 
     protected static function boot()
@@ -152,37 +156,33 @@ class Application extends Model
         return in_array($this->status, ['draft', 'additional_info_required']);
     }
 
-    public function canBeSubmitted(): bool
+   public function canBeSubmitted(): bool
     {
-        // Check all requirements
-        $hasPersonalDetails = $this->personalDetails !== null;
+        $isDraft = in_array($this->status, ['draft', 'additional_info_required']);
+
+        $hasPersonalDetails    = $this->personalDetails !== null;
         $hasResidentialAddresses = $this->residentialAddresses()->count() > 0;
-        $hasEmploymentDetails = $this->employmentDetails()->count() > 0;
-        $hasLivingExpenses = $this->livingExpenses()->count() > 0;
-        $hasFinalSignature = $this->hasFinalSignature();
-        $isDraft = $this->status === 'draft';
+        $hasEmploymentDetails  = $this->employmentDetails()->count() > 0;
+        $hasLivingExpenses     = $this->livingExpenses()->count() > 0;
+        $hasFinalSignature     = $this->hasFinalSignature();
 
         $checks = [
-            'status_is_draft' => $isDraft,
-            'has_personal_details' => $hasPersonalDetails,
-            'has_residential_addresses' => $hasResidentialAddresses,
-            'has_employment_details' => $hasEmploymentDetails,
-            'has_living_expenses' => $hasLivingExpenses,
-            'has_final_signature' => $hasFinalSignature,
+            'status_is_editable'       => $isDraft,
+            'has_personal_details'     => $hasPersonalDetails,
+            'has_residential_addresses'=> $hasResidentialAddresses,
+            'has_employment_details'   => $hasEmploymentDetails,
+            'has_living_expenses'      => $hasLivingExpenses,
+            'has_final_signature'      => $hasFinalSignature,
         ];
 
-        // Log what's missing
-        $missing = array_keys(array_filter($checks, fn($value) => !$value));
-
+        $missing = array_keys(array_filter($checks, fn($v) => !$v));
         if (!empty($missing)) {
-            \Log::warning('Application cannot be submitted - missing requirements', [
+            \Log::warning('Application cannot be submitted', [
                 'application_id' => $this->id,
-                'missing' => $missing,
-                'checks' => $checks,
+                'missing'        => $missing,
             ]);
         }
 
-        // Return true only if ALL checks pass
         return $isDraft
             && $hasPersonalDetails
             && $hasResidentialAddresses
@@ -239,5 +239,15 @@ class Application extends Model
             ->where('is_agreed', true)
             ->whereNotNull('signature_data')
             ->exists();
+    }
+
+    public function returnedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'returned_by');
+    }
+
+    public function isReturned(): bool
+    {
+        return $this->status === 'additional_info_required';
     }
 }

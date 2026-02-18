@@ -29,6 +29,9 @@ return new class extends Migration
             $table->timestamp('submitted_at')->nullable();
             $table->timestamp('completed_at')->nullable();
             $table->ipAddress('submission_ip')->nullable();
+            $table->text('return_reason')->nullable();
+            $table->timestamp('returned_at')->nullable();
+            $table->foreignId('returned_by')->nullable()->constrained('users')->onDelete('set null');
             $table->string('electronic_signature_id')->nullable();
             $table->timestamp('signature_signed_at')->nullable();
             $table->ipAddress('signature_ip')->nullable();

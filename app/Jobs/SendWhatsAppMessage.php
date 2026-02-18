@@ -6,7 +6,8 @@ use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Queue\Queueable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
-use App\Services\TwilioService;
+use Illuminate\Support\Facades\Log;
+use App\Services\MessagingService;
 use App\Models\Application;
 
 class SendWhatsAppMessage implements ShouldQueue
@@ -16,9 +17,6 @@ class SendWhatsAppMessage implements ShouldQueue
     public $tries = 3;
     public $timeout = 30;
 
-    /**
-     * Create a new job instance.
-     */
     public function __construct(
         public string $phone,
         public string $message,
@@ -26,25 +24,23 @@ class SendWhatsAppMessage implements ShouldQueue
     ) {}
 
     /**
-     * Execute the job.
+     * FIX: Inject MessagingService instead of TwilioService.
+     * Only update App/Services/MessagingService.php — not this file.
      */
-    public function handle(TwilioService $twilio): void
+    public function handle(MessagingService $messaging): void
     {
         $application = $this->applicationId
             ? Application::find($this->applicationId)
             : null;
 
-        $twilio->sendWhatsApp($this->phone, $this->message, $application);
+        $messaging->send($this->phone, $this->message, $application);
     }
 
-    /**
-     * Handle a job failure.
-     */
     public function failed(\Throwable $exception): void
     {
-        \Log::error('SendWhatsAppMessage job failed', [
+        Log::error('SendWhatsAppMessage job permanently failed', [
             'phone' => $this->phone,
-            'error' => $exception->getMessage()
+            'error' => $exception->getMessage(),
         ]);
     }
 }

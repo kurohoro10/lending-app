@@ -1,12 +1,5 @@
 <?php
 
-/**
- * File: app/Actions/Application/SubmitApplication.php
- * Description: Handles full application submission workflow including
- *              validation, auto-decline logic, status updates,
- *              logging, and notification dispatching.
- */
-
 namespace App\Actions\Application;
 
 use App\Models\Application;
@@ -15,38 +8,38 @@ use App\Models\ActivityLog;
 use App\Services\Application\ApplicationNotificationService;
 use App\Services\AutoDeclineService;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SubmitApplication
 {
+    /**
+     * Execute the application submission logic.
+     *
+     * NOTE: By the time this is called from ApplicationController::submit(),
+     * the 'final_submission' declaration has already been saved. That is
+     * intentional — canBeSubmitted() requires it to exist before we can
+     * proceed. Do NOT re-create it here.
+     *
+     * @param Application $application   The application instance being submitted.
+     * @param array{
+     *   signature: string,
+     *   signature_type?: string,
+     *   signatory_position?: string
+     * } $signatureData Metadata regarding the user's digital signature.
+     * @return void
+     * @throws \Throwable
+     */
     public function handle(Application $application, array $signatureData): void
     {
-        \Log::info('SubmitApplication action started', [
-            'application_id' => $application->id,
-            'signature_data_keys' => array_keys($signatureData),
-            'has_signature' => !empty($signatureData['signature']),
-        ]);
-
         DB::transaction(function () use ($application, $signatureData) {
 
-            \Log::info('Creating signature declaration...');
-
-            // Store final declaration
-            $application->declarations()->create([
-                'declaration_type'   => 'final_submission',
-                'declaration_text'   => 'Final submission declaration.',
-                'is_agreed'          => true,
-                'agreed_at'          => now(),
-                'agreement_ip'       => request()->ip(),
-                'signature_data'     => $signatureData['signature'],
-                'signature_type'     => $signatureData['signature_type'] ?? 'typed',
-                'signatory_name'     => auth()->user()->name,
-                'signatory_position' => $signatureData['signatory_position'] ?? null,
-                'signature_timestamp'=> now(),
-            ]);
-
-            \Log::info('Signature declaration created', [
-                'declaration_id' => $application->id,
-            ]);
+            // ✅ FIX: Declaration creation REMOVED from here.
+            //
+            // Previously this created a second 'final_submission' declaration,
+            // duplicating the one already saved in ApplicationController::submit()
+            // (which must happen first so canBeSubmitted() passes).
+            //
+            // The controller is the single source of truth for the declaration.
 
             $declineCheck = AutoDeclineService::checkDeclineCriteria($application);
 
@@ -56,9 +49,12 @@ class SubmitApplication
             }
 
             $application->update([
-                'status'       => 'submitted',
-                'submitted_at' => now(),
-                'submission_ip'=> request()->ip(),
+                'status'        => 'submitted',
+                'submitted_at'  => now(),
+                'submission_ip' => request()->ip(),
+                'return_reason' => null,
+                'returned_at'   => null,
+                'returned_by'   => null,
             ]);
 
             ActivityLog::logActivity(
@@ -71,11 +67,18 @@ class SubmitApplication
         // Reload relationships before sending notifications
         $application->load('personalDetails', 'user');
 
-        // Notifications outside transaction
+        // Notifications outside transaction to prevent delay/locking
         app(ApplicationNotificationService::class)
             ->handleSubmitted($application);
     }
 
+    /**
+     * Transition the application to a declined state automatically.
+     *
+     * @param Application $application The application instance to decline.
+     * @param string      $reason      The reason for the automatic decline.
+     * @return void
+     */
     protected function autoDecline(Application $application, string $reason): void
     {
         $application->update([
@@ -94,16 +97,16 @@ class SubmitApplication
             ['email' => 'system@internal.local'],
             [
                 'name'     => 'System',
-                'password' => bcrypt(\Illuminate\Support\Str::random(32)),
+                'password' => bcrypt(Str::random(32)),
             ]
         );
 
         $application->comments()->create([
-            'user_id'          => $systemUser->id,
-            'comment'          => 'AUTO-DECLINE: ' . $reason,
-            'is_internal'      => true,
-            'is_client_visible'=> false,
-            'commenter_ip'     => request()->ip(),
+            'user_id'           => $systemUser->id,
+            'comment'           => 'AUTO-DECLINE: ' . $reason,
+            'is_internal'       => true,
+            'is_client_visible' => false,
+            'commenter_ip'      => request()->ip(),
         ]);
 
         // Reload before sending notifications
