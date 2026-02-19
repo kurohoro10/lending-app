@@ -345,4 +345,37 @@ class ApplicationController extends Controller
             \Log::error('Failed to queue SMS: ' . $e->getMessage());
         }
     }
+
+    /**
+     * Mark the CreditSense bank statement step as complete.
+     *
+     * This is called via AJAX from the CreditSense JS callback (response "99" or "100")
+     * when the client finishes connecting their bank in the iframe.
+     *
+     * The actual bank data arrives separately via CreditSense's webhook to your
+     * webhook endpoint — this just records that the client completed the journey
+     * so the progress bar can update and canBeSubmitted() can pass.
+     */
+    public function completeBankStatements(Application $application): \Illuminate\Http\JsonResponse
+    {
+        $this->authorize('update', $application);
+
+        // Idempotent — safe to call multiple times
+        if (!$application->credit_sense_completed_at) {
+            $application->update([
+                'credit_sense_completed_at' => now(),
+            ]);
+
+            ActivityLog::logActivity(
+                'bank_statements_connected',
+                'Client completed CreditSense bank statement connection',
+                $application
+            );
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Bank statements marked as connected.',
+        ]);
+    }
 }

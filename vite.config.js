@@ -14,7 +14,8 @@ export default defineConfig({
                 'resources/js/applications/loan-details.js',
                 'resources/js/applications/personalDetails.js',
                 'resources/js/applications/residential.js',
-                'resources/js/applications/application.edit.js'
+                'resources/js/applications/application.edit.js',
+                'resources/js/applications/creditSense.js',
             ],
             refresh: true,
         }),

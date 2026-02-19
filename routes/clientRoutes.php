@@ -25,6 +25,8 @@ Route::patch('applications/{application}', [ApplicationController::class, 'updat
 Route::delete('applications/{application}', [ApplicationController::class, 'destroy'])->name('applications.destroy');
 Route::post('applications/{application}/submit', [ApplicationController::class, 'submit'])
     ->name('applications.submit');
+Route::post('/applications/{application}/bank-statements/complete', [ApplicationController::class, 'completeBankStatements'])
+    ->name('applications.bank-statements.complete');
 
 // Personal Details
 Route::post('applications/{application}/personal-details', [PersonalDetailsController::class, 'store'])

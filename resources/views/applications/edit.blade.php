@@ -51,6 +51,9 @@
             <!-- Living Expenses Section -->
             @include('applications.partials.edit.living-expenses-form', ['application' => $application])
 
+            <!-- Bank Statements Section (CreditSense) -->
+            @include('applications.partials.edit.bank-statements', ['application' => $application])
+
             <!-- Documents Section -->
             @include('applications.partials.edit.documents-upload', ['application' => $application])
 
@@ -78,6 +81,7 @@
             'addresses'      => $application->residentialAddresses->count() > 0,
             'employment'     => $application->employmentDetails->count() > 0,
             'expenses'       => $application->livingExpenses->count() > 0,
+            // 'bankStatements' => $application->credit_sense_completed_at !== null,
         ];
     @endphp
 

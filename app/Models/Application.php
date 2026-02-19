@@ -31,15 +31,17 @@ class Application extends Model
         'electronic_signature_id',
         'signature_signed_at',
         'signature_ip',
+        'credit_sense_completed_at',
         'assigned_to',
     ];
 
     protected $casts = [
-        'loan_amount'         => 'decimal:2',
-        'submitted_at'        => 'datetime',
-        'completed_at'        => 'datetime',
-        'signature_signed_at' => 'datetime',
-        'returned_at'         => 'datetime',
+        'loan_amount'               => 'decimal:2',
+        'submitted_at'              => 'datetime',
+        'completed_at'              => 'datetime',
+        'signature_signed_at'       => 'datetime',
+        'returned_at'               => 'datetime',
+        'credit_sense_completed_at' => 'datetime',
     ];
 
     protected static function boot()
@@ -160,19 +162,21 @@ class Application extends Model
     {
         $isDraft = in_array($this->status, ['draft', 'additional_info_required']);
 
-        $hasPersonalDetails    = $this->personalDetails !== null;
-        $hasResidentialAddresses = $this->residentialAddresses()->count() > 0;
-        $hasEmploymentDetails  = $this->employmentDetails()->count() > 0;
-        $hasLivingExpenses     = $this->livingExpenses()->count() > 0;
-        $hasFinalSignature     = $this->hasFinalSignature();
+        $hasPersonalDetails        = $this->personalDetails !== null;
+        $hasResidentialAddresses   = $this->residentialAddresses()->count() > 0;
+        $hasEmploymentDetails      = $this->employmentDetails()->count() > 0;
+        $hasLivingExpenses         = $this->livingExpenses()->count() > 0;
+        $hasFinalSignature         = $this->hasFinalSignature();
+        // $credit_sense_completed_at = $this->credit_sense_completed_at;
 
         $checks = [
-            'status_is_editable'       => $isDraft,
-            'has_personal_details'     => $hasPersonalDetails,
-            'has_residential_addresses'=> $hasResidentialAddresses,
-            'has_employment_details'   => $hasEmploymentDetails,
-            'has_living_expenses'      => $hasLivingExpenses,
-            'has_final_signature'      => $hasFinalSignature,
+            'status_is_editable'        => $isDraft,
+            'has_personal_details'      => $hasPersonalDetails,
+            'has_residential_addresses' => $hasResidentialAddresses,
+            'has_employment_details'    => $hasEmploymentDetails,
+            'has_living_expenses'       => $hasLivingExpenses,
+            'has_final_signature'       => $hasFinalSignature,
+            // 'credit_sense_completed_at' => $credit_sense_completed_at,
         ];
 
         $missing = array_keys(array_filter($checks, fn($v) => !$v));
@@ -188,6 +192,7 @@ class Application extends Model
             && $hasResidentialAddresses
             && $hasEmploymentDetails
             && $hasLivingExpenses
+            // && $credit_sense_completed_at
             && $hasFinalSignature;
     }
 

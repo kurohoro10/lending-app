@@ -16,6 +16,7 @@
         window.RESIDENTIAL_CONFIG = window.RESIDENTIAL_CONFIG || {};
         window.EMPLOYMENT_CONFIG = window.EMPLOYMENT_CONFIG || {};
         window.EXPENSES_CONFIG = window.EXPENSES_CONFIG || {};
+        window.CREDITSENSE = window.CREDITSENSE || {};
     </script>
 
     <!-- Scripts -->

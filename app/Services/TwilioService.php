@@ -2,7 +2,8 @@
 
 /**
  * File: app/Services/TwilioService.php
- * Description: Service layer for sending WhatsApp messages via Twilio Sandbox.
+ * Description: Service layer for sending WhatsApp and SMS via Twilio.
+ *              Automatically disabled outside production.
  */
 
 namespace App\Services;
@@ -14,39 +15,101 @@ use App\Models\Application;
 
 class TwilioService
 {
-    protected Client $client;
-    protected string $whatsappFrom;
-    protected string $smsFrom;
+    protected ?Client $client = null;
+    protected ?string $whatsappFrom = null;
+    protected ?string $smsFrom = null;
+    protected bool $enabled = false;
 
     public function __construct()
     {
-        $sid = config('twilio.sid');
+        if (!app()->environment('production')) {
+            Log::info('Twilio disabled (non-production environment).');
+            return;
+        }
+
+        $sid   = config('twilio.sid');
         $token = config('twilio.auth_token');
-        $whatsappFrom = config('twilio.whatsapp_from');
-        $smsFrom = config('twilio.sms_from');
 
-        if (!$sid || !$token) {
-            throw new \RuntimeException('Twilio credentials are not configured.');
+        $this->whatsappFrom = config('twilio.whatsapp_from');
+        $this->smsFrom      = config('twilio.sms_from');
+
+        if (!$sid || !$token || !$this->smsFrom) {
+            Log::warning('Twilio credentials incomplete. Service disabled.');
+            return;
         }
 
-        if (!$smsFrom) {
-            throw new \RuntimeException('TWILIO_SMS_FROM is not configured.');
+        $this->client  = new Client($sid, $token);
+        $this->enabled = true;
+    }
+
+    /**
+     * Send SMS message
+     */
+    public function sendSMS(string $to, string $message, ?Application $application = null): array
+    {
+        if (!$this->enabled || !$this->client) {
+            Log::info('SMS skipped — Twilio disabled.', ['to' => $to]);
+
+            return [
+                'success' => false,
+                'message' => 'Twilio disabled',
+            ];
         }
 
-        $this->client = new Client($sid, $token);
-        $this->whatsappFrom = $whatsappFrom ?? '';
-        $this->smsFrom = $smsFrom;
+        try {
+            $twilioMessage = $this->client->messages->create(
+                $to,
+                [
+                    'from' => $this->smsFrom,
+                    'body' => $message,
+                ]
+            );
+
+            if ($application) {
+                $this->logCommunication(
+                    $application,
+                    'sms',
+                    'outbound',
+                    $to,
+                    $message,
+                    $twilioMessage->sid,
+                    'sent'
+                );
+            }
+
+            return [
+                'success'     => true,
+                'message_sid' => $twilioMessage->sid,
+                'status'      => $twilioMessage->status,
+            ];
+
+        } catch (\Exception $e) {
+            Log::error('Twilio SMS Error: ' . $e->getMessage());
+
+            return [
+                'success' => false,
+                'error'   => $e->getMessage(),
+            ];
+        }
     }
 
     /**
      * Send WhatsApp message
      *
      * @param string $to Recipient number (E.164 format e.g. +639XXXXXXXXX)
-     * @param string $message
-     * @return void
      */
     public function sendWhatsApp(string $to, string $message, ?Application $application = null): array
     {
+        // Added the same disabled guard that sendSMS has.
+        if (!$this->enabled || !$this->client) {
+            Log::info('WhatsApp skipped — Twilio disabled.', ['to' => $to]);
+
+            return [
+                'success' => false,
+                'message' => 'Twilio disabled',
+            ];
+        }
+
         try {
             $twilioMessage = $this->client->messages->create(
                 "whatsapp:$to",
@@ -56,7 +119,6 @@ class TwilioService
                 ]
             );
 
-            // Log communication
             if ($application) {
                 $this->logCommunication(
                     $application,
@@ -70,9 +132,9 @@ class TwilioService
             }
 
             return [
-                'success' => true,
+                'success'     => true,
                 'message_sid' => $twilioMessage->sid,
-                'status' => $twilioMessage->status,
+                'status'      => $twilioMessage->status,
             ];
 
         } catch (\Exception $e) {
@@ -82,58 +144,6 @@ class TwilioService
                 $this->logCommunication(
                     $application,
                     'whatsapp',
-                    'outbound',
-                    $to,
-                    $message,
-                    null,
-                    'failed'
-                );
-            }
-
-            throw $e;
-        }
-    }
-
-    /**
-     * Send SMS message
-     */
-    public function sendSMS(string $to, string $message, ?Application $application = null): array
-    {
-        try {
-            $twilioMessage = $this->client->messages->create(
-                $to, // No 'whatsapp:' prefix for SMS
-                [
-                    'from' => $this->smsFrom,
-                    'body' => $message,
-                ]
-            );
-
-            // Log communication
-            if ($application) {
-                $this->logCommunication(
-                    $application,
-                    'sms',
-                    'outbound',
-                    $to,
-                    $message,
-                    $twilioMessage->sid,
-                    'sent'
-                );
-            }
-
-            return [
-                'success' => true,
-                'message_sid' => $twilioMessage->sid,
-                'status' => $twilioMessage->status,
-            ];
-
-        } catch (\Exception $e) {
-            Log::error('Twilio SMS Error: ' . $e->getMessage());
-
-            if ($application) {
-                $this->logCommunication(
-                    $application,
-                    'sms',
                     'outbound',
                     $to,
                     $message,
@@ -158,27 +168,27 @@ class TwilioService
         ?string $externalId,
         string $status
     ): void {
+        // ✅ FIX 2: Use the correct from number based on message type.
+        // Previously always used whatsapp_from even for SMS messages.
+        $ownNumber = $type === 'sms' ? $this->smsFrom : $this->whatsappFrom;
+
         Communication::create([
             'application_id' => $application->id,
-            'user_id' => $application->user_id,
-            'type' => $type,
-            'direction' => $direction,
-            'from_address' => $direction === 'outbound'
-                ? config('twilio.whatsapp_from')
-                : $recipient,
-            'to_address' => $direction === 'outbound'
-                ? $recipient
-                : config('twilio.whatsapp_from'),
-            'subject' => null,
-            'body' => $message,
-            'metadata' => null,
-            'status' => $status,
-            'sent_at' => now(),
-            'delivered_at' => null,
-            'read_at' => null,
-            'error_message' => null,
-            'external_id' => $externalId,
-            'sender_ip' => request()->ip(),
+            'user_id'        => $application->user_id,
+            'type'           => $type,
+            'direction'      => $direction,
+            'from_address'   => $direction === 'outbound' ? $ownNumber : $recipient,
+            'to_address'     => $direction === 'outbound' ? $recipient  : $ownNumber,
+            'subject'        => null,
+            'body'           => $message,
+            'metadata'       => null,
+            'status'         => $status,
+            'sent_at'        => now(),
+            'delivered_at'   => null,
+            'read_at'        => null,
+            'error_message'  => null,
+            'external_id'    => $externalId,
+            'sender_ip'      => request()->ip(),
         ]);
     }
 
@@ -187,15 +197,13 @@ class TwilioService
      */
     public function handleIncoming(array $data): void
     {
-        $from = $data['From'] ?? null;
-        $body = $data['Body'] ?? null;
+        $from       = $data['From']       ?? null;
+        $body       = $data['Body']       ?? null;
         $messageSid = $data['MessageSid'] ?? null;
 
-        // Determine if WhatsApp or SMS
-        $type = str_starts_with($from, 'whatsapp:') ? 'whatsapp' : 'sms';
+        $type      = str_starts_with($from, 'whatsapp:') ? 'whatsapp' : 'sms';
         $cleanFrom = str_replace('whatsapp:', '', $from);
 
-        // Find application by phone number
         $application = $this->findApplicationByPhone($cleanFrom);
 
         if ($application) {
