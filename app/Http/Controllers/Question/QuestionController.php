@@ -36,6 +36,26 @@ class QuestionController extends Controller
 
         ActivityLog::logActivity('question_asked', 'Question asked to client', $application);
 
+        // Notify the client that a question has been asked
+        try {
+            $application->user->notify(new \App\Notifications\Application\QuestionAsked($question));
+
+            // Send SMS if phone is available
+            if ($application->personalDetails?->mobile_phone) {
+                $smsMessage = $question->is_mandatory
+                    ? "Action required: A mandatory question has been asked on your application #{$application->application_number}. Please log in to answer."
+                    : "A question has been asked on your application #{$application->application_number}. Please log in to answer.";
+
+                app(\App\Services\MessagingService::class)->send(
+                    $application->personalDetails->mobile_phone,
+                    $smsMessage,
+                    $application
+                );
+            }
+        } catch (\Exception $e) {
+            \Log::error('Failed to send question notification to client: ' . $e->getMessage());
+        }
+
         return response()->json([
             'success'  => true,
             'message'  => 'Question sent to client.',

@@ -12,7 +12,6 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Auth;
-use App\Jobs\SendSMSMessage;
 use App\Actions\Application\SubmitApplication;
 use App\Services\MessagingService;
 
