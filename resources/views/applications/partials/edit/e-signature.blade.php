@@ -1,6 +1,6 @@
 <!-- Electronic Signature Section - Required Before Submit -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border-2 border-red-300">
-    <button type="button" 
+    <button type="button"
             class="w-full bg-gradient-to-r from-red-600 to-pink-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-pink-500 focus:ring-offset-2"
             id="e-signature-btn"
             aria-expanded="true"
@@ -22,7 +22,7 @@
         </div>
     </button>
 
-    <div id="e-signature-content" 
+    <div id="e-signature-content"
          class="transition-all duration-300 ease-in-out p-6"
          aria-labelledby="e-signature-header">
         <div class="p-6">
@@ -254,7 +254,3 @@
         width: 100%;
     }
 </style>
-
-@push('scripts')
-    @vite('resources/js/applications/e-signature.js')
-@endpush

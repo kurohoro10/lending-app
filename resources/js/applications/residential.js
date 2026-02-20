@@ -11,9 +11,11 @@
     const manualInput = document.getElementById('suburb-manual');
     const stateSelect = document.getElementById('state-selector');
 
-    residentialAccordionBtn.addEventListener('click', () => {
-        toggleAccordion('residential-addresses');
-    });
+    if (residentialAccordionBtn) {
+        residentialAccordionBtn.addEventListener('click', () => {
+            toggleAccordion('residential-addresses');
+        });
+    }
 
     // Helper functions
     function clearErrors() {
@@ -139,7 +141,7 @@
     stateSelect?.addEventListener('change', function (e) {
         updateSuburbs(e.target.value);
     });
-    
+
 
     // Manual suburb entry logic
     manualInput?.addEventListener('input', function(e) {
@@ -169,79 +171,81 @@
     });
 
     // Handle form submission with Fetch API
-    form.addEventListener('submit', async function (event) {
-        event.preventDefault();
+    if (form) {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
 
-        // Clear previous errors
-        clearErrors();
+            // Clear previous errors
+            clearErrors();
 
-        // Validate date range
-        if (!validateDateRange()) {
-            return;
-        }
-
-        // Disable submit button and show loading state
-        submitButton.disabled = true;
-        const originalText = submitButtonText.textContent;
-        submitButtonText.textContent = 'Adding...';
-
-        try {
-            // Get form data
-            const formData = new FormData(form);
-
-            // Send fetch request
-            const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
-                    'Accept': 'application/json',
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                // Success
-                displaySuccess(data.message || 'Address added successfully.');
-
-                // Reset form
-                form.reset();
-                suburbSelect.disabled = true;
-                suburbSelect.innerHTML = '<option value="">Select state first...</option>';
-
-                // Add new address to the list
-                if (data.address) {
-                    addAddressToList(data.address);
-                    updateAddressCount();
-
-                    document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                        detail: { type: 'address' }
-                    }));
-                }
-            } else {
-                // Validation errors
-                if (data.errors) {
-                    Object.keys(data.errors).forEach(fieldName => {
-                        const messages = data.errors[fieldName];
-                        if (Array.isArray(messages) && messages.length > 0) {
-                            displayFieldError(fieldName, messages[0]);
-                        }
-                    });
-                    displayError('Please correct the errors above.');
-                } else {
-                    displayError(data.message || 'An error occurred. Please try again.');
-                }
+            // Validate date range
+            if (!validateDateRange()) {
+                return;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            displayError('A network error occurred. Please check your connection and try again.');
-        } finally {
-            // Re-enable submit button
-            submitButton.disabled = false;
-            submitButtonText.textContent = originalText;
-        }
-    });
+
+            // Disable submit button and show loading state
+            submitButton.disabled = true;
+            const originalText = submitButtonText.textContent;
+            submitButtonText.textContent = 'Adding...';
+
+            try {
+                // Get form data
+                const formData = new FormData(form);
+
+                // Send fetch request
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
+                        'Accept': 'application/json',
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success
+                    displaySuccess(data.message || 'Address added successfully.');
+
+                    // Reset form
+                    form.reset();
+                    suburbSelect.disabled = true;
+                    suburbSelect.innerHTML = '<option value="">Select state first...</option>';
+
+                    // Add new address to the list
+                    if (data.address) {
+                        addAddressToList(data.address);
+                        updateAddressCount();
+
+                        document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                            detail: { type: 'address' }
+                        }));
+                    }
+                } else {
+                    // Validation errors
+                    if (data.errors) {
+                        Object.keys(data.errors).forEach(fieldName => {
+                            const messages = data.errors[fieldName];
+                            if (Array.isArray(messages) && messages.length > 0) {
+                                displayFieldError(fieldName, messages[0]);
+                            }
+                        });
+                        displayError('Please correct the errors above.');
+                    } else {
+                        displayError(data.message || 'An error occurred. Please try again.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('A network error occurred. Please check your connection and try again.');
+            } finally {
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButtonText.textContent = originalText;
+            }
+        });
+    }
 
     // Function to add address to the list dynamically
     function addAddressToList(address) {

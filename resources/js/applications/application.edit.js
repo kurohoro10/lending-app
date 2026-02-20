@@ -5,16 +5,17 @@
  */
 
 (() => {
-    const state = window.APP_STATE || {
-        progress: {
-            loanDetails: true,
-            personalDetails: false,
-            addresses: false,
-            employment: false,
-            expenses: false
-        },
-        legalAge: 18
+    const state = window.APP_STATE ?? {};
+
+    state.progress = state.progress ?? {
+        loanDetails: true,
+        personalDetails: false,
+        addresses: false,
+        employment: false,
+        expenses: false
     };
+
+    state.legalAge = state.legalAge ?? 18;
 
     const els = {
         submitBtn: document.getElementById('submit-application-btn'),

@@ -9,6 +9,7 @@ use App\Http\Controllers\Admin\CreditCheckController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\Question\QuestionController;
+use App\Http\Controllers\Admin\SettingsController;
 
 /*
 |--------------------------------------------------------------------------
@@ -19,15 +20,15 @@ use App\Http\Controllers\Question\QuestionController;
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 // Applications
-Route::get('/applications', [AdminApplicationController::class, 'index'])
+Route::get('/applications',                                 [AdminApplicationController::class, 'index'])
     ->name('applications.index');
-Route::get('/applications/{application}', [AdminApplicationController::class, 'show'])
+Route::get('/applications/{application}',                   [AdminApplicationController::class, 'show'])
     ->name('applications.show');
-Route::patch('/applications/{application}/status', [AdminApplicationController::class, 'updateStatus'])
+Route::patch('/applications/{application}/status',          [AdminApplicationController::class, 'updateStatus'])
     ->name('applications.updateStatus');
-Route::patch('/applications/{application}/assign', [AdminApplicationController::class, 'assign'])
+Route::patch('/applications/{application}/assign',          [AdminApplicationController::class, 'assign'])
     ->name('applications.assign');
-Route::get('/applications/{application}/export-pdf', [AdminApplicationController::class, 'exportPdf'])
+Route::get('/applications/{application}/export-pdf',        [AdminApplicationController::class, 'exportPdf'])
     ->name('applications.exportPdf');
 Route::post('/applications/{application}/return-to-client', [AdminApplicationController::class, 'returnToClient'])
 ->name('applications.returnToClient');
@@ -35,46 +36,48 @@ Route::post('/applications/{application}/return-to-client', [AdminApplicationCon
 // Comments
 Route::post('applications/{application}/comments', [CommentController::class, 'store'])
     ->name('comments.store');
-Route::patch('comments/{comment}', [CommentController::class, 'update'])
+Route::patch('comments/{comment}',                 [CommentController::class, 'update'])
     ->name('comments.update');
-Route::delete('comments/{comment}', [CommentController::class, 'destroy'])
+Route::delete('comments/{comment}',                [CommentController::class, 'destroy'])
     ->name('comments.destroy');
-Route::post('comments/{comment}/toggle-pin', [CommentController::class, 'togglePin'])
+Route::post('comments/{comment}/toggle-pin',       [CommentController::class, 'togglePin'])
     ->name('comments.togglePin');
+Route::patch('/{commentId}/restore',               [CommentController::class, 'restore'])
+    ->name('comments.restore');
 
 // Tasks
-Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+Route::get('/tasks',                            [TaskController::class, 'index'])->name('tasks.index');
 Route::post('applications/{application}/tasks', [TaskController::class, 'store'])
     ->name('tasks.store');
-Route::patch('tasks/{task}', [TaskController::class, 'update'])
+Route::patch('tasks/{task}',                    [TaskController::class, 'update'])
     ->name('tasks.update');
-Route::post('tasks/{task}/complete', [TaskController::class, 'complete'])
+Route::post('tasks/{task}/complete',            [TaskController::class, 'complete'])
     ->name('tasks.complete');
-Route::delete('tasks/{task}', [TaskController::class, 'destroy'])
+Route::delete('tasks/{task}',                   [TaskController::class, 'destroy'])
     ->name('tasks.destroy');
 
 // Questions (Admin Asks)
 Route::post('applications/{application}/questions', [QuestionController::class, 'store'])
     ->name('questions.store');
-Route::delete('questions/{question}', [QuestionController::class, 'destroy'])
+Route::delete('questions/{question}',               [QuestionController::class, 'destroy'])
     ->name('questions.destroy');
 
 // Communications
 Route::get('applications/{application}/communications', [CommunicationController::class, 'index'])
     ->name('communications.index');
-Route::post('applications/{application}/send-email', [CommunicationController::class, 'sendEmail'])
+Route::post('applications/{application}/send-email',    [CommunicationController::class, 'sendEmail'])
     ->name('communications.sendEmail');
-Route::post('applications/{application}/send-sms', [CommunicationController::class, 'sendSms'])
+Route::post('applications/{application}/send-sms',      [CommunicationController::class, 'sendSms'])
     ->name('communications.sendSms');
-Route::get('communications/{communication}', [CommunicationController::class, 'show'])
+Route::get('communications/{communication}',            [CommunicationController::class, 'show'])
     ->name('communications.show');
 
 // Credit Checks
 Route::post('applications/{application}/credit-check', [CreditCheckController::class, 'request'])
     ->name('creditChecks.request');
-Route::patch('credit-checks/{creditCheck}', [CreditCheckController::class, 'update'])
+Route::patch('credit-checks/{creditCheck}',            [CreditCheckController::class, 'update'])
     ->name('creditChecks.update');
-Route::get('credit-checks/{creditCheck}', [CreditCheckController::class, 'show'])
+Route::get('credit-checks/{creditCheck}',              [CreditCheckController::class, 'show'])
     ->name('creditChecks.show');
 
 // Living Expense Verification
@@ -88,9 +91,15 @@ Route::patch('documents/{document}/status', [DocumentController::class, 'updateS
 // Communication Templates & Sending
 Route::get('applications/{application}/email-templates', [CommunicationController::class, 'getEmailTemplates'])
     ->name('communications.emailTemplates');
-Route::get('applications/{application}/sms-templates', [CommunicationController::class, 'getSMSTemplates'])
+Route::get('applications/{application}/sms-templates',   [CommunicationController::class, 'getSMSTemplates'])
     ->name('communications.smsTemplates');
-Route::post('applications/{application}/send-email', [CommunicationController::class, 'sendEmail'])
+Route::post('applications/{application}/send-email',     [CommunicationController::class, 'sendEmail'])
     ->name('communications.sendEmail');
-Route::post('applications/{application}/send-sms', [CommunicationController::class, 'sendSms'])
+Route::post('applications/{application}/send-sms',       [CommunicationController::class, 'sendSms'])
     ->name('communications.sendSms');
+
+    // Settings
+Route::get('/settings',           [SettingsController::class, 'index'])
+    ->name('settings.index');
+Route::patch('/settings/{group}', [SettingsController::class, 'update'])
+    ->name('settings.update');

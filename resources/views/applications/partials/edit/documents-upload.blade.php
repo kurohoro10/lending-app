@@ -178,5 +178,3 @@ Object.assign(window.APP_STATE, {
     }
 });
 </script>
-
-@vite('resources/js/applications/documents.js')

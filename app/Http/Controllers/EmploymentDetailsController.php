@@ -17,15 +17,12 @@ class EmploymentDetailsController extends Controller
         if (!$application->personalDetails || !$application->personalDetails->date_of_birth) {
             $errorMessage = 'Please complete Personal Details (Date of Birth) first.';
 
-            // Check if the request expects JSON (AJAX request)
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
-                    'success' => true,
-                    'message' => 'Employment details added successfully.',
-                    'employment' => $employment,
+                    'success' => false,
+                    'message' => $errorMessage,
                     'type' => 'employment',
-                    'trigger_progress_update' => true
-                ], 201);
+                ], 422);
             }
 
             return back()->withErrors([

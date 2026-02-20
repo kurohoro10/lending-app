@@ -1,6 +1,6 @@
 <!-- Personal Details Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
-    <button type="button" 
+    <button type="button"
         class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
         id="personal-details-btn"
         aria-expanded="true"
@@ -15,7 +15,7 @@
                 </h3>
                 <p class="text-indigo-100 text-sm mt-1">Tell us about yourself</p>
             </div>
-            
+
             <!-- Chevron Icon -->
             <svg id="personal-details-chevron" class="w-5 h-5 text-white transition-transform duration-200 transform rotate-180" fill="currentColor" viewBox="0 0 20 20">
                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
@@ -23,7 +23,7 @@
         </div>
     </button>
 
-    <div id="personal-details-content" 
+    <div id="personal-details-content"
         class="transition-all duration-300 ease-in-out p-6"
         aria-labelledby="personal-details-header">
         <div class="p-6">
@@ -157,5 +157,3 @@
         </div>
     </div>
 </div>
-
-@vite('resources/js/applications/personalDetails.js')

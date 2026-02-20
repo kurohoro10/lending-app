@@ -5,9 +5,11 @@
     const submitButtonText = document.getElementById('submit-expense-text');
     const livingExpensesAccordionBtn = document.getElementById('living-expenses-btn');
 
-    livingExpensesAccordionBtn.addEventListener('click', () => {
-        toggleAccordion('living-expenses');
-    });
+    if (livingExpensesAccordionBtn) {
+        livingExpensesAccordionBtn.addEventListener('click', () => {
+            toggleAccordion('living-expenses');
+        });
+    }
 
     // Helper functions
     function clearErrors() {
@@ -99,72 +101,74 @@
     }
 
     // Handle form submission with Fetch API
-    form.addEventListener('submit', async function (event) {
-        event.preventDefault();
+    if (form) {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
 
-        // Clear previous errors
-        clearErrors();
+            // Clear previous errors
+            clearErrors();
 
-        // Disable submit button and show loading state
-        submitButton.disabled = true;
-        const originalText = submitButtonText.textContent;
-        submitButtonText.textContent = 'Adding...';
+            // Disable submit button and show loading state
+            submitButton.disabled = true;
+            const originalText = submitButtonText.textContent;
+            submitButtonText.textContent = 'Adding...';
 
-        try {
-            // Get form data
-            const formData = new FormData(form);
+            try {
+                // Get form data
+                const formData = new FormData(form);
 
-            // Send fetch request
-            const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
-                    'Accept': 'application/json',
-                },
-                body: formData
-            });
+                // Send fetch request
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
+                        'Accept': 'application/json',
+                    },
+                    body: formData
+                });
 
-            const data = await response.json();
+                const data = await response.json();
 
-            if (response.ok) {
-                // Success
-                displaySuccess(data.message || 'Living expense added successfully.');
+                if (response.ok) {
+                    // Success
+                    displaySuccess(data.message || 'Living expense added successfully.');
 
-                // Reset form
-                form.reset();
+                    // Reset form
+                    form.reset();
 
-                // Add new expense to the table
-                if (data.expense) {
-                    addExpenseToTable(data.expense);
-                    updateTotalExpenses();
+                    // Add new expense to the table
+                    if (data.expense) {
+                        addExpenseToTable(data.expense);
+                        updateTotalExpenses();
 
-                    document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                        detail: { type: 'expense' }
-                    }));
-                }
-            } else {
-                // Validation errors
-                if (data.errors) {
-                    Object.keys(data.errors).forEach(fieldName => {
-                        const messages = data.errors[fieldName];
-                        if (Array.isArray(messages) && messages.length > 0) {
-                            displayFieldError(fieldName, messages[0]);
-                        }
-                    });
-                    displayError('Please correct the errors above.');
+                        document.dispatchEvent(new CustomEvent('ajaxSuccess', {
+                            detail: { type: 'expense' }
+                        }));
+                    }
                 } else {
-                    displayError(data.message || 'An error occurred. Please try again.');
+                    // Validation errors
+                    if (data.errors) {
+                        Object.keys(data.errors).forEach(fieldName => {
+                            const messages = data.errors[fieldName];
+                            if (Array.isArray(messages) && messages.length > 0) {
+                                displayFieldError(fieldName, messages[0]);
+                            }
+                        });
+                        displayError('Please correct the errors above.');
+                    } else {
+                        displayError(data.message || 'An error occurred. Please try again.');
+                    }
                 }
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('A network error occurred. Please check your connection and try again.');
+            } finally {
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButtonText.textContent = originalText;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            displayError('A network error occurred. Please check your connection and try again.');
-        } finally {
-            // Re-enable submit button
-            submitButton.disabled = false;
-            submitButtonText.textContent = originalText;
-        }
-    });
+        });
+    }
 
     // Function to add expense to the table dynamically
     function addExpenseToTable(expense) {

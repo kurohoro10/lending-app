@@ -6,9 +6,11 @@
     const submitButtonText = document.getElementById('submit-button-text');
     const messagesContainer = document.getElementById('form-messages');
 
-    personalDetailsAccordionBtn.addEventListener('click', () => {
-        toggleAccordion('personal-details');
-    });
+    if (personalDetailsAccordionBtn) {
+        personalDetailsAccordionBtn.addEventListener('click', () => {
+            toggleAccordion('personal-details');
+        });
+    }
 
     // Helper function to clear all error messages
     function clearErrors() {
@@ -104,75 +106,79 @@
     }
 
     // Clear errors when user types
-    dobInput.addEventListener('input', function () {
-        const errorElement = document.getElementById('date_of_birth-error');
-        errorElement.classList.add('hidden');
-        dobInput.classList.remove('border-red-500');
-        dobInput.removeAttribute('aria-invalid');
-    });
+    if (dobInput) {
+        dobInput.addEventListener('input', function () {
+            const errorElement = document.getElementById('date_of_birth-error');
+            errorElement.classList.add('hidden');
+            dobInput.classList.remove('border-red-500');
+            dobInput.removeAttribute('aria-invalid');
+        });
+    }
 
     // Handle form submission with Fetch API
-    form.addEventListener('submit', async function (event) {
-        event.preventDefault();
+    if (form) {
+        form.addEventListener('submit', async function (event) {
+            event.preventDefault();
 
-        // Clear previous errors
-        clearErrors();
+            // Clear previous errors
+            clearErrors();
 
-        // Validate age
-        if (!validateAge()) {
-            return;
-        }
-
-        // Disable submit button and show loading state
-        submitButton.disabled = true;
-        const originalText = submitButtonText.textContent;
-        submitButtonText.textContent = 'Saving...';
-
-        try {
-            // Get form data
-            const formData = new FormData(form);
-
-            // Send fetch request
-            const response = await fetch(form.action, {
-                method: 'POST',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
-                    'Accept': 'application/json',
-                },
-                body: formData
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                // Success
-                displaySuccess(data.message || 'Personal details saved successfully.');
-
-                // Optional: Update button text if it's a create -> update scenario
-                if (originalText.includes('Save')) {
-                    submitButtonText.textContent = 'Update Personal Details';
-                }
-            } else {
-                // Validation errors
-                if (data.errors) {
-                    Object.keys(data.errors).forEach(fieldName => {
-                        const messages = data.errors[fieldName];
-                        if (Array.isArray(messages) && messages.length > 0) {
-                            displayFieldError(fieldName, messages[0]);
-                        }
-                    });
-                    displayError('Please correct the errors below.');
-                } else {
-                    displayError(data.message || 'An error occurred. Please try again.');
-                }
+            // Validate age
+            if (!validateAge()) {
+                return;
             }
-        } catch (error) {
-            console.error('Error:', error);
-            displayError('A network error occurred. Please check your connection and try again.');
-        } finally {
-            // Re-enable submit button
-            submitButton.disabled = false;
-            submitButtonText.textContent = originalText;
-        }
-    });
+
+            // Disable submit button and show loading state
+            submitButton.disabled = true;
+            const originalText = submitButtonText.textContent;
+            submitButtonText.textContent = 'Saving...';
+
+            try {
+                // Get form data
+                const formData = new FormData(form);
+
+                // Send fetch request
+                const response = await fetch(form.action, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
+                        'Accept': 'application/json',
+                    },
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    // Success
+                    displaySuccess(data.message || 'Personal details saved successfully.');
+
+                    // Optional: Update button text if it's a create -> update scenario
+                    if (originalText.includes('Save')) {
+                        submitButtonText.textContent = 'Update Personal Details';
+                    }
+                } else {
+                    // Validation errors
+                    if (data.errors) {
+                        Object.keys(data.errors).forEach(fieldName => {
+                            const messages = data.errors[fieldName];
+                            if (Array.isArray(messages) && messages.length > 0) {
+                                displayFieldError(fieldName, messages[0]);
+                            }
+                        });
+                        displayError('Please correct the errors below.');
+                    } else {
+                        displayError(data.message || 'An error occurred. Please try again.');
+                    }
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                displayError('A network error occurred. Please check your connection and try again.');
+            } finally {
+                // Re-enable submit button
+                submitButton.disabled = false;
+                submitButtonText.textContent = originalText;
+            }
+        });
+    }
 })();

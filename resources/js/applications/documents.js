@@ -4,11 +4,6 @@
  */
 
 (() => {
-    if (!window.APP_STATE || !APP_STATE.routes) {
-        console.error('APP_STATE.routes is not defined');
-        return;
-    }
-
     const form = document.getElementById('document-form');
     if (!form) return;
     const fileInput = document.getElementById('file-upload');
@@ -24,10 +19,13 @@
     const submitButton = document.getElementById('submit-document-button');
     const submitButtonText = document.getElementById('submit-document-text');
     const documentsAccordionBtn = document.getElementById('documents-btn');
-    
-    documentsAccordionBtn.addEventListener('click', () => {
-        toggleAccordion('documents');
-    });
+
+    if (documentsAccordionBtn) {
+        documentsAccordionBtn.addEventListener('click', () => {
+            console.log('clicked');
+            toggleAccordion('documents');
+        });
+    }
 
     const allowedTypes = [
         'application/pdf',

@@ -15,7 +15,7 @@ Route::get('/', function () {
 })->name('welcome');
 
 // Public Application Routes (No Authentication Required)
-Route::get('apply', [ApplicationController::class, 'create'])->name('applications.create');
+Route::get('apply',  [ApplicationController::class, 'create'])->name('applications.create');
 Route::post('apply', [ApplicationController::class, 'store'])->name('applications.store');
 Route::get('privacy-policy', function () {
     return view('pages.public.privacy-policy');
@@ -44,10 +44,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 
 
 // WhatsApp & SMS Routes
-Route::post('/whatsapp/send', [WhatsAppController::class, 'send'])->name('whatsapp.send');
-Route::post('/whatsapp/queue', [WhatsAppController::class, 'queue'])->name('whatsapp.queue');
-Route::post('/sms/send', [WhatsAppController::class, 'sendSMS'])->name('sms.send');
-Route::post('/sms/queue', [WhatsAppController::class, 'queueSMS'])->name('sms.queue');
+Route::post('/whatsapp/send',   [WhatsAppController::class, 'send'])->name('whatsapp.send');
+Route::post('/whatsapp/queue',  [WhatsAppController::class, 'queue'])->name('whatsapp.queue');
+Route::post('/sms/send',        [WhatsAppController::class, 'sendSMS'])->name('sms.send');
+Route::post('/sms/queue',       [WhatsAppController::class, 'queueSMS'])->name('sms.queue');
 
 // Twilio Webhooks (no CSRF protection needed)
 Route::post('/webhooks/twilio/sms', function (\Illuminate\Http\Request $request) {

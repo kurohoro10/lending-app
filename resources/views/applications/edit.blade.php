@@ -91,8 +91,6 @@
     });
     </script>
 
-    @vite('resources/js/applications/application.edit.js')
-
     <style>
         /* Screen reader only content */
         .sr-only {

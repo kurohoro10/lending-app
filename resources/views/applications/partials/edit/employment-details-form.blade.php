@@ -188,5 +188,3 @@
         deleteRoute: @js(route('applications.employment-details.destroy', [$application, ':id']))
     });
 </script>
-
-@vite('resources/js/applications/employmentDetails.js')

@@ -24,6 +24,8 @@ class Comment extends Model
         'is_pinned' => 'boolean',
     ];
 
+    protected $dates = ['deleted_at'];
+
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);

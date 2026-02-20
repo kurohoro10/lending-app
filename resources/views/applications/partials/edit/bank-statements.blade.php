@@ -190,5 +190,3 @@ window.CREDITSENSE = Object.assign(window.CREDITSENSE ?? {}, {
     completeRoute:  @js(route('applications.bank-statements.complete', $application)),
 });
 </script>
-
-@vite('resources/js/applications/creditSense.js')

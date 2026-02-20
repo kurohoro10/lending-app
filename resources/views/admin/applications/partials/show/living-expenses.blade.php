@@ -34,7 +34,7 @@
                         </td>
                         <td class="px-4 py-2 text-right">
                             @if(!$expense->is_verified)
-                            <button onclick="showVerifyModal({{ $expense->id }})" class="text-indigo-600 hover:text-indigo-900 text-sm">Verify</button>
+                            <button class="text-indigo-600 hover:text-indigo-900 text-sm">Verify</button>
                             @endif
                         </td>
                     </tr>

@@ -3,10 +3,12 @@
     const drawnTab = document.getElementById('tab-drawn');
     const clearBtn = document.getElementById('clear-signature-btn');
     const eSignatureAccordionBtn = document.getElementById('e-signature-btn');
-    
-    eSignatureAccordionBtn.addEventListener('click', () => {
-        toggleAccordion('e-signature');
-    });
+
+    if (eSignatureAccordionBtn) {
+        eSignatureAccordionBtn.addEventListener('click', () => {
+            toggleAccordion('e-signature');
+        });
+    }
 
     function showSignatureType(type) {
         document.querySelectorAll('.signature-panel').forEach(panel => panel.classList.add('hidden'));

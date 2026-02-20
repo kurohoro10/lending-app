@@ -175,11 +175,9 @@
             @endif
 
             <!-- Export PDF -->
-            {{-- <div class="flex flex-col justify-end"> --}}
-                <a href="{{ route('admin.applications.exportPdf', $application) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700">
-                    Export PDF
-                </a>
-            {{-- </div> --}}
+            <a href="{{ route('admin.applications.exportPdf', $application) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700">
+                Export PDF
+            </a>
         </div>
     </div>
 </div>

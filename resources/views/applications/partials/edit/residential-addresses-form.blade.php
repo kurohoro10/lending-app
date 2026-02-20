@@ -284,5 +284,3 @@ Object.assign(window.RESIDENTIAL_CONFIG  , {
     deleteRoute: @js(route('applications.residential-addresses.destroy', [$application, ':id']))
 });
 </script>
-
-@vite('resources/js/applications/residential.js')

@@ -164,7 +164,3 @@
         deleteRoute: @js(route('applications.living-expenses.destroy', [$application, ':id']))
     });
 </script>
-
-@push('scripts')
-    @vite('resources/js/applications/livingExpenses.js')
-@endpush

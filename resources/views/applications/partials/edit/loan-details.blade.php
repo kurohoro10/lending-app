@@ -1,7 +1,7 @@
 <!-- Loan Details Section -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
     <!-- Accordion Header -->
-    <button type="button" 
+    <button type="button"
             class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
             id="loan-details-btn"
             aria-expanded="true"
@@ -22,7 +22,7 @@
     </button>
 
     <!-- Accordion Content -->
-    <div id="loan-details-content" 
+    <div id="loan-details-content"
          class="transition-all duration-300 ease-in-out p-6"
          aria-labelledby="loan-details-header">
         <div class="p-6">
@@ -98,5 +98,3 @@
         </div>
     </div>
 </div>
-
-@vite('resources/js/applications/loan-details.js')

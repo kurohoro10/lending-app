@@ -8,26 +8,26 @@ use App\Models\Comment;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
 
 /**
  * Class CommentController
  *
- * Manages the creation, modification, and visibility of comments
- * attached to loan applications, supporting both internal staff notes
- * and client-facing communications.
+ * All mutating methods support progressive enhancement:
+ *  - JS present (Accept: application/json) → JsonResponse with rendered HTML
+ *  - JS absent  (plain form POST)          → RedirectResponse with flash message
  *
  * @package App\Http\Controllers\Admin
  */
 class CommentController extends Controller
 {
+    private const VIEW_ITEM  = 'admin.applications.partials.show.comment-item';
+    private const VIEW_TOAST = 'admin.applications.partials.show.comment-undo-toast';
+
     /**
-     * Store a newly created comment in storage.
-     *
-     * @param Request     $request
-     * @param Application $application
-     * @return RedirectResponse
+     * Store a new comment.
      */
-    public function store(Request $request, Application $application): RedirectResponse
+    public function store(Request $request, Application $application): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'comment'   => 'required|string',
@@ -43,6 +43,8 @@ class CommentController extends Controller
             'ip_address' => $request->ip(),
         ]);
 
+        $comment->load('user');
+
         ActivityLog::logActivity(
             'commented',
             "Added {$validated['type']} comment",
@@ -51,20 +53,23 @@ class CommentController extends Controller
             ['comment_preview' => substr($validated['comment'], 0, 50)]
         );
 
-        // Implementation Note: In the future, trigger a notification
-        // if ($validated['type'] === 'client_visible') ...
+        // if ($validated['type'] === 'client_visible') { notify client }
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Comment added successfully.',
+                'html'    => view(self::VIEW_ITEM, compact('comment'))->render(),
+            ]);
+        }
 
         return back()->with('success', 'Comment added successfully.');
     }
 
     /**
-     * Update the specified comment in storage.
-     *
-     * @param Request $request
-     * @param Comment $comment
-     * @return RedirectResponse
+     * Update a comment.
      */
-    public function update(Request $request, Comment $comment): RedirectResponse
+    public function update(Request $request, Comment $comment): JsonResponse|RedirectResponse
     {
         $validated = $request->validate([
             'comment'   => 'required|string',
@@ -73,56 +78,90 @@ class CommentController extends Controller
 
         $oldValues = $comment->only(['comment', 'is_pinned']);
         $comment->update($validated);
+        $comment->load('user');
 
-        ActivityLog::logActivity(
-            'updated',
-            'Updated comment',
-            $comment,
-            $oldValues,
-            $validated
-        );
+        ActivityLog::logActivity('updated', 'Updated comment', $comment, $oldValues, $validated);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => 'Comment updated successfully.',
+                'html'    => view(self::VIEW_ITEM, compact('comment'))->render(),
+            ]);
+        }
 
         return back()->with('success', 'Comment updated successfully.');
     }
 
     /**
-     * Remove the specified comment from storage.
-     *
-     * @param Comment $comment
-     * @return RedirectResponse
+     * Soft-delete a comment and return an undo toast.
      */
-    public function destroy(Comment $comment): RedirectResponse
+    public function destroy(Request $request, Comment $comment): JsonResponse|RedirectResponse
     {
         $application = $comment->application;
+        $commentId   = $comment->id;
 
         $comment->delete();
 
-        ActivityLog::logActivity(
-            'deleted',
-            'Deleted comment',
-            $application
-        );
+        ActivityLog::logActivity('deleted', 'Soft-deleted comment', $application);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success'    => true,
+                'message'    => 'Comment deleted.',
+                'comment_id' => $commentId,
+                'undo_html'  => view(self::VIEW_TOAST, [
+                    'commentId'    => $commentId,
+                    'restoreRoute' => route('admin.comments.restore', $commentId),
+                ])->render(),
+            ]);
+        }
 
         return back()->with('success', 'Comment deleted successfully.');
     }
 
     /**
-     * Toggle the pinned status of a comment.
-     *
-     * @param Comment $comment
-     * @return RedirectResponse
+     * Restore a soft-deleted comment.
      */
-    public function togglePin(Comment $comment): RedirectResponse
+    public function restore(Request $request, int $commentId): JsonResponse|RedirectResponse
+    {
+        $comment = Comment::withTrashed()->findOrFail($commentId);
+        $comment->restore();
+        $comment->load('user');
+
+        ActivityLog::logActivity('restored', 'Restored comment', $comment);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success'    => true,
+                'message'    => 'Comment restored.',
+                'comment_id' => $comment->id,
+                'html'       => view(self::VIEW_ITEM, compact('comment'))->render(),
+            ]);
+        }
+
+        return back()->with('success', 'Comment restored.');
+    }
+
+    /**
+     * Toggle the pinned status of a comment.
+     */
+    public function togglePin(Request $request, Comment $comment): JsonResponse|RedirectResponse
     {
         $comment->update(['is_pinned' => !$comment->is_pinned]);
+        $comment->load('user');
 
         $action = $comment->is_pinned ? 'Pinned' : 'Unpinned';
 
-        ActivityLog::logActivity(
-            'pinned',
-            "{$action} comment",
-            $comment
-        );
+        ActivityLog::logActivity('pinned', "{$action} comment", $comment);
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'success' => true,
+                'message' => "{$action} comment successfully.",
+                'html'    => view(self::VIEW_ITEM, compact('comment'))->render(),
+            ]);
+        }
 
         return back()->with('success', "Comment {$action} successfully.");
     }
