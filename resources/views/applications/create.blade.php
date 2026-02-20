@@ -857,133 +857,80 @@
 
     <script>
         // ==========================================
-        // LOAN CALCULATOR LOGIC
-        // ==========================================
-        const calcLoanSlider = document.getElementById('calcLoanSlider');
-        const calcTermSlider = document.getElementById('calcTermSlider');
-        const calcRateSlider = document.getElementById('calcRateSlider');
-
-        const calcLoanFill = document.getElementById('calcLoanFill');
-        const calcTermFill = document.getElementById('calcTermFill');
-        const calcRateFill = document.getElementById('calcRateFill');
-
-        const calcLoanAmount = document.getElementById('calcLoanAmount');
-        const calcLoanTerm = document.getElementById('calcLoanTerm');
-        const calcInterestRate = document.getElementById('calcInterestRate');
-        const calcMonthlyPayment = document.getElementById('calcMonthlyPayment');
-        const calcTotalInterest = document.getElementById('calcTotalInterest');
-        const calcTotalRepayment = document.getElementById('calcTotalRepayment');
-
-        function formatCurrency(amount) {
-            return '$' + Math.round(amount).toLocaleString();
-        }
-
-        function updateSliderFill(slider, fill) {
-            const min = parseFloat(slider.min);
-            const max = parseFloat(slider.max);
-            const value = parseFloat(slider.value);
-            const percentage = ((value - min) / (max - min)) * 100;
-            fill.style.width = percentage + '%';
-        }
-
-        function calculateLoan() {
-            const principal = parseFloat(calcLoanSlider.value);
-            const termMonths = parseInt(calcTermSlider.value);
-            const annualRate = parseFloat(calcRateSlider.value);
-            const monthlyRate = annualRate / 100 / 12;
-
-            // Calculate monthly payment using loan payment formula
-            const monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
-            const totalRepayment = monthlyPayment * termMonths;
-            const totalInterest = totalRepayment - principal;
-
-            // Update displays
-            calcLoanAmount.textContent = formatCurrency(principal);
-            calcLoanTerm.textContent = termMonths + ' months';
-            calcInterestRate.textContent = annualRate + '%';
-            calcMonthlyPayment.textContent = formatCurrency(monthlyPayment);
-            calcTotalInterest.textContent = formatCurrency(totalInterest);
-            calcTotalRepayment.textContent = formatCurrency(totalRepayment);
-
-            // Update slider fills
-            updateSliderFill(calcLoanSlider, calcLoanFill);
-            updateSliderFill(calcTermSlider, calcTermFill);
-            updateSliderFill(calcRateSlider, calcRateFill);
-        }
-
-        // Event listeners
-        calcLoanSlider.addEventListener('input', calculateLoan);
-        calcTermSlider.addEventListener('input', calculateLoan);
-        calcRateSlider.addEventListener('input', calculateLoan);
-
-        // Initial calculation
-        calculateLoan();
-
-        // ==========================================
-        // USE CALCULATOR VALUES IN FORM
-        // ==========================================
-        function useCalculatorValues() {
-            const loanAmountInput = document.getElementById('loan_amount');
-            const termMonthsInput = document.getElementById('term_months');
-
-            if (loanAmountInput) {
-                loanAmountInput.value = calcLoanSlider.value;
-                // Add visual feedback
-                loanAmountInput.focus();
-                loanAmountInput.classList.add('ring-2', 'ring-green-400');
-                setTimeout(() => {
-                    loanAmountInput.classList.remove('ring-2', 'ring-green-400');
-                }, 1500);
-            }
-
-            if (termMonthsInput) {
-                termMonthsInput.value = calcTermSlider.value;
-                termMonthsInput.classList.add('ring-2', 'ring-green-400');
-                setTimeout(() => {
-                    termMonthsInput.classList.remove('ring-2', 'ring-green-400');
-                }, 1500);
-            }
-
-            // Scroll to form
-            document.querySelector('.lg\\:col-span-2').scrollIntoView({ behavior: 'smooth', block: 'start' });
-
-            // Show success message
-            const tempMessage = document.createElement('div');
-            tempMessage.className = 'fixed top-24 right-6 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in';
-            tempMessage.innerHTML = `
-                <div class="flex items-center gap-2">
-                    <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                    </svg>
-                    <span class="font-semibold">Values applied to form!</span>
-                </div>
-            `;
-            document.body.appendChild(tempMessage);
-
-            setTimeout(() => {
-                tempMessage.style.opacity = '0';
-                tempMessage.style.transform = 'translateY(-10px)';
-                setTimeout(() => tempMessage.remove(), 300);
-            }, 2000);
-        }
-
-        // ==========================================
-        // CONSENT CHECKBOXES ENABLE SUBMIT
+        // SUBMIT BUTTON LOADING STATE
         // ==========================================
         document.addEventListener('DOMContentLoaded', () => {
-            const privacy = document.getElementById('privacy_consent');
-            const terms = document.getElementById('terms_consent');
+            const form      = document.querySelector('form');
             const submitBtn = document.getElementById('submitBtn');
+            const privacy   = document.getElementById('privacy_consent');
+            const terms     = document.getElementById('terms_consent');
 
+            // Store original button content
+            const originalButtonHTML = submitBtn.innerHTML;
+
+            // Function to show loading state
+            function showLoadingState() {
+                submitBtn.disabled = true;
+                submitBtn.classList.add('opacity-75', 'cursor-wait');
+                submitBtn.classList.remove('hover:scale-105', 'hover:shadow-lg');
+
+                submitBtn.innerHTML = `
+                    <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Creating Your Application...</span>
+                `;
+            }
+
+            // Function to restore button state (in case of validation error)
+            function restoreButtonState() {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-75', 'cursor-wait');
+                submitBtn.classList.add('hover:scale-105', 'hover:shadow-lg');
+                submitBtn.innerHTML = originalButtonHTML;
+                updateSubmitState(); // Re-check if button should be enabled
+            }
+
+            // Function to update submit button enabled/disabled state
             function updateSubmitState() {
-                const enabled = privacy.checked && terms.checked;
+                const enabled      = privacy.checked && terms.checked;
                 submitBtn.disabled = !enabled;
                 submitBtn.classList.toggle('opacity-50', !enabled);
                 submitBtn.classList.toggle('cursor-not-allowed', !enabled);
             }
 
+            // Handle form submission
+            form.addEventListener('submit', function(e) {
+                // Check if consents are checked
+                if (privacy.checked && terms.checked) {
+                    // Show loading state
+                    showLoadingState();
+
+                    // If there are validation errors on the backend, the page will reload
+                    // and the button will automatically return to normal state
+
+                    // Optional: Add a timeout to restore button if submission takes too long
+                    // (This handles cases where backend validation fails)
+                    setTimeout(() => {
+                        // Check if we're still on the same page (form didn't submit successfully)
+                        if (document.getElementById('submitBtn')) {
+                            restoreButtonState();
+                        }
+                    }, 10000); // 10 seconds timeout
+                }
+            });
+
+            // Restore button state if there are validation errors on page load
+            @if($errors->any())
+                restoreButtonState();
+            @endif
+
+            // Event listeners for consent checkboxes
             privacy.addEventListener('change', updateSubmitState);
             terms.addEventListener('change', updateSubmitState);
+
+            // Initial state
             updateSubmitState();
 
             // Initial calculation with passed values
@@ -993,10 +940,50 @@
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('amount')) {
                 setTimeout(() => {
-                    showSuccessToast('Calculator values loaded from welcome page!');
+                    const tempMessage     = document.createElement('div');
+                    tempMessage.className = 'fixed top-24 right-6 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in';
+                    tempMessage.innerHTML = `
+                        <div class="flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                            </svg>
+                            <span class="font-semibold">Calculator values loaded!</span>
+                        </div>
+                    `;
+                    document.body.appendChild(tempMessage);
+
+                    setTimeout(() => {
+                        tempMessage.style.opacity    = '0';
+                        tempMessage.style.transform  = 'translateY(-10px)';
+                        tempMessage.style.transition = 'all 0.3s ease';
+                        setTimeout(() => tempMessage.remove(), 300);
+                    }, 3000);
                 }, 500);
             }
         });
+
+        // Add CSS for spinner animation (if not already in your styles)
+        const style       = document.createElement('style');
+        style.textContent = `
+            @keyframes spin {
+                from {
+                    transform: rotate(0deg);
+                }
+                to {
+                    transform: rotate(360deg);
+                }
+            }
+
+            .animate-spin {
+                animation: spin 1s linear infinite;
+            }
+
+            /* Smooth transition for button state changes */
+            .submit-btn {
+                transition: all 0.3s ease;
+            }
+        `;
+        document.head.appendChild(style);
     </script>
 </body>
 </html>

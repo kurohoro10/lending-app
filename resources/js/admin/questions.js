@@ -1,4 +1,4 @@
-const applicationId = window.APP_QUESTION.applicationId;
+const applicationId = window.APP_QUESTION?.applicationId;
 const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
 
 function toggleAskForm() {

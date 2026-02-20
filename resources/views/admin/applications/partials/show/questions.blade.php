@@ -67,3 +67,9 @@
         </div>
     </div>
 </div>
+
+<script>
+Object.assign(window.APP_QUESTION, {
+    applicationId: {{ $application->id }}
+});
+</script>

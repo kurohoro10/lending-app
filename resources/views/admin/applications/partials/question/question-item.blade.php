@@ -35,9 +35,3 @@
         </div>
     @endif
 </div>
-
-<script>
-Object.assign(window.APP_QUESTION, {
-    applicationId: {{ $application->id }}
-});
-</script>
