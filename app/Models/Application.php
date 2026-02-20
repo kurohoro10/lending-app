@@ -33,15 +33,21 @@ class Application extends Model
         'signature_ip',
         'credit_sense_completed_at',
         'assigned_to',
+        'credit_sense_report',
+        'credit_sense_report_received_at',
+        'verified_expenses',
     ];
 
     protected $casts = [
-        'loan_amount'               => 'decimal:2',
-        'submitted_at'              => 'datetime',
-        'completed_at'              => 'datetime',
-        'signature_signed_at'       => 'datetime',
-        'returned_at'               => 'datetime',
-        'credit_sense_completed_at' => 'datetime',
+        'loan_amount'                      => 'decimal:2',
+        'submitted_at'                     => 'datetime',
+        'completed_at'                     => 'datetime',
+        'signature_signed_at'              => 'datetime',
+        'returned_at'                      => 'datetime',
+        'credit_sense_completed_at'        => 'datetime',
+        'credit_sense_report'              => 'array',
+        'credit_sense_report_received_at'  => 'datetime',
+        'verified_expenses'                => 'array',
     ];
 
     protected static function boot()

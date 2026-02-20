@@ -67,6 +67,7 @@
                 @include('admin.applications.partials.show.activity-log')
             @endif
 
+            @include('admin.applications.partials.show.expense-calculator-modal', ['application' => $application])
         </div>
     </div>
 </x-app-layout>

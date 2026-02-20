@@ -174,6 +174,21 @@
                 </div>
             @endif
 
+            <button type="button"
+                    id="open-expense-calculator"
+                    data-data-route="{{ route('admin.expenses.data', $application) }}"
+                    class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-300 text-indigo-700 text-sm
+                        font-medium rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                        focus:ring-offset-2 transition"
+                    aria-haspopup="dialog"
+                    aria-controls="expense-calculator-modal">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                Expense Calculator
+            </button>
+
             <!-- Export PDF -->
             <a href="{{ route('admin.applications.exportPdf', $application) }}" class="inline-flex items-center px-4 py-2 bg-green-600 border border-transparent rounded-md font-semibold text-xs text-white uppercase tracking-widest hover:bg-green-700">
                 Export PDF

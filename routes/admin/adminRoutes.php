@@ -6,6 +6,7 @@ use App\Http\Controllers\Admin\CommentController;
 use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\Admin\CreditCheckController;
+use App\Http\Controllers\Admin\LivingExpenseVerificationController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\Question\QuestionController;
@@ -42,7 +43,7 @@ Route::delete('comments/{comment}',                [CommentController::class, 'd
     ->name('comments.destroy');
 Route::post('comments/{comment}/toggle-pin',       [CommentController::class, 'togglePin'])
     ->name('comments.togglePin');
-Route::patch('/{commentId}/restore',               [CommentController::class, 'restore'])
+Route::patch('comments/{commentId}/restore',       [CommentController::class, 'restore'])
     ->name('comments.restore');
 
 // Tasks
@@ -72,6 +73,12 @@ Route::post('applications/{application}/send-sms',      [CommunicationController
 Route::get('communications/{communication}',            [CommunicationController::class, 'show'])
     ->name('communications.show');
 
+// Communication Templates
+Route::get('applications/{application}/email-templates', [CommunicationController::class, 'getEmailTemplates'])
+    ->name('communications.emailTemplates');
+Route::get('applications/{application}/sms-templates',   [CommunicationController::class, 'getSMSTemplates'])
+    ->name('communications.smsTemplates');
+
 // Credit Checks
 Route::post('applications/{application}/credit-check', [CreditCheckController::class, 'request'])
     ->name('creditChecks.request');
@@ -83,20 +90,14 @@ Route::get('credit-checks/{creditCheck}',              [CreditCheckController::c
 // Living Expense Verification
 Route::patch('living-expenses/{livingExpense}/verify', [LivingExpenseController::class, 'verify'])
     ->name('livingExpenses.verify');
+Route::get('applications/{application}/expenses/data',   [LivingExpenseVerificationController::class, 'data'])
+    ->name('expenses.data');
+Route::post('applications/{application}/expenses/verify', [LivingExpenseVerificationController::class, 'store'])
+    ->name('expenses.verify');
 
 // Document Review
 Route::patch('documents/{document}/status', [DocumentController::class, 'updateStatus'])
     ->name('documents.updateStatus');
-
-// Communication Templates & Sending
-Route::get('applications/{application}/email-templates', [CommunicationController::class, 'getEmailTemplates'])
-    ->name('communications.emailTemplates');
-Route::get('applications/{application}/sms-templates',   [CommunicationController::class, 'getSMSTemplates'])
-    ->name('communications.smsTemplates');
-Route::post('applications/{application}/send-email',     [CommunicationController::class, 'sendEmail'])
-    ->name('communications.sendEmail');
-Route::post('applications/{application}/send-sms',       [CommunicationController::class, 'sendSms'])
-    ->name('communications.sendSms');
 
     // Settings
 Route::get('/settings',           [SettingsController::class, 'index'])
