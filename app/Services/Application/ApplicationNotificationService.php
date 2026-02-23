@@ -7,17 +7,17 @@ use App\Models\User;
 use App\Notifications\Application\ApplicationSubmitted;
 use App\Notifications\Application\ApplicationDeclined;
 use App\Notifications\Admin\NewApplicationSubmittedAdmin;
-use App\Services\TwilioService;
+use App\Services\MessagingService;
 use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Log;
 
 class ApplicationNotificationService
 {
-    protected TwilioService $twilioService;
+    protected MessagingService $messaging;
 
-    public function __construct(TwilioService $twilioService)
+    public function __construct(MessagingService $messaging)
     {
-        $this->twilioService = $twilioService;
+        $this->messaging = $messaging;
     }
 
     public function handleSubmitted(Application $application): void
@@ -106,7 +106,7 @@ class ApplicationNotificationService
 
         try {
             // Send SMS synchronously using WhatsApp (since you're using sandbox)
-            $this->twilioService->sendSMS($phone, $message, $application);
+            $this->messaging->send($phone, $message, $application);
 
         } catch (\Exception $e) {
             Log::error('Failed to send SMS', [

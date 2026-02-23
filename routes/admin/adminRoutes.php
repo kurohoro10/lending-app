@@ -62,6 +62,8 @@ Route::post('applications/{application}/questions', [QuestionController::class, 
     ->name('questions.store');
 Route::delete('questions/{question}',               [QuestionController::class, 'destroy'])
     ->name('questions.destroy');
+Route::patch('questions/{question}/mark-read', [QuestionController::class, 'markAsRead'])
+->name('questions.markAsRead');
 
 // Communications
 Route::get('applications/{application}/communications', [CommunicationController::class, 'index'])

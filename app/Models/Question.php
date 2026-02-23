@@ -23,6 +23,8 @@ class Question extends Model
         'answer_ip',
         'status',
         'is_mandatory',
+        'read_by',
+        'read_at',
     ];
 
     protected $casts = [
@@ -30,6 +32,7 @@ class Question extends Model
         'asked_at'     => 'datetime',
         'answered_at'  => 'datetime',
         'is_mandatory' => 'boolean',
+        'read_at' => 'datetime',
     ];
 
     public function application(): BelongsTo
@@ -45,6 +48,32 @@ class Question extends Model
     public function answeredBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'answered_by');
+    }
+
+    public function readBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'read_by');
+    }
+
+    /**
+     * Check if this answered question is unread by admins
+     */
+    public function isUnread(): bool
+    {
+        return $this->status === 'answered' && $this->read_at === null;
+    }
+
+    /**
+     * Mark question as read by current admin
+     */
+    public function markAsRead(int $userId): void
+    {
+        if ($this->status === 'answered' && !$this->read_at) {
+            $this->update([
+                'read_by' => $userId,
+                'read_at' => now(),
+            ]);
+        }
     }
 
     public function scopePending($query)

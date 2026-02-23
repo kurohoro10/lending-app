@@ -11,7 +11,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\View\View;
 use Illuminate\Support\Facades\Log;
 use App\Services\Communication\CommunicationTemplateService;
-use App\Services\TwilioService;
+use App\Services\MessagingService;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Class CommunicationController
@@ -160,7 +161,7 @@ class CommunicationController extends Controller
         }
 
         try {
-            app(TwilioService::class)->sendSMS(
+            app(MessagingService::class)->send(
                 $application->personalDetails->mobile_phone,
                 $validated['message'],
                 $application
@@ -180,5 +181,118 @@ class CommunicationController extends Controller
                 'message' => 'Failed to send SMS. Service may be temporarily unavailable.',
             ], 500);
         }
+    }
+
+    /**
+     * Return application to client for amendments
+     */
+    public function returnToClient(Request $request, Application $application)
+    {
+        // Load relationships
+        $application->load('personalDetails', 'user');
+
+        if (!in_array($application->status, ['submitted', 'under_review'])) {
+            return back()->with('error', 'Only submitted or under review applications can be returned.');
+        }
+
+        $validated = $request->validate([
+            'return_reason' => 'required|string|min:10|max:1000',
+            'notify_sms'    => 'nullable|boolean',
+        ]);
+
+        DB::beginTransaction();
+        try {
+            $application->update([
+                'status'        => 'additional_info_required',
+                'return_reason' => $validated['return_reason'],
+                'returned_at'   => now(),
+                'returned_by'   => auth()->id(),
+            ]);
+
+            ActivityLog::logActivity(
+                'returned_to_client',
+                'Application returned to client: ' . $validated['return_reason'],
+                $application
+            );
+
+            // Add visible comment to client
+            $application->comments()->create([
+                'user_id'           => auth()->id(),
+                'comment'           => 'Application returned for amendments: ' . $validated['return_reason'],
+                'is_internal'       => false,
+                'is_client_visible' => true,
+                'commenter_ip'      => $request->ip(),
+            ]);
+
+            DB::commit();
+
+            \Log::info('Application returned to client', [
+                'application_id' => $application->id,
+                'notify_sms' => $request->boolean('notify_sms'),
+                'has_phone' => $application->personalDetails?->mobile_phone !== null,
+                'phone' => $application->personalDetails?->mobile_phone,
+            ]);
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            \Log::error('Failed to return application: ' . $e->getMessage());
+            return back()->with('error', 'Failed to return application. Please try again.');
+        }
+
+        // Notifications outside transaction
+        try {
+            // Send email notification
+            $application->user->notify(
+                new \App\Notifications\Application\ApplicationReturned($application)
+            );
+            \Log::info('Return email sent successfully');
+        } catch (\Exception $e) {
+            \Log::error('Failed to send return email: ' . $e->getMessage());
+        }
+
+        // SMS notification
+        if ($request->boolean('notify_sms')) {
+            \Log::info('SMS notification requested', [
+                'has_phone' => $application->personalDetails?->mobile_phone !== null,
+                'phone' => $application->personalDetails?->mobile_phone,
+            ]);
+
+            if ($application->personalDetails?->mobile_phone) {
+                try {
+                    $phone = $application->personalDetails->mobile_phone;
+                    $message = "Your loan application #{$application->application_number} has been returned for amendments. Reason: {$validated['return_reason']}. Please log in to update and resubmit.";
+
+                    \Log::info('Attempting to send SMS', [
+                        'phone' => $phone,
+                        'message_length' => strlen($message),
+                    ]);
+
+                    $result = app(MessagingService::class)->send(
+                        $phone,
+                        $message,
+                        $application
+                    );
+
+                    \Log::info('SMS sent successfully', [
+                        'result' => $result,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send return SMS', [
+                        'phone' => $phone ?? 'unknown',
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            } else {
+                \Log::warning('Cannot send SMS - no phone number', [
+                    'application_id' => $application->id,
+                    'has_personal_details' => $application->personalDetails !== null,
+                ]);
+            }
+        } else {
+            \Log::info('SMS notification not requested (checkbox not checked)');
+        }
+
+        return back()->with('success', 'Application returned to client successfully.');
     }
 }

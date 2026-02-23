@@ -22,6 +22,11 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8 space-y-6">
 
+            <!-- Pending Questions -->
+            @if($application->questions->where('status', 'pending')->count() > 0)
+                @include('applications.partials.show.pending-questions')
+            @endif
+
             <!-- Status Overview -->
             @include('applications.partials.show.status-overview')
 
@@ -51,11 +56,6 @@
             <!-- Documents -->
             @if($application->documents->count() > 0)
                 @include('applications.partials.show.documents')
-            @endif
-
-            <!-- Pending Questions -->
-            @if($application->questions->where('status', 'pending')->count() > 0)
-                @include('applications.partials.show.pending-questions')
             @endif
 
             <!-- Questions Section -->

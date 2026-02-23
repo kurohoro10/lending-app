@@ -49,32 +49,17 @@ class TwilioService
     {
         if (!$this->enabled || !$this->client) {
             Log::info('SMS skipped — Twilio disabled.', ['to' => $to]);
-
-            return [
-                'success' => false,
-                'message' => 'Twilio disabled',
-            ];
+            return ['success' => false, 'message' => 'Twilio disabled'];
         }
 
         try {
-            $twilioMessage = $this->client->messages->create(
-                $to,
-                [
-                    'from' => $this->smsFrom,
-                    'body' => $message,
-                ]
-            );
+            $twilioMessage = $this->client->messages->create($to, [
+                'from' => $this->smsFrom,
+                'body' => $message,
+            ]);
 
             if ($application) {
-                $this->logCommunication(
-                    $application,
-                    'sms',
-                    'outbound',
-                    $to,
-                    $message,
-                    $twilioMessage->sid,
-                    'sent'
-                );
+                $this->logCommunication($application, 'sms', 'outbound', $to, $message, $twilioMessage->sid, 'sent');
             }
 
             return [
@@ -85,50 +70,28 @@ class TwilioService
 
         } catch (\Exception $e) {
             Log::error('Twilio SMS Error: ' . $e->getMessage());
-
-            return [
-                'success' => false,
-                'error'   => $e->getMessage(),
-            ];
+            return ['success' => false, 'error' => $e->getMessage()];
         }
     }
 
     /**
      * Send WhatsApp message
-     *
-     * @param string $to Recipient number (E.164 format e.g. +639XXXXXXXXX)
      */
     public function sendWhatsApp(string $to, string $message, ?Application $application = null): array
     {
-        // Added the same disabled guard that sendSMS has.
         if (!$this->enabled || !$this->client) {
             Log::info('WhatsApp skipped — Twilio disabled.', ['to' => $to]);
-
-            return [
-                'success' => false,
-                'message' => 'Twilio disabled',
-            ];
+            return ['success' => false, 'message' => 'Twilio disabled'];
         }
 
         try {
-            $twilioMessage = $this->client->messages->create(
-                "whatsapp:$to",
-                [
-                    'from' => $this->whatsappFrom,
-                    'body' => $message,
-                ]
-            );
+            $twilioMessage = $this->client->messages->create("whatsapp:$to", [
+                'from' => $this->whatsappFrom,
+                'body' => $message,
+            ]);
 
             if ($application) {
-                $this->logCommunication(
-                    $application,
-                    'whatsapp',
-                    'outbound',
-                    $to,
-                    $message,
-                    $twilioMessage->sid,
-                    'sent'
-                );
+                $this->logCommunication($application, 'whatsapp', 'outbound', $to, $message, $twilioMessage->sid, 'sent');
             }
 
             return [
@@ -141,15 +104,7 @@ class TwilioService
             Log::error('Twilio WhatsApp Error: ' . $e->getMessage());
 
             if ($application) {
-                $this->logCommunication(
-                    $application,
-                    'whatsapp',
-                    'outbound',
-                    $to,
-                    $message,
-                    null,
-                    'failed'
-                );
+                $this->logCommunication($application, 'whatsapp', 'outbound', $to, $message, null, 'failed');
             }
 
             throw $e;
@@ -157,7 +112,10 @@ class TwilioService
     }
 
     /**
-     * Log communication to database
+     * Log communication to database.
+     *
+     * Maps type + direction to the ENUM values defined in the communications table:
+     * email_in | email_out | sms_in | sms_out | whatsapp | system_notification
      */
     protected function logCommunication(
         Application $application,
@@ -168,17 +126,22 @@ class TwilioService
         ?string $externalId,
         string $status
     ): void {
-        // ✅ FIX 2: Use the correct from number based on message type.
-        // Previously always used whatsapp_from even for SMS messages.
         $ownNumber = $type === 'sms' ? $this->smsFrom : $this->whatsappFrom;
+
+        $communicationType = match (true) {
+            $type === 'sms' && $direction === 'inbound'  => 'sms_in',
+            $type === 'sms' && $direction === 'outbound' => 'sms_out',
+            $type === 'whatsapp'                         => 'whatsapp',
+            default                                      => 'system_notification',
+        };
 
         Communication::create([
             'application_id' => $application->id,
             'user_id'        => $application->user_id,
-            'type'           => $type,
+            'type'           => $communicationType,
             'direction'      => $direction,
-            'from_address'   => $direction === 'outbound' ? $ownNumber : $recipient,
-            'to_address'     => $direction === 'outbound' ? $recipient  : $ownNumber,
+            'from_address'   => $direction === 'outbound' ? $ownNumber   : $recipient,
+            'to_address'     => $direction === 'outbound' ? $recipient   : $ownNumber,
             'subject'        => null,
             'body'           => $message,
             'metadata'       => null,
@@ -207,15 +170,7 @@ class TwilioService
         $application = $this->findApplicationByPhone($cleanFrom);
 
         if ($application) {
-            $this->logCommunication(
-                $application,
-                $type,
-                'inbound',
-                $cleanFrom,
-                $body,
-                $messageSid,
-                'received'
-            );
+            $this->logCommunication($application, $type, 'inbound', $cleanFrom, $body, $messageSid, 'received');
         }
 
         Log::info("Incoming {$type} from {$cleanFrom}: {$body}");

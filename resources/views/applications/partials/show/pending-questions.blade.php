@@ -1,15 +1,53 @@
-<div id="pending-questions-warning" class="bg-yellow-50 border-l-4 border-yellow-400 p-4">
-    <div class="flex">
-        <div class="flex-shrink-0">
-            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
-                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
-            </svg>
+<!-- Pending Questions Warning - Minimalistic Design -->
+@if($application->questions->where('status', 'pending')->count() > 0)
+<div id="pending-questions-warning" class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 transition-all duration-300">
+    <div class="flex items-start justify-between gap-4">
+        <div class="flex-1">
+            <p class="text-sm font-medium text-gray-900">
+                <span id="pending-count">{{ $application->questions->where('status', 'pending')->count() }}</span>
+                {{ $application->questions->where('status', 'pending')->count() === 1 ? 'question' : 'questions' }} need{{ $application->questions->where('status', 'pending')->count() === 1 ? 's' : '' }} your answer
+            </p>
+            <button type="button"
+                    onclick="scrollToQuestions()"
+                    class="mt-1 text-sm text-gray-600 hover:text-gray-900 underline decoration-1 underline-offset-2 hover:decoration-2 transition-all">
+                View questions
+            </button>
         </div>
-        <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">
-                You have {{ $application->questions->where('status', 'pending')->count() }} pending question(s)
-            </h3>
-            <p class="mt-2 text-sm text-yellow-700">Please scroll down to answer the questions from our assessment team.</p>
-        </div>
+        <span id="pending-badge" class="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
+            {{ $application->questions->where('status', 'pending')->count() }}
+        </span>
     </div>
 </div>
+@endif
+
+<script>
+function scrollToQuestions() {
+    const questionsSection = document.getElementById('client-questions-section');
+
+    if (questionsSection) {
+        // Smooth scroll
+        questionsSection.scrollIntoView({
+            behavior: 'smooth',
+            block: 'start'
+        });
+
+        // Subtle highlight
+        questionsSection.style.boxShadow = '0 0 0 2px rgba(251, 191, 36, 0.3)';
+        setTimeout(() => {
+            questionsSection.style.boxShadow = '';
+        }, 1500);
+
+        // Focus first pending textarea
+        setTimeout(() => {
+            const firstInput = questionsSection.querySelector('textarea[id^="answer-input-"]');
+            if (firstInput) {
+                firstInput.focus();
+                firstInput.scrollIntoView({
+                    behavior: 'smooth',
+                    block: 'center'
+                });
+            }
+        }, 500);
+    }
+}
+</script>

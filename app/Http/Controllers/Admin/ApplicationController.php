@@ -2,24 +2,32 @@
 
 namespace App\Http\Controllers\Admin;
 
+use App\Events\Application\ApplicationReturned;
+use App\Events\Application\ApplicationStatusChanged;
 use App\Http\Controllers\Controller;
 use App\Models\Application;
-use App\Models\User;
 use App\Models\ActivityLog;
-use Illuminate\Http\Request;
+use App\Models\Question;
+use App\Models\User;
+use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
-use Illuminate\View\View;
+use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\View\View;
 use App\Services\MessagingService;
 
 class ApplicationController extends Controller
 {
     public function index(Request $request): View
     {
-        $query = Application::with(['user', 'personalDetails', 'assignedTo'])->latest();
+        $query = Application::with(['user', 'personalDetails', 'assignedTo'])
+            ->withCount(['questions' => function ($q) {
+                $q->where('status', 'answered')
+                    ->whereNull('read_at');
+            }])
+            ->latest();
 
         if ($request->filled('status')) {
             $query->where('status', $request->status);
@@ -43,7 +51,9 @@ class ApplicationController extends Controller
         $applications = $query->paginate(20);
         $assessors    = User::role('assessor')->get();
 
-        return view('admin.applications.index', compact('applications', 'assessors'));
+        $totalAnsweredQuestions = Question::where('status', 'answered')->whereNull('read_at')->count();
+
+        return view('admin.applications.index', compact('applications', 'assessors', 'totalAnsweredQuestions'));
     }
 
     public function show(Application $application): View
@@ -64,6 +74,25 @@ class ApplicationController extends Controller
             'activityLogs.user',
         ]);
 
+        // Auto-mark all answered questions as read when admin views the application
+        $unreadQuestions = $application->questions()
+            ->where('status', 'answered')
+            ->whereNull('read_at')
+            ->get();
+
+        foreach ($unreadQuestions as $question) {
+            $question->markAsRead(auth()->id());
+        }
+
+        // Log this activity
+        if ($unreadQuestions->count() > 0) {
+            ActivityLog::logActivity(
+                'questions_reviewed',
+                "Admin reviewed {$unreadQuestions->count()} answered question(s)",
+                $application
+            );
+        }
+
         return view('admin.applications.show', compact('application'));
     }
 
@@ -73,7 +102,7 @@ class ApplicationController extends Controller
             'status' => [
                 'required',
                 'string',
-                'in:draft,submitted,under_review,additional_info_required,approved,declined,withdrawn'
+                'in:draft,submitted,under_review,additional_info_required,approved,declined,withdrawn',
             ],
             'status_note' => 'nullable|string|max:500',
         ]);
@@ -85,7 +114,6 @@ class ApplicationController extends Controller
             return back()->with('error', 'Cannot change status of an approved application.');
         }
 
-        // ✅ FIX: Error message previously said "approved" — now correctly says "declined"
         if ($oldStatus === 'declined' && $newStatus !== 'declined') {
             return back()->with('error', 'Cannot change status of a declined application.');
         }
@@ -94,13 +122,14 @@ class ApplicationController extends Controller
         try {
             $application->update(['status' => $newStatus]);
 
-            if (!empty($validated['status_note'])) {
+            $statusNote = $validated['status_note'] ?? null;
+
+            if (filled($statusNote)) {
                 $application->comments()->create([
-                    'user_id'           => auth()->id(),
-                    'comment'           => 'Status changed to ' . ucwords(str_replace('_', ' ', $newStatus)) . ': ' . $validated['status_note'],
-                    'is_internal'       => true,
-                    'is_client_visible' => false,
-                    'commenter_ip'      => $request->ip(),
+                    'user_id'    => auth()->id(),
+                    'comment'    => 'Status changed to ' . ucwords(str_replace('_', ' ', $newStatus)) . ': ' . $statusNote,
+                    'type'       => 'internal',
+                    'ip_address' => $request->ip(),
                 ]);
             }
 
@@ -113,75 +142,17 @@ class ApplicationController extends Controller
             );
 
             DB::commit();
-
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to update status: ' . $e->getMessage());
+            Log::error('Failed to update application status: ' . $e->getMessage(), [
+                'application_id' => $application->id,
+            ]);
             return back()->with('error', 'Failed to update status. Please try again.');
         }
 
-        $this->sendStatusChangeNotifications($application, $oldStatus, $newStatus);
+        ApplicationStatusChanged::dispatch($application, $oldStatus, $newStatus);
 
         return back()->with('success', 'Application status updated successfully.');
-    }
-
-    /**
-     * ✅ FIX: Inject MessagingService so the WhatsApp→SMS switch happens in one place
-     */
-    protected function sendStatusChangeNotifications(Application $application, string $oldStatus, string $newStatus): void
-    {
-        $messaging = app(MessagingService::class);
-        $hasPhone  = $application->personalDetails?->mobile_phone;
-
-        try {
-            switch ($newStatus) {
-                case 'under_review':
-                    $application->user->notify(new \App\Notifications\Application\ApplicationUnderReview($application));
-                    if ($hasPhone) {
-                        $messaging->send(
-                            $application->personalDetails->mobile_phone,
-                            "Your loan application #{$application->application_number} is now under review. - Loan Team",
-                            $application
-                        );
-                    }
-                    break;
-
-                case 'approved':
-                    $application->user->notify(new \App\Notifications\Application\ApplicationApproved($application));
-                    if ($hasPhone) {
-                        $messaging->send(
-                            $application->personalDetails->mobile_phone,
-                            "Congratulations! Your loan application #{$application->application_number} has been APPROVED! - Loan Team",
-                            $application
-                        );
-                    }
-                    break;
-
-                case 'declined':
-                    $application->user->notify(new \App\Notifications\Application\ApplicationDeclined($application, 'Application declined after review'));
-                    if ($hasPhone) {
-                        $messaging->send(
-                            $application->personalDetails->mobile_phone,
-                            "Regarding your loan application #{$application->application_number} - we're unable to proceed. Check email for details. - Loan Team",
-                            $application
-                        );
-                    }
-                    break;
-
-                case 'additional_info_required':
-                    $application->user->notify(new \App\Notifications\Application\ApplicationAdditionalInfoRequired($application));
-                    if ($hasPhone) {
-                        $messaging->send(
-                            $application->personalDetails->mobile_phone,
-                            "We need additional information for your application #{$application->application_number}. Please log in. - Loan Team",
-                            $application
-                        );
-                    }
-                    break;
-            }
-        } catch (\Exception $e) {
-            Log::error('Failed to send status change notifications: ' . $e->getMessage());
-        }
     }
 
     public function assign(Request $request, Application $application): RedirectResponse
@@ -197,31 +168,13 @@ class ApplicationController extends Controller
         return back()->with('success', 'Application assigned successfully.');
     }
 
-    public function exportPdf(Application $application): Response
-    {
-        $application->load([
-            'personalDetails',
-            'residentialAddresses',
-            'employmentDetails',
-            'livingExpenses',
-            'documents',
-            'comments',
-            'activityLogs',
-        ]);
-
-        $exportDate = now();
-        $exportedBy = auth()->user();
-
-        $pdf = Pdf::loadView('admin.applications.pdf', compact('application', 'exportDate', 'exportedBy'));
-
-        return $pdf->download("application-{$application->application_number}.pdf");
-    }
-
     public function returnToClient(Request $request, Application $application): RedirectResponse
     {
         if (!in_array($application->status, ['submitted', 'under_review'])) {
             return back()->with('error', 'Only submitted or under review applications can be returned.');
         }
+
+        $application->load('personalDetails', 'user');
 
         $validated = $request->validate([
             'return_reason' => 'required|string|min:10|max:1000',
@@ -237,52 +190,97 @@ class ApplicationController extends Controller
                 'returned_by'   => auth()->id(),
             ]);
 
+            $application->comments()->create([
+                'user_id'    => auth()->id(),
+                'comment'    => 'Application returned for amendments: ' . $validated['return_reason'],
+                'type'       => 'client_visible',
+                'ip_address' => $request->ip(),
+            ]);
+
             ActivityLog::logActivity(
                 'returned_to_client',
                 'Application returned to client: ' . $validated['return_reason'],
                 $application
             );
 
-            $application->comments()->create([
-                'user_id'           => auth()->id(),
-                'comment'           => 'Application returned for amendments: ' . $validated['return_reason'],
-                'is_internal'       => false,
-                'is_client_visible' => true,
-                'commenter_ip'      => $request->ip(),
-            ]);
-
             DB::commit();
-
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Failed to return application: ' . $e->getMessage());
+            Log::error('Failed to return application: ' . $e->getMessage(), [
+                'application_id' => $application->id,
+            ]);
             return back()->with('error', 'Failed to return application. Please try again.');
         }
 
-        $this->handleReturnNotifications($application, $validated['return_reason'], $request->boolean('notify_sms'));
+        ApplicationReturned::dispatch(
+            $application,
+            $validated['return_reason'],
+            $request->boolean('notify_sms')
+        );
+
+        if ($request->boolean('notify_sms')) {
+            \Log::info('SMS notification requested', [
+                'has_phone' => $application->personalDetails?->mobile_phone !== null,
+                'phone' => $application->personalDetails?->mobile_phone,
+            ]);
+
+            if ($application->personalDetails?->mobile_phone) {
+                try {
+                    $phone = $application->personalDetails->mobile_phone;
+                    $message = "Your loan application #{$application->application_number} has been returned for amendments. Reason: {$validated['return_reason']}. Please log in to update and resubmit.";
+
+                    \Log::info('Attempting to send SMS', [
+                        'phone' => $phone,
+                        'message_length' => strlen($message),
+                    ]);
+
+                    $result = app(MessagingService::class)->send( // CHANGE THIS
+                        $phone,
+                        $message,
+                        $application
+                    );
+
+                    \Log::info('SMS sent successfully', [
+                        'result' => $result,
+                    ]);
+                } catch (\Exception $e) {
+                    \Log::error('Failed to send return SMS', [
+                        'phone' => $phone ?? 'unknown',
+                        'error' => $e->getMessage(),
+                        'trace' => $e->getTraceAsString(),
+                    ]);
+                }
+            } else {
+                \Log::warning('Cannot send SMS - no phone number', [
+                    'application_id' => $application->id,
+                    'has_personal_details' => $application->personalDetails !== null,
+                ]);
+            }
+        } else {
+            \Log::info('SMS notification not requested (checkbox not checked)');
+        }
 
         return back()->with('success', 'Application returned to client successfully.');
     }
 
-    protected function handleReturnNotifications(Application $application, string $reason, bool $sendSms): void
+    public function exportPdf(Application $application): Response
     {
-        try {
-            $application->user->notify(new \App\Notifications\Application\ApplicationReturned($application));
-        } catch (\Exception $e) {
-            Log::error('Failed to send return email: ' . $e->getMessage());
-        }
+        $application->load([
+            'personalDetails',
+            'residentialAddresses',
+            'employmentDetails',
+            'livingExpenses',
+            'documents',
+            'comments',
+            'activityLogs',
+        ]);
 
-        // ✅ FIX: Use MessagingService instead of TwilioService directly
-        if ($sendSms && $application->personalDetails?->mobile_phone) {
-            try {
-                app(MessagingService::class)->send(
-                    $application->personalDetails->mobile_phone,
-                    "Your application #{$application->application_number} has been returned. Reason: {$reason}.",
-                    $application
-                );
-            } catch (\Exception $e) {
-                Log::error('Failed to send return SMS: ' . $e->getMessage());
-            }
-        }
+        $pdf = Pdf::loadView('admin.applications.pdf', [
+            'application' => $application,
+            'exportDate'  => now(),
+            'exportedBy'  => auth()->user(),
+        ]);
+
+        return $pdf->download("application-{$application->application_number}.pdf");
     }
 }

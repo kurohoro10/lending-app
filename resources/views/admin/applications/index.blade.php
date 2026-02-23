@@ -8,6 +8,34 @@
     <div class="py-12">
         <div class="max-w-7xl mx-auto sm:px-6 lg:px-8">
 
+            <!-- Answered Questions Alert -->
+            @if(isset($totalAnsweredQuestions) && $totalAnsweredQuestions > 0)
+            <div class="mb-6 bg-green-50 border-l-4 border-green-400 rounded-lg p-4 shadow-sm animate-pulse-subtle"
+                 role="alert"
+                 aria-live="polite">
+                <div class="flex items-start">
+                    <div class="flex-shrink-0">
+                        <svg class="h-6 w-6 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                        </svg>
+                    </div>
+                    <div class="ml-3 flex-1">
+                        <h3 class="text-sm font-semibold text-green-800">
+                            {{ $totalAnsweredQuestions }} Client Response{{ $totalAnsweredQuestions > 1 ? 's' : '' }} Available
+                        </h3>
+                        <p class="mt-1 text-sm text-green-700">
+                            Clients have answered questions on their applications. Review responses below to continue assessment.
+                        </p>
+                    </div>
+                    <div class="ml-3 flex-shrink-0">
+                        <span class="inline-flex items-center px-3 py-1.5 rounded-full text-sm font-bold bg-green-200 text-green-900">
+                            {{ $totalAnsweredQuestions }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+            @endif
+
             <!-- Filters -->
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-6">
                 <div class="p-6">
@@ -55,31 +83,42 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Application #</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Loan Amount</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Submitted</th>
-                                    <th scope="col" class="relative px-6 py-3">
-                                        <span class="sr-only">Actions</span>
-                                    </th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">App #</th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses</th>
+                                    <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
                                 </tr>
                             </thead>
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($applications as $application)
-                                    <tr class="hover:bg-gray-50">
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                                            {{ $application->application_number }}
+                                    <tr class="hover:bg-gray-50 transition-colors {{ $application->questions_count > 0 ? 'bg-green-50 hover:bg-green-100' : '' }}">
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            <div class="flex items-center">
+                                                <span class="text-sm font-medium text-gray-900">
+                                                    {{ $application->application_number }}
+                                                </span>
+                                                @if($application->questions_count > 0)
+                                                    <span class="ml-2 flex h-2 w-2 relative">
+                                                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                                                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                                                    </span>
+                                                @endif
+                                            </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-3 py-3 whitespace-nowrap">
                                             <div class="text-sm font-medium text-gray-900">{{ $application->personalDetails->full_name ?? 'N/A' }}</div>
-                                            <div class="text-sm text-gray-500">{{ $application->personalDetails->email ?? 'N/A' }}</div>
+                                            <div class="text-xs text-gray-500 truncate max-w-[150px]" title="{{ $application->personalDetails->email ?? 'N/A' }}">
+                                                {{ $application->personalDetails->email ?? 'N/A' }}
+                                            </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            ${{ number_format($application->loan_amount, 2) }}
+                                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">
+                                            ${{ number_format($application->loan_amount, 0) }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap">
+                                        <td class="px-3 py-3 whitespace-nowrap">
                                             @php
                                                 $statusColors = [
                                                     'draft' => 'gray',
@@ -90,19 +129,50 @@
                                                     'declined' => 'red',
                                                 ];
                                                 $color = $statusColors[$application->status] ?? 'gray';
+                                                $statusLabels = [
+                                                    'draft' => 'Draft',
+                                                    'submitted' => 'Submitted',
+                                                    'under_review' => 'Review',
+                                                    'additional_info_required' => 'Info Req.',
+                                                    'approved' => 'Approved',
+                                                    'declined' => 'Declined',
+                                                ];
+                                                $label = $statusLabels[$application->status] ?? ucwords(str_replace('_', ' ', $application->status));
                                             @endphp
                                             <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-{{ $color }}-100 text-{{ $color }}-800">
-                                                {{ ucwords(str_replace('_', ' ', $application->status)) }}
+                                                {{ $label }}
                                             </span>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $application->assignedTo->name ?? 'Unassigned' }}
+                                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
+                                            <div class="truncate max-w-[100px]" title="{{ $application->assignedTo->name ?? 'Unassigned' }}">
+                                                {{ $application->assignedTo ? Str::limit($application->assignedTo->name, 12) : '—' }}
+                                            </div>
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {{ $application->submitted_at ? $application->submitted_at->format('d M Y') : 'Not submitted' }}
+                                        <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-500">
+                                            {{ $application->submitted_at ? $application->submitted_at->format('M d, Y') : '—' }}
                                         </td>
-                                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                            <a href="{{ route('admin.applications.show', $application) }}" class="text-indigo-600 hover:text-indigo-900">Review</a>
+                                        <td class="px-3 py-3 whitespace-nowrap">
+                                            @if($application->questions_count > 0)
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold bg-green-200 text-green-900 border border-green-300">
+                                                    <svg class="w-3 h-3 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                                    </svg>
+                                                    {{ $application->questions_count }}
+                                                </span>
+                                            @else
+                                                <span class="text-sm text-gray-400">—</span>
+                                            @endif
+                                        </td>
+                                        <td class="px-3 py-3 whitespace-nowrap text-right text-sm">
+                                            <a href="{{ route('admin.applications.show', $application) }}"
+                                               class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
+                                                Review
+                                                @if($application->questions_count > 0)
+                                                    <span class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-green-500 rounded-full">
+                                                        {{ $application->questions_count }}
+                                                    </span>
+                                                @endif
+                                            </a>
                                         </td>
                                     </tr>
                                 @endforeach
@@ -125,4 +195,26 @@
             </div>
         </div>
     </div>
+
+    <style>
+        @keyframes pulse-subtle {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.9; }
+        }
+
+        .animate-pulse-subtle {
+            animation: pulse-subtle 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+        }
+
+        /* Ensure table doesn't cause horizontal scroll */
+        .overflow-x-auto {
+            -webkit-overflow-scrolling: touch;
+        }
+
+        @media (min-width: 1024px) {
+            .overflow-x-auto {
+                overflow-x: visible;
+            }
+        }
+    </style>
 </x-app-layout>

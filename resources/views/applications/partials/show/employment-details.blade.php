@@ -6,7 +6,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <span class="text-sm font-medium text-gray-500">Employment Type:</span>
-                    <span class="ml-2 text-sm text-gray-900">{{ strtoupper($employment->employment_type) }}</span>
+                    <span class="ml-2 text-sm text-gray-900">{{ strtoupper(str_replace('_', ' ', $employment->employment_type)) }}</span>
                 </div>
                 <div>
                     <span class="text-sm font-medium text-gray-500">Employer:</span>

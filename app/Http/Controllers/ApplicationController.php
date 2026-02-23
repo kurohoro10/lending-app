@@ -21,10 +21,19 @@ class ApplicationController extends Controller
     {
         $applications = auth()->user()->applications()
             ->with(['personalDetails'])
+            ->withCount(['questions' => function ($query) {
+                $query->where('status', 'pending');
+            }])
             ->latest()
             ->paginate(10);
 
-        return view('applications.index', compact('applications'));
+        // Get total pending questions across all applications
+        $totalPendingQuestions = auth()->user()->applications()
+            ->join('questions', 'applications.id', '=', 'questions.application_id')
+            ->where('questions.status', 'pending')
+            ->count();
+
+        return view('applications.index', compact('applications', 'totalPendingQuestions'));
     }
 
     public function create(Request $request)
