@@ -146,7 +146,7 @@
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Income</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Income (optional)</label>
                             <div class="mt-1 relative rounded-xl shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 text-lg font-semibold">$</span>

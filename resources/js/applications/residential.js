@@ -1,124 +1,152 @@
+// resources/js/residential-addresses.js
+
 (() => {
+    const REQUIRED_MONTHS = 36;
+
     const residentialAccordionBtn = document.getElementById('residential-addresses-btn');
-    const form = document.getElementById('residential-address-form');
-    const typeSelect = document.getElementById('address-type-select');
-    const startDateInput = document.getElementById('start-date-input');
-    const endDateInput = document.getElementById('end-date-input');
-    const messagesContainer = document.getElementById('address-messages');
-    const submitButton = document.getElementById('submit-address-button');
-    const submitButtonText = document.getElementById('submit-address-text');
-    const suburbSelect = document.getElementById('suburb-selector');
-    const manualInput = document.getElementById('suburb-manual');
-    const stateSelect = document.getElementById('state-selector');
+    const form                    = document.getElementById('residential-address-form');
+    const typeSelect              = document.getElementById('address-type-select');
+    const startDateInput          = document.getElementById('start-date-input');
+    const endDateInput            = document.getElementById('end-date-input');
+    const messagesContainer       = document.getElementById('address-messages');
+    const submitButton            = document.getElementById('submit-address-button');
+    const submitButtonText        = document.getElementById('submit-address-text');
+    const suburbSelect            = document.getElementById('suburb-selector');
+    const manualInput             = document.getElementById('suburb-manual');
+    const stateSelect             = document.getElementById('state-selector');
 
-    if (residentialAccordionBtn) {
-        residentialAccordionBtn.addEventListener('click', () => {
-            toggleAccordion('residential-addresses');
-        });
+    if (!form) return;
+
+    // ── Accordion ─────────────────────────────────────────────────────────────
+
+    residentialAccordionBtn?.addEventListener('click', () => {
+        toggleAccordion('residential-addresses');
+    });
+
+    // ── Coverage tracker ──────────────────────────────────────────────────────
+    // Injected into the DOM once, updated after every add/delete response.
+
+    function injectCoverageIndicator() {
+        if (document.getElementById('address-coverage-indicator')) return;
+
+        const listContainer = document.getElementById('address-list-container');
+        if (!listContainer) return;
+
+        const el = document.createElement('div');
+        el.id = 'address-coverage-indicator';
+        el.className = 'mb-6';
+        el.setAttribute('aria-live', 'polite');
+        el.setAttribute('aria-atomic', 'true');
+        listContainer.insertAdjacentElement('afterbegin', el);
     }
 
-    // Helper functions
-    function clearErrors() {
-        const errorElements = form.querySelectorAll('[id$="-error"]');
-        errorElements.forEach(element => {
-            element.classList.add('hidden');
-            element.textContent = '';
-        });
+    function updateCoverageIndicator(coverage) {
+        injectCoverageIndicator();
+        const el = document.getElementById('address-coverage-indicator');
+        if (!el) return;
 
-        const inputs = form.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.classList.remove('border-red-500');
-            input.removeAttribute('aria-invalid');
-        });
+        const { total_months, required_months, met, percentage, message } = coverage;
+        const years   = Math.floor(total_months / 12);
+        const months  = total_months % 12;
+        const covered = [years > 0 ? `${years}y` : null, months > 0 ? `${months}m` : null]
+            .filter(Boolean).join(' ') || '0m';
 
-        messagesContainer.innerHTML = '';
-    }
-
-    function displayFieldError(fieldName, message) {
-        const errorElement = document.getElementById(`${fieldName}-error`);
-        const inputElement = document.getElementById(`${fieldName}-input`) ||
-                            document.getElementById(`${fieldName}-selector`) ||
-                            document.getElementById(`${fieldName}-select`);
-
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-        }
-
-        if (inputElement) {
-            inputElement.classList.add('border-red-500');
-            inputElement.setAttribute('aria-invalid', 'true');
-        }
-    }
-
-    function displaySuccess(message) {
-        messagesContainer.innerHTML = `
-            <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+        el.innerHTML = `
+            <div class="rounded-xl border-2 p-4 transition-all ${met
+                ? 'border-green-200 bg-green-50'
+                : 'border-amber-200 bg-amber-50'}">
+                <div class="flex items-center justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <svg class="w-4 h-4 flex-shrink-0 ${met ? 'text-green-600' : 'text-amber-500'}"
+                             fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            ${met
+                                ? '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>'
+                                : '<path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>'
+                            }
                         </svg>
+                        <span class="text-sm font-semibold ${met ? 'text-green-800' : 'text-amber-800'}">
+                            Address History Coverage
+                        </span>
                     </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-green-800">${message}</p>
-                    </div>
+                    <span class="text-xs font-bold tabular-nums ${met ? 'text-green-700' : 'text-amber-700'}">
+                        ${covered} / 3y
+                    </span>
                 </div>
+
+                <!-- Progress bar -->
+                <div class="relative h-2.5 bg-white rounded-full overflow-hidden border ${met ? 'border-green-200' : 'border-amber-200'}"
+                     role="progressbar"
+                     aria-valuenow="${percentage}"
+                     aria-valuemin="0"
+                     aria-valuemax="100"
+                     aria-label="Address history coverage: ${percentage}%">
+                    <div class="absolute inset-y-0 left-0 rounded-full transition-all duration-500 ${met ? 'bg-green-500' : 'bg-amber-400'}"
+                         style="width: ${percentage}%"></div>
+                </div>
+
+                <p class="mt-2 text-xs ${met ? 'text-green-700' : 'text-amber-700'}">
+                    ${message}
+                </p>
             </div>
         `;
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function displayError(message) {
-        messagesContainer.innerHTML = `
-            <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-red-800">${message}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    // Calculate coverage from DOM (used on page load — no server round-trip needed)
+    function calculateCoverageFromDOM() {
+        const cards = document.querySelectorAll('[data-address-card]');
+        if (cards.length === 0) return;
 
-    // Client-side validation
-    function validateDateRange() {
-        if (!startDateInput.value) return true;
+        // Collect date ranges from existing server-rendered address cards.
+        // We rely on the server responding with coverage data after add/delete,
+        // but on initial page load we calculate from the months_at_address data
+        // encoded in the card's data attribute (added below via blade).
+        const ranges = [];
+        cards.forEach(card => {
+            const startStr = card.dataset.startDate;
+            const endStr   = card.dataset.endDate;
+            if (!startStr) return;
 
-        const type = typeSelect.value;
-        const start = new Date(startDateInput.value);
-        const end = endDateInput.value ? new Date(endDateInput.value) : new Date();
+            const start = new Date(startStr).getTime();
+            const end   = endStr ? new Date(endStr).getTime() : Date.now();
+            if (!isNaN(start) && !isNaN(end)) ranges.push([start, end]);
+        });
 
-        const requirements = {
-            'previous_1': 1,
-            'previous_2': 2,
-            'previous_3': 3,
-            'current': 0
-        };
+        if (ranges.length === 0) return;
 
-        const requiredYears = requirements[type] || 0;
-
-        if (requiredYears > 0) {
-            let diffInMs = end - start;
-            let diffInYears = diffInMs / (1000 * 60 * 60 * 24 * 365.25);
-
-            if (diffInYears < requiredYears) {
-                const message = `For ${type.replace(/_/g, ' ')}, the duration must be at least ${requiredYears} year(s). Current: ${diffInYears.toFixed(1)} years.`;
-                displayError(message);
-                return false;
+        // Merge overlapping ranges
+        ranges.sort((a, b) => a[0] - b[0]);
+        const merged = [];
+        for (const [s, e] of ranges) {
+            if (!merged.length || s > merged[merged.length - 1][1]) {
+                merged.push([s, e]);
+            } else {
+                merged[merged.length - 1][1] = Math.max(merged[merged.length - 1][1], e);
             }
         }
 
-        return true;
+        const totalMs     = merged.reduce((sum, [s, e]) => sum + (e - s), 0);
+        const totalMonths = Math.round(totalMs / (1000 * 60 * 60 * 24 * 30.44));
+        const met         = totalMonths >= REQUIRED_MONTHS;
+        const percentage  = Math.min(100, Math.round((totalMonths / REQUIRED_MONTHS) * 100));
+        const years       = Math.floor(totalMonths / 12);
+        const months      = totalMonths % 12;
+
+        updateCoverageIndicator({
+            total_months:    totalMonths,
+            required_months: REQUIRED_MONTHS,
+            met,
+            percentage,
+            message: met
+                ? 'Address history requirement met.'
+                : `You need ${REQUIRED_MONTHS - totalMonths} more month(s) of address history (${totalMonths} of ${REQUIRED_MONTHS} months covered).`,
+        });
     }
 
-    // Suburb dropdown functionality
+    // Run on page load
+    calculateCoverageFromDOM();
+
+    // ── Suburb dropdown ───────────────────────────────────────────────────────
+
     function updateSuburbs(state) {
         if (!state) {
             suburbSelect.disabled = true;
@@ -129,32 +157,28 @@
         suburbSelect.disabled = false;
         suburbSelect.innerHTML = '<option value="">Select suburb...</option>';
 
-        const suburbs = RESIDENTIAL_CONFIG.allSuburbs[state] || [];
+        const suburbs = window.RESIDENTIAL_CONFIG?.allSuburbs?.[state] || [];
         suburbs.forEach(suburb => {
             const option = document.createElement('option');
-            option.value = suburb;
+            option.value       = suburb;
             option.textContent = suburb;
             suburbSelect.appendChild(option);
         });
-    };
+    }
 
-    stateSelect?.addEventListener('change', function (e) {
-        updateSuburbs(e.target.value);
-    });
+    stateSelect?.addEventListener('change', e => updateSuburbs(e.target.value));
 
-
-    // Manual suburb entry logic
-    manualInput?.addEventListener('input', function(e) {
+    manualInput?.addEventListener('input', e => {
         if (e.target.value) {
             suburbSelect.value = '';
-            let hiddenInput = document.querySelector('input[name="suburb"][type="hidden"]');
-            if (!hiddenInput) {
-                hiddenInput = document.createElement('input');
-                hiddenInput.type = 'hidden';
-                hiddenInput.name = 'suburb';
-                e.target.parentNode.appendChild(hiddenInput);
+            let hidden = document.querySelector('input[name="suburb"][type="hidden"]');
+            if (!hidden) {
+                hidden = document.createElement('input');
+                hidden.type = 'hidden';
+                hidden.name = 'suburb';
+                e.target.parentNode.appendChild(hidden);
             }
-            hiddenInput.value = e.target.value;
+            hidden.value = e.target.value;
             suburbSelect.removeAttribute('required');
         } else {
             suburbSelect.setAttribute('required', 'required');
@@ -162,262 +186,266 @@
         }
     });
 
-    // Clear manual when dropdown selected
-    suburbSelect?.addEventListener('change', function(e) {
+    suburbSelect?.addEventListener('change', e => {
         if (e.target.value) {
             manualInput.value = '';
             document.querySelector('input[name="suburb"][type="hidden"]')?.remove();
         }
     });
 
-    // Handle form submission with Fetch API
-    if (form) {
-        form.addEventListener('submit', async function (event) {
-            event.preventDefault();
+    // ── Error helpers ─────────────────────────────────────────────────────────
 
-            // Clear previous errors
-            clearErrors();
-
-            // Validate date range
-            if (!validateDateRange()) {
-                return;
-            }
-
-            // Disable submit button and show loading state
-            submitButton.disabled = true;
-            const originalText = submitButtonText.textContent;
-            submitButtonText.textContent = 'Adding...';
-
-            try {
-                // Get form data
-                const formData = new FormData(form);
-
-                // Send fetch request
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
-                        'Accept': 'application/json',
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Success
-                    displaySuccess(data.message || 'Address added successfully.');
-
-                    // Reset form
-                    form.reset();
-                    suburbSelect.disabled = true;
-                    suburbSelect.innerHTML = '<option value="">Select state first...</option>';
-
-                    // Add new address to the list
-                    if (data.address) {
-                        addAddressToList(data.address);
-                        updateAddressCount();
-
-                        document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                            detail: { type: 'address' }
-                        }));
-                    }
-                } else {
-                    // Validation errors
-                    if (data.errors) {
-                        Object.keys(data.errors).forEach(fieldName => {
-                            const messages = data.errors[fieldName];
-                            if (Array.isArray(messages) && messages.length > 0) {
-                                displayFieldError(fieldName, messages[0]);
-                            }
-                        });
-                        displayError('Please correct the errors above.');
-                    } else {
-                        displayError(data.message || 'An error occurred. Please try again.');
-                    }
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                displayError('A network error occurred. Please check your connection and try again.');
-            } finally {
-                // Re-enable submit button
-                submitButton.disabled = false;
-                submitButtonText.textContent = originalText;
-            }
+    function clearErrors() {
+        form.querySelectorAll('[id$="-error"]').forEach(el => {
+            el.classList.add('hidden');
+            el.textContent = '';
         });
+        form.querySelectorAll('input, select').forEach(el => {
+            el.classList.remove('border-red-500');
+            el.removeAttribute('aria-invalid');
+        });
+        messagesContainer.innerHTML = '';
     }
 
-    // Function to add address to the list dynamically
+    function displayFieldError(fieldName, message) {
+        const errorEl = document.getElementById(`${fieldName}-error`);
+        const inputEl = document.getElementById(`${fieldName}-input`)
+                     ?? document.getElementById(`${fieldName}-selector`)
+                     ?? document.getElementById(`${fieldName}-select`);
+
+        if (errorEl) { errorEl.textContent = message; errorEl.classList.remove('hidden'); }
+        if (inputEl) { inputEl.classList.add('border-red-500'); inputEl.setAttribute('aria-invalid', 'true'); }
+    }
+
+    function displaySuccess(message) {
+        messagesContainer.innerHTML = successHtml(message);
+        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function displayWarning(message) {
+        messagesContainer.innerHTML = warningHtml(message);
+        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function displayError(message) {
+        messagesContainer.innerHTML = errorHtml(message);
+        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function successHtml(message) {
+        return `<div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg flex items-center gap-3" role="status">
+            <svg class="h-5 w-5 text-green-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-sm font-semibold text-green-800">${message}</p>
+        </div>`;
+    }
+
+    function warningHtml(message) {
+        return `<div class="p-4 bg-amber-50 border-l-4 border-amber-400 rounded-lg flex items-start gap-3" role="status" aria-live="polite">
+            <svg class="h-5 w-5 text-amber-500 flex-shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+            </svg>
+            <div>
+                <p class="text-sm font-semibold text-amber-800">Incomplete Address History</p>
+                <p class="text-sm text-amber-700 mt-0.5">${message} You can still add this address — just make sure to complete your history before submitting your application.</p>
+            </div>
+        </div>`;
+    }
+
+    function errorHtml(message) {
+        return `<div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg flex items-center gap-3" role="alert">
+            <svg class="h-5 w-5 text-red-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+            </svg>
+            <p class="text-sm font-semibold text-red-800">${message}</p>
+        </div>`;
+    }
+
+    // ── Form submit ───────────────────────────────────────────────────────────
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        clearErrors();
+
+        // Warn if coverage not yet met — but don't block submission
+        const coverageEl = document.getElementById('address-coverage-indicator');
+        const progressBar = coverageEl?.querySelector('[role="progressbar"]');
+        const currentPct = progressBar ? parseInt(progressBar.getAttribute('aria-valuenow') ?? '100') : 100;
+        if (currentPct < 100) {
+            const remaining = Math.ceil((REQUIRED_MONTHS * (100 - currentPct)) / 100);
+            displayWarning(`You still need approximately ${remaining} more month(s) of address history.`);
+            // Small delay so user sees the warning before the loading state kicks in
+            await new Promise(resolve => setTimeout(resolve, 800));
+        }
+
+        submitButton.disabled     = true;
+        submitButtonText.textContent = 'Adding…';
+
+        try {
+            const res  = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'Accept':       'application/json',
+                },
+                body: new FormData(form),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                displaySuccess(data.message || 'Address added successfully.');
+                form.reset();
+                suburbSelect.disabled = true;
+                suburbSelect.innerHTML = '<option value="">Select state first...</option>';
+
+                if (data.address) {
+                    addAddressToList(data.address);
+                    updateAddressCount();
+                    document.dispatchEvent(new CustomEvent('ajaxSuccess', { detail: { type: 'address' } }));
+                }
+
+                // Update coverage indicator from server response
+                if (data.coverage) {
+                    updateCoverageIndicator(data.coverage);
+                }
+
+            } else {
+                if (data.errors) {
+                    Object.entries(data.errors).forEach(([field, messages]) => {
+                        if (messages.length) displayFieldError(field, messages[0]);
+                    });
+                    displayError('Please correct the errors above.');
+                } else {
+                    displayError(data.message || 'An error occurred. Please try again.');
+                }
+            }
+        } catch {
+            displayError('A network error occurred. Please check your connection and try again.');
+        } finally {
+            submitButton.disabled     = false;
+            submitButtonText.textContent = 'Add Address';
+        }
+    });
+
+    // ── Delete ────────────────────────────────────────────────────────────────
+
+    document.addEventListener('click', e => {
+        const btn = e.target.closest('.delete-address-btn');
+        if (!btn) return;
+        deleteAddress(btn.dataset.addressId);
+    });
+
+    async function deleteAddress(addressId) {
+        if (!confirm('Are you sure you want to delete this address?')) return;
+
+        const deleteUrl = window.RESIDENTIAL_CONFIG?.deleteRoute?.replace(':id', addressId);
+        if (!deleteUrl) return;
+
+        try {
+            const res  = await fetch(deleteUrl, {
+                method: 'DELETE',
+                headers: {
+                    'X-CSRF-TOKEN':  document.querySelector('meta[name="csrf-token"]')?.content,
+                    'Accept':        'application/json',
+                    'Content-Type':  'application/json',
+                },
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                document.querySelector(`[data-address-id="${addressId}"]`)?.remove();
+                updateAddressCount();
+                document.dispatchEvent(new CustomEvent('ajaxSuccess', { detail: { type: 'address' } }));
+                displaySuccess(data.message || 'Address deleted successfully.');
+
+                // Update coverage from server response
+                if (data.coverage) {
+                    updateCoverageIndicator(data.coverage);
+                }
+            } else {
+                throw new Error(data.message || 'Failed to delete address.');
+            }
+        } catch (err) {
+            displayError(err.message);
+        }
+    }
+
+    // ── Address list helpers ──────────────────────────────────────────────────
+
     function addAddressToList(address) {
-        const addressList = document.getElementById('address-list');
+        let addressList = document.getElementById('address-list');
         const listContainer = document.getElementById('address-list-container');
 
-        // Create container if it doesn't exist
         if (!addressList) {
             listContainer.innerHTML = `
                 <div class="mb-8">
                     <div class="flex items-center justify-between mb-4">
                         <h4 class="text-sm font-semibold text-gray-900">Your Address History</h4>
-                        <span id="address-count-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">
-                            1 Address(es)
-                        </span>
+                        <span id="address-count-badge" class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold">1 Address(es)</span>
                     </div>
                     <div id="address-list" class="space-y-3" data-addresses-section></div>
-                </div>
-            `;
+                </div>`;
+            addressList = document.getElementById('address-list');
         }
 
-        const addressItem = createAddressElement(address);
-        document.getElementById('address-list').insertAdjacentHTML('beforeend', addressItem);
+        addressList.insertAdjacentHTML('beforeend', createAddressElement(address));
     }
 
-    // Function to create address HTML element
     function createAddressElement(address) {
-        const startDate = address.start_date ? new Date(address.start_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'N/A';
-        const endDate = address.end_date ? new Date(address.end_date).toLocaleDateString('en-US', { month: 'short', year: 'numeric' }) : 'Present';
+        const startDate = address.start_date
+            ? new Date(address.start_date).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })
+            : 'N/A';
+        const endDate = address.end_date
+            ? new Date(address.end_date).toLocaleDateString('en-AU', { month: 'short', year: 'numeric' })
+            : 'Present';
+        const typeLabel = address.address_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const statusLabel = (address.residential_status || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
 
         return `
-            <div data-address-card class="address-item p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 hover:shadow-lg hover:border-indigo-200 transition-all" data-address-id="${address.id}">
-                <div class="flex justify-between items-start">
-                    <div class="flex items-start space-x-4 flex-1">
-                        <div class="flex-shrink-0">
-                            <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
-                                <svg class="h-6 w-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                        </div>
-                        <div class="flex-1">
-                            <div class="flex items-center flex-wrap gap-2 mb-2">
-                                <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">
-                                    ${address.address_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </span>
-                                <span class="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-xs font-semibold">
-                                    ${(address.residential_status || 'N/A').replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}
-                                </span>
-                                <span class="text-xs text-gray-500 flex items-center">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M6 2a1 1 0 00-1 1v1H4a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V6a2 2 0 00-2-2h-1V3a1 1 0 10-2 0v1H7V3a1 1 0 00-1-1zm0 5a1 1 0 000 2h8a1 1 0 100-2H6z" clip-rule="evenodd"/>
-                                    </svg>
-                                    ${startDate} - ${endDate}
-                                </span>
-                            </div>
-                            <div class="text-sm font-semibold text-gray-900 mb-1">
-                                ${address.street_address || 'N/A'}
-                            </div>
-                            <div class="text-sm text-gray-600">
-                                ${address.suburb || 'N/A'}, ${address.state || 'N/A'} ${address.postcode || 'N/A'}
-                            </div>
+        <div data-address-card
+             class="address-item p-5 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border-2 border-gray-200 hover:shadow-lg hover:border-indigo-200 transition-all"
+             data-address-id="${address.id}"
+             data-start-date="${address.start_date ?? ''}"
+             data-end-date="${address.end_date ?? ''}">
+            <div class="flex justify-between items-start">
+                <div class="flex items-start space-x-4 flex-1">
+                    <div class="flex-shrink-0">
+                        <div class="h-12 w-12 rounded-xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center">
+                            <svg class="h-6 w-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
+                            </svg>
                         </div>
                     </div>
-                    <button type="button"
-                            data-address-id="${address.id}"
-                            aria-label="Delete address record ${address.address_type.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}"
-                            class="ml-4 inline-flex items-center px-4 py-2 bg-red-50 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition-all hover:shadow-md delete-address-btn">
-                        <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                        </svg>
-                        Delete
-                    </button>
+                    <div class="flex-1">
+                        <div class="flex items-center flex-wrap gap-2 mb-2">
+                            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-bold">${typeLabel}</span>
+                            <span class="px-3 py-1 bg-gray-200 text-gray-700 rounded-full text-xs font-semibold">${statusLabel}</span>
+                            <span class="text-xs text-gray-500">${startDate} – ${endDate}</span>
+                        </div>
+                        <div class="text-sm font-semibold text-gray-900 mb-1">${address.street_address || 'N/A'}</div>
+                        <div class="text-sm text-gray-600">${address.suburb || 'N/A'}, ${address.state || 'N/A'} ${address.postcode || 'N/A'}</div>
+                    </div>
                 </div>
+                <button type="button"
+                        data-address-id="${address.id}"
+                        aria-label="Delete ${typeLabel} address"
+                        class="ml-4 inline-flex items-center px-4 py-2 bg-red-50 text-red-700 rounded-xl text-sm font-semibold hover:bg-red-100 transition-all delete-address-btn">
+                    <svg class="w-4 h-4 mr-1.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                    </svg>
+                    Delete
+                </button>
             </div>
-        `;
+        </div>`;
     }
 
-    // Update address count badge
     function updateAddressCount() {
         const badge = document.getElementById('address-count-badge');
         const count = document.querySelectorAll('.address-item').length;
-        if (badge) {
-            badge.textContent = `${count} Address(es)`;
-        }
+        if (badge) badge.textContent = `${count} Address(es)`;
     }
 
-    // Global delete function
-    async function deleteAddress(applicationId, addressId) {
-        if (!confirm('Are you sure you want to delete this address?')) {
-            return;
-        }
-
-        const messagesContainer = document.getElementById('address-messages');
-        const deleteUrl = RESIDENTIAL_CONFIG.deleteRoute.replace(':id', addressId);
-
-        try {
-            const response = await fetch(deleteUrl, {
-                method: 'DELETE',
-                headers: {
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                }
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                // Remove the address from DOM
-                const addressElement = document.querySelector(`[data-address-id="${addressId}"]`);
-                if (addressElement) {
-                    addressElement.remove();
-                }
-
-                updateAddressCount();
-
-                document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                    detail: { type: 'address' }
-                }));
-
-                // Update count
-                const badge = document.getElementById('address-count-badge');
-                const count = document.querySelectorAll('.address-item').length;
-                if (badge) {
-                    badge.textContent = `${count} Address(es)`;
-                }
-
-                // Show success message
-                messagesContainer.innerHTML = `
-                    <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-semibold text-green-800">${data.message || 'Address deleted successfully.'}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-            } else {
-                throw new Error(data.message || 'Failed to delete address');
-            }
-        } catch (error) {
-            console.error('Error:', error);
-            messagesContainer.innerHTML = `
-                <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-semibold text-red-800">${error.message}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-        }
-    }
-
-    document.addEventListener('click', e => {
-        const btn = e.target.closest('.delete-address-btn');
-        if (!btn) return;
-
-        const addressId = btn.dataset.addressId;
-        deleteAddress(RESIDENTIAL_CONFIG.applicationId, addressId);
-    });
 })();

@@ -2,7 +2,6 @@
 
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ApplicationController;
-use App\Http\Controllers\Sms\WhatsAppController as WhatsAppController;
 
 /*
 |--------------------------------------------------------------------------
@@ -41,13 +40,6 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     ->prefix('admin')
     ->name('admin.')
     ->group(base_path('routes/admin/adminRoutes.php'));
-
-
-// WhatsApp & SMS Routes
-Route::post('/whatsapp/send',   [WhatsAppController::class, 'send'])->name('whatsapp.send');
-Route::post('/whatsapp/queue',  [WhatsAppController::class, 'queue'])->name('whatsapp.queue');
-Route::post('/sms/send',        [WhatsAppController::class, 'sendSMS'])->name('sms.send');
-Route::post('/sms/queue',       [WhatsAppController::class, 'queueSMS'])->name('sms.queue');
 
 // Twilio Webhooks (no CSRF protection needed)
 Route::post('/webhooks/twilio/sms', function (\Illuminate\Http\Request $request) {
