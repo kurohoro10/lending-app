@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\Application;
+use App\Models\Question;
 use App\Models\Task;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -14,29 +15,35 @@ class DashboardController extends Controller
     {
         // Application statistics
         $stats = [
-            'total_applications' => Application::count(),
-            'draft' => Application::where('status', 'draft')->count(),
-            'submitted' => Application::where('status', 'submitted')->count(),
-            'under_review' => Application::where('status', 'under_review')->count(),
+            'total_applications'       => Application::count(),
+            'draft'                    => Application::where('status', 'draft')->count(),
+            'submitted'                => Application::where('status', 'submitted')->count(),
+            'under_review'             => Application::where('status', 'under_review')->count(),
             'additional_info_required' => Application::where('status', 'additional_info_required')->count(),
-            'approved' => Application::where('status', 'approved')->count(),
-            'declined' => Application::where('status', 'declined')->count(),
+            'approved'                 => Application::where('status', 'approved')->count(),
+            'declined'                 => Application::where('status', 'declined')->count(),
         ];
 
-        // Recent applications
+        // Unread answered questions — drives the alert banner and Responses column
+        $totalAnsweredQuestions = Question::where('status', 'answered')
+            ->whereNull('read_at')
+            ->count();
+
+        // Recent applications — include unread answered question count per application
         $recentApplications = Application::with(['user', 'personalDetails', 'assignedTo'])
+            ->withCount(['questions' => function ($q) {
+                $q->where('status', 'answered')->whereNull('read_at');
+            }])
             ->latest()
             ->limit(10)
             ->get();
 
         // Task statistics
         $taskStats = [
-            'pending_tasks' => Task::where('status', 'pending')->count(),
+            'pending_tasks'   => Task::where('status', 'pending')->count(),
             'in_progress_tasks' => Task::where('status', 'in_progress')->count(),
-            'overdue_tasks' => Task::overdue()->count(),
-            'completed_today' => Task::completed()
-                ->whereDate('completed_at', today())
-                ->count(),
+            'overdue_tasks'   => Task::overdue()->count(),
+            'completed_today' => Task::completed()->whereDate('completed_at', today())->count(),
         ];
 
         // My tasks (if assessor)
@@ -59,11 +66,11 @@ class DashboardController extends Controller
         // Loan amount statistics
         $loanStats = [
             'total_requested' => Application::sum('loan_amount'),
-            'total_approved' => Application::where('status', 'approved')->sum('loan_amount'),
-            'average_loan' => Application::avg('loan_amount'),
+            'total_approved'  => Application::where('status', 'approved')->sum('loan_amount'),
+            'average_loan'    => Application::avg('loan_amount'),
         ];
 
-        // Assessor workload
+        // Assessor workload (admin only)
         $assessorWorkload = [];
         if (auth()->user()->isAdmin()) {
             $assessorWorkload = User::role('assessor')
@@ -77,6 +84,7 @@ class DashboardController extends Controller
 
         return view('admin.dashboard', compact(
             'stats',
+            'totalAnsweredQuestions',
             'recentApplications',
             'taskStats',
             'myTasks',

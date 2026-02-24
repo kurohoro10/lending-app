@@ -29,7 +29,7 @@
 <body class="font-sans antialiased">
     <x-banner />
 
-    <div class="min-h-screen bg-gray-100">
+    <div class="min-h-screen flex flex-col bg-gray-100">
         @livewire('navigation-menu')
 
         <!-- Page Heading -->
@@ -42,7 +42,7 @@
         @endif
 
         <!-- Page Content -->
-        <main>
+        <main class="flex-1">
             <!-- Flash Messages -->
             @if (session('success'))
                 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4">
@@ -80,6 +80,13 @@
 
             {{ $slot }}
         </main>
+
+        <footer class="w-full flex justify-end px-6 py-6" role="contentinfo">
+            <p class="text-gray-500 text-xs">
+                <span class="sr-only">Application </span>
+                <span aria-label="Version Number">Version: {{ config('app.version') }}</span>
+            </p>
+        </footer>
     </div>
 
     @stack('modals')
