@@ -1,335 +1,254 @@
+// resources/js/living-expenses.js
+
 (() => {
-    const form = document.getElementById('expense-form');
-    const messagesContainer = document.getElementById('expense-messages');
-    const submitButton = document.getElementById('submit-expense-button');
-    const submitButtonText = document.getElementById('submit-expense-text');
-    const livingExpensesAccordionBtn = document.getElementById('living-expenses-btn');
+    const FREQ_MULTIPLIERS = {
+        weekly:      52 / 12,
+        fortnightly: 26 / 12,
+        monthly:     1,
+        quarterly:   1 / 3,
+        annual:      1 / 12,
+    };
 
-    if (livingExpensesAccordionBtn) {
-        livingExpensesAccordionBtn.addEventListener('click', () => {
-            toggleAccordion('living-expenses');
-        });
+    const form            = document.getElementById('expense-form');
+    const messages        = document.getElementById('expense-messages');
+    const submitBtn       = document.getElementById('submit-expense-button');
+    const submitText      = document.getElementById('submit-expense-text');
+    const grandTotal      = document.getElementById('grand-total-monthly');
+    const addOtherBtn     = document.getElementById('add-other-expense-btn');
+    const otherRows       = document.getElementById('other-expense-rows');
+    const accordionBtn    = document.getElementById('living-expenses-btn');
+
+    if (!form) return;
+
+    accordionBtn?.addEventListener('click', () => toggleAccordion('living-expenses'));
+
+    // ── Live total calculation ────────────────────────────────────────────────
+
+    function toMonthly(amount, frequency) {
+        return parseFloat(amount || 0) * (FREQ_MULTIPLIERS[frequency] ?? 1);
     }
 
-    // Helper functions
-    function clearErrors() {
-        const errorElements = form.querySelectorAll('[id$="-error"]');
-        errorElements.forEach(element => {
-            element.classList.add('hidden');
-            element.textContent = '';
-        });
-
-        const inputs = form.querySelectorAll('input, select, textarea');
-        inputs.forEach(input => {
-            input.classList.remove('border-red-500');
-            input.removeAttribute('aria-invalid');
-        });
-
-        messagesContainer.innerHTML = '';
+    function fmt(value) {
+        return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value);
     }
 
-    function displayFieldError(fieldName, message) {
-        const errorElement = document.getElementById(`${fieldName}-error`);
-        const inputElement = document.getElementById(fieldName) ||
-                            document.getElementById(fieldName.replace(/_/g, '-'));
+    function recalcRow(row) {
+        const amountInput = row.querySelector('.expense-amount-input');
+        const freqSelect  = row.querySelector('.expense-frequency-select');
+        const monthlyEl   = row.querySelector('.row-monthly');
+        if (!amountInput || !freqSelect || !monthlyEl) return;
 
-        if (errorElement) {
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-        }
-
-        if (inputElement) {
-            inputElement.classList.add('border-red-500');
-            inputElement.setAttribute('aria-invalid', 'true');
-        }
+        const monthly = toMonthly(amountInput.value, freqSelect.value);
+        monthlyEl.textContent = amountInput.value ? fmt(monthly) : '—';
     }
 
-    function displaySuccess(message) {
-        messagesContainer.innerHTML = `
-            <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-green-800">${message}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
+    function recalcAll() {
+        let total = 0;
 
-    function displayError(message) {
-        messagesContainer.innerHTML = `
-            <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-red-800">${message}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    // Calculate monthly amount based on frequency
-    function calculateMonthlyAmount(amount, frequency) {
-        const numAmount = parseFloat(amount);
-
-        switch(frequency) {
-            case 'weekly':
-                return numAmount * 52 / 12;
-            case 'fortnightly':
-                return numAmount * 26 / 12;
-            case 'monthly':
-                return numAmount;
-            case 'quarterly':
-                return numAmount / 3;
-            case 'annual':
-                return numAmount / 12;
-            default:
-                return numAmount;
-        }
-    }
-
-    // Handle form submission with Fetch API
-    if (form) {
-        form.addEventListener('submit', async function (event) {
-            event.preventDefault();
-
-            // Clear previous errors
-            clearErrors();
-
-            // Disable submit button and show loading state
-            submitButton.disabled = true;
-            const originalText = submitButtonText.textContent;
-            submitButtonText.textContent = 'Adding...';
-
-            try {
-                // Get form data
-                const formData = new FormData(form);
-
-                // Send fetch request
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
-                        'Accept': 'application/json',
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Success
-                    displaySuccess(data.message || 'Living expense added successfully.');
-
-                    // Reset form
-                    form.reset();
-
-                    // Add new expense to the table
-                    if (data.expense) {
-                        addExpenseToTable(data.expense);
-                        updateTotalExpenses();
-
-                        document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                            detail: { type: 'expense' }
-                        }));
-                    }
-                } else {
-                    // Validation errors
-                    if (data.errors) {
-                        Object.keys(data.errors).forEach(fieldName => {
-                            const messages = data.errors[fieldName];
-                            if (Array.isArray(messages) && messages.length > 0) {
-                                displayFieldError(fieldName, messages[0]);
-                            }
-                        });
-                        displayError('Please correct the errors above.');
-                    } else {
-                        displayError(data.message || 'An error occurred. Please try again.');
-                    }
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                displayError('A network error occurred. Please check your connection and try again.');
-            } finally {
-                // Re-enable submit button
-                submitButton.disabled = false;
-                submitButtonText.textContent = originalText;
+        form.querySelectorAll('.expense-input-row, [data-other-row]').forEach(row => {
+            recalcRow(row);
+            const amountInput = row.querySelector('.expense-amount-input');
+            const freqSelect  = row.querySelector('.expense-frequency-select');
+            if (amountInput?.value) {
+                total += toMonthly(amountInput.value, freqSelect?.value ?? 'monthly');
             }
         });
-    }
 
-    // Function to add expense to the table dynamically
-    function addExpenseToTable(expense) {
-        const tbody = document.getElementById('expenses-tbody');
-        const tableContainer = document.getElementById('expenses-table-container');
-
-        // Create table if it doesn't exist
-        if (!tbody) {
-            tableContainer.innerHTML = `
-                <div class="mb-6 overflow-hidden rounded-xl border border-gray-200">
-                    <div data-expenses-section class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gradient-to-r from-gray-50 to-gray-100">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Category</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Expense</th>
-                                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Amount</th>
-                                    <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase tracking-wider">Frequency</th>
-                                    <th class="px-6 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider">Monthly</th>
-                                    <th class="px-6 py-3"></th>
-                                </tr>
-                            </thead>
-                            <tbody id="expenses-tbody" class="bg-white divide-y divide-gray-200"></tbody>
-                            <tfoot id="expenses-tfoot">
-                                <tr class="bg-gradient-to-r from-green-50 to-emerald-50 border-t-2 border-green-200">
-                                    <td colspan="4" class="px-6 py-4 text-sm font-bold text-gray-900 text-right">Total Monthly Expenses:</td>
-                                    <td id="total-monthly-expenses" class="px-6 py-4 text-sm font-bold text-green-700 text-right text-lg">$0.00</td>
-                                    <td></td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-            `;
+        if (grandTotal) {
+            grandTotal.textContent = fmt(total);
+            grandTotal.setAttribute('aria-label', `Total monthly expenses: ${fmt(total)}`);
         }
-
-        const expenseRow = createExpenseRow(expense);
-        document.getElementById('expenses-tbody').insertAdjacentHTML('beforeend', expenseRow);
     }
 
-    // Function to create expense table row
-    function createExpenseRow(expense) {
-        const monthlyAmount = calculateMonthlyAmount(expense.client_declared_amount, expense.frequency);
+    // ── Submit button state ──────────────────────────────────────────────────────
 
-        return `
-            <tr data-expense-row class="expense-row hover:bg-gray-50 transition" data-expense-id="${expense.id}" data-monthly-amount="${monthlyAmount}">
-                <td class="px-6 py-4 whitespace-nowrap">
-                    <span class="px-2 py-1 bg-indigo-100 text-indigo-700 rounded-full text-xs font-medium">
-                        ${expense.expense_category.charAt(0).toUpperCase() + expense.expense_category.slice(1)}
-                    </span>
-                </td>
-                <td class="px-6 py-4 text-sm font-medium text-gray-900">${expense.expense_name}</td>
-                <td class="px-6 py-4 text-sm text-right text-gray-700">$${parseFloat(expense.client_declared_amount).toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td class="px-6 py-4 text-sm text-gray-600">${expense.frequency.charAt(0).toUpperCase() + expense.frequency.slice(1)}</td>
-                <td class="px-6 py-4 text-sm text-right font-semibold text-gray-900">$${monthlyAmount.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                <td class="px-6 py-4 text-right whitespace-nowrap">
-                    <button type="button"
-                            data-expense-id="${expense.id}"
-                            aria-label="Delete expense record ${expense.expense_name}"
-                            class="text-red-600 hover:text-red-900 text-sm font-medium delete-expense-btn">
-                        Delete
-                    </button>
-                </td>
-            </tr>
-        `;
+    function hasAnyData() {
+        // Any standard row with amount > 0
+        const hasAmount = [...form.querySelectorAll('.expense-amount-input')]
+            .some(input => parseFloat(input.value || 0) > 0);
+
+        // Any Other row with a name filled in
+        const hasNamedOther = [...form.querySelectorAll('[data-other-row] input[type="text"]')]
+            .some(input => input.value.trim().length > 0);
+
+        return hasAmount || hasNamedOther;
     }
 
-    // Global delete function
-    async function deleteExpense(applicationId, expenseId) {
-        if (!confirm('Are you sure you want to delete this expense?')) {
+    function updateSubmitState() {
+        if (!submitBtn) return;
+        const enabled = hasAnyData();
+        submitBtn.disabled = !enabled;
+        submitBtn.setAttribute('aria-disabled', String(!enabled));
+        submitBtn.title = enabled ? '' : 'Please enter at least one expense before saving.';
+    }
+
+    // Run on page load to show saved values
+    recalcAll();
+    updateSubmitState();
+
+    // Delegated input listener for all amount/frequency fields
+    form.addEventListener('input', e => {
+        if (e.target.matches('.expense-amount-input, .expense-frequency-select')) {
+            recalcAll();
+            updateSubmitState();
+        }
+        // Also watch Other row name fields
+        if (e.target.closest('[data-other-row]') && e.target.type === 'text') {
+            updateSubmitState();
+        }
+    });
+    form.addEventListener('change', e => {
+        if (e.target.matches('.expense-frequency-select')) {
+            recalcAll();
+            updateSubmitState();
+        }
+    });
+
+    // ── Add / remove "Other" rows ─────────────────────────────────────────────
+
+    let otherIndex = Date.now(); // unique index for new rows
+
+    addOtherBtn?.addEventListener('click', () => {
+        otherIndex++;
+        const row = buildOtherRow(`other_new_${otherIndex}`);
+        otherRows.insertAdjacentHTML('beforeend', row);
+        otherRows.lastElementChild?.querySelector('input[type="text"]')?.focus();
+    });
+
+    otherRows?.addEventListener('click', e => {
+        const removeBtn = e.target.closest('.remove-other-row');
+        if (!removeBtn) return;
+
+        const row = removeBtn.closest('[data-other-row]');
+        if (!row) return;
+
+        // Keep at least one blank row
+        const allRows = otherRows.querySelectorAll('[data-other-row]');
+        if (allRows.length <= 1) {
+            // Just clear the inputs instead of removing
+            row.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => i.value = '');
+            row.querySelector('select').value = 'monthly';
+            row.querySelector('.row-monthly').textContent = '—';
+            recalcAll();
+            updateSubmitState();
             return;
         }
 
-        const messagesContainer = document.getElementById('expense-messages');
-        const deleteUrl = EXPENSES_CONFIG.deleteRoute.replace(':id', expenseId);
+        row.remove();
+        recalcAll();
+        updateSubmitState();
+    });
+
+    function buildOtherRow(index) {
+        return `
+        <div class="other-expense-row flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200"
+             data-other-row>
+            <div class="flex-1 min-w-0">
+                <label class="sr-only">Expense name</label>
+                <input type="text"
+                       name="expenses[${index}][expense_name]"
+                       placeholder="Expense name (e.g. Gym membership)"
+                       class="w-full py-2 px-3 border border-gray-300 rounded-lg text-sm
+                              focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                       aria-label="Custom expense name">
+                <input type="hidden" name="expenses[${index}][expense_category]" value="other">
+            </div>
+            <div class="relative w-32 flex-shrink-0">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">$</span>
+                <label class="sr-only">Amount</label>
+                <input type="number"
+                       name="expenses[${index}][client_declared_amount]"
+                       min="0" step="0.01" placeholder="0.00"
+                       class="expense-amount-input w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
+                              focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none tabular-nums"
+                       aria-label="Custom expense amount">
+            </div>
+            <div class="w-36 flex-shrink-0">
+                <label class="sr-only">Frequency</label>
+                <select name="expenses[${index}][frequency]"
+                        class="expense-frequency-select w-full py-2 px-3 border border-gray-300 bg-white rounded-lg text-sm
+                               focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                        aria-label="Custom expense frequency">
+                    <option value="weekly">Weekly</option>
+                    <option value="fortnightly">Fortnightly</option>
+                    <option value="monthly" selected>Monthly</option>
+                    <option value="quarterly">Quarterly</option>
+                    <option value="annual">Annual</option>
+                </select>
+            </div>
+            <div class="w-20 text-right flex-shrink-0">
+                <span class="row-monthly text-sm font-semibold text-gray-800 tabular-nums">—</span>
+            </div>
+            <button type="button"
+                    class="remove-other-row flex-shrink-0 text-gray-400 hover:text-red-500
+                           focus:outline-none focus:ring-2 focus:ring-red-400 rounded transition"
+                    aria-label="Remove this expense row">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                </svg>
+            </button>
+        </div>`;
+    }
+
+    // ── Form submit ───────────────────────────────────────────────────────────
+
+    form.addEventListener('submit', async e => {
+        e.preventDefault();
+        clearMessages();
+
+        submitBtn.disabled        = true;
+        submitText.textContent    = 'Saving…';
 
         try {
-            const response = await fetch(deleteUrl, {
-                method: 'DELETE',
+            const res  = await fetch(form.action, {
+                method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
-                    'Accept': 'application/json',
-                    'Content-Type': 'application/json',
-                }
+                    'Accept':       'application/json',
+                },
+                body: new FormData(form),
             });
 
-            const data = await response.json();
+            const data = await res.json();
 
-            if (response.ok) {
-                // Remove the expense row from DOM
-                const expenseRow = document.querySelector(`[data-expense-id="${expenseId}"]`);
-                if (expenseRow) {
-                    expenseRow.remove();
-                }
-
-                updateTotalExpenses();
-
-                document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                    detail: { type: 'expense' }
-                }));
-
-                // Show success message
-                messagesContainer.innerHTML = `
-                    <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-semibold text-green-800">${data.message || 'Living expense deleted successfully.'}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            if (res.ok && data.success) {
+                showMessage(data.message, 'success');
+                document.dispatchEvent(new CustomEvent('ajaxSuccess', { detail: { type: 'expense' } }));
+            } else if (data.errors) {
+                const first = Object.values(data.errors).flat()[0] ?? 'Please check your entries.';
+                showMessage(first, 'error');
             } else {
-                throw new Error(data.message || 'Failed to delete expense');
+                showMessage(data.message || 'An error occurred. Please try again.', 'error');
             }
-        } catch (error) {
-            console.error('Error:', error);
-            messagesContainer.innerHTML = `
-                <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-semibold text-red-800">${error.message}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } catch {
+            showMessage('A network error occurred. Please check your connection.', 'error');
+        } finally {
+            submitBtn.disabled     = false;
+            submitText.textContent = 'Save Expenses';
         }
-    }
-
-    // Helper function to recalculate total expenses
-    function updateTotalExpenses() {
-        const expenseRows = document.querySelectorAll('.expense-row');
-        let total = 0;
-
-        expenseRows.forEach(row => {
-            const monthlyAmount = parseFloat(row.dataset.monthlyAmount || 0);
-            total += monthlyAmount;
-        });
-
-        const totalElement = document.getElementById('total-monthly-expenses');
-        if (totalElement) {
-            totalElement.textContent = `$${total.toLocaleString('en-AU', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-        }
-    }
-
-    document.addEventListener('click', e => {
-        const btn = e.target.closest('.delete-expense-btn')
-        if (!btn) return;
-
-        const expense_id = btn.dataset.expenseId;
-        deleteExpense(EXPENSES_CONFIG.applicationId, expense_id);
     });
+
+    // ── Message helpers ───────────────────────────────────────────────────────
+
+    function clearMessages() {
+        if (messages) messages.innerHTML = '';
+    }
+
+    function showMessage(text, type) {
+        if (!messages) return;
+        const isSuccess = type === 'success';
+        messages.innerHTML = `
+        <div class="p-4 ${isSuccess ? 'bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400' : 'bg-red-50 border-l-4 border-red-400'} rounded-lg flex items-center gap-3"
+             role="${isSuccess ? 'status' : 'alert'}">
+            <svg class="h-5 w-5 flex-shrink-0 ${isSuccess ? 'text-green-600' : 'text-red-600'}" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                ${isSuccess
+                    ? '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>'
+                    : '<path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>'
+                }
+            </svg>
+            <p class="text-sm font-semibold ${isSuccess ? 'text-green-800' : 'text-red-800'}">${text}</p>
+        </div>`;
+        messages.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
 })();
