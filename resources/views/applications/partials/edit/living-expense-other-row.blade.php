@@ -1,4 +1,4 @@
-{{-- resources/views/applications/partials/living-expense-other-row.blade.php --}}
+{{-- resources/views/applications/partials/edit/living-expense-other-row.blade.php --}}
 {{-- Used for both server-rendered existing "other" rows and as a template reference --}}
 
 @php $exp = $expense ?? null; @endphp

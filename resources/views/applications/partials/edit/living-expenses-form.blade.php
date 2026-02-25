@@ -1,4 +1,4 @@
-{{-- resources/views/applications/partials/living-expenses.blade.php --}}
+{{-- resources/views/applications/partials/living-expenses-form.blade.php --}}
 
 @php
     $standardCategories = [
@@ -20,7 +20,7 @@
     );
 @endphp
 
-<div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
+<div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200" data-expenses-section>
 
     {{-- Header --}}
     <button type="button"

@@ -164,8 +164,30 @@
     }
 
     function checkExpensesComplete() {
-        const expenseRows = document.querySelectorAll('[data-expense-row]');
-        return expenseRows.length > 0;
+        // Check if there are any expense rows in the form
+        const expenseRows = document.querySelectorAll('[data-expense-row], .expense-input-row');
+
+        // Check if any have values saved (look for non-zero amounts)
+        let hasSavedExpenses = false;
+
+        expenseRows.forEach(row => {
+            const amountInput = row.querySelector('.expense-amount-input');
+            if (amountInput && parseFloat(amountInput.value || 0) > 0) {
+                hasSavedExpenses = true;
+            }
+        });
+
+        // Also check "other" rows that have names
+        const otherRows = document.querySelectorAll('[data-other-row]');
+        otherRows.forEach(row => {
+            const nameInput = row.querySelector('input[type="text"]');
+            const amountInput = row.querySelector('.expense-amount-input');
+            if (nameInput?.value.trim() && amountInput && parseFloat(amountInput.value || 0) > 0) {
+                hasSavedExpenses = true;
+            }
+        });
+
+        return hasSavedExpenses;
     }
 
     function updateProgressState() {
