@@ -10,6 +10,9 @@
             {{-- ── Assign To ──────────────────────────────────────────────── --}}
             @include('admin.applications.partials.show.assignedTo')
 
+            {{-- ── Create Task ────────────────────────────────────────────────────────── --}}
+            @include('admin.applications.partials.show.create-task')
+
             {{-- ── Contact Client (Communication modal) ──────────────────── --}}
             @include('admin.partials.communication.communication-modal')
 
