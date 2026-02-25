@@ -108,7 +108,9 @@
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
+                                    @if(auth()->user()->hasRole('admin'))
+                                        <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
+                                    @endif
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses</th>
                                     <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -119,8 +121,8 @@
                                     @php
                                         $statusColors = ['draft' => 'gray', 'submitted' => 'blue', 'under_review' => 'yellow', 'additional_info_required' => 'orange', 'approved' => 'green', 'declined' => 'red'];
                                         $statusLabels = ['draft' => 'Draft', 'submitted' => 'Submitted', 'under_review' => 'Review', 'additional_info_required' => 'Info Req.', 'approved' => 'Approved', 'declined' => 'Declined'];
-                                        $color = $statusColors[$application->status] ?? 'gray';
-                                        $label = $statusLabels[$application->status] ?? ucwords(str_replace('_', ' ', $application->status));
+                                        $color  = $statusColors[$application->status] ?? 'gray';
+                                        $label  = $statusLabels[$application->status] ?? ucwords(str_replace('_', ' ', $application->status));
                                         $qCount = $application->questions_count ?? 0;
                                     @endphp
                                     <tr class="hover:bg-gray-50 transition-colors {{ $qCount > 0 ? 'bg-green-50 hover:bg-green-100' : '' }}">
@@ -159,12 +161,14 @@
                                             </span>
                                         </td>
 
-                                        {{-- Assigned --}}
-                                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
-                                            <div class="truncate max-w-[100px]" title="{{ $application->assignedTo->name ?? 'Unassigned' }}">
-                                                {{ $application->assignedTo ? Str::limit($application->assignedTo->name, 12) : '—' }}
-                                            </div>
-                                        </td>
+                                        {{-- Assigned (admin only) --}}
+                                        @if(auth()->user()->hasRole('admin'))
+                                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                <div class="truncate max-w-[100px]" title="{{ $application->assignedTo->name ?? 'Unassigned' }}">
+                                                    {{ $application->assignedTo ? Str::limit($application->assignedTo->name, 12) : '—' }}
+                                                </div>
+                                            </td>
+                                        @endif
 
                                         {{-- Date --}}
                                         <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-500">
@@ -211,7 +215,11 @@
                                   d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                         <h3 class="mt-2 text-sm font-medium text-gray-900">No recent applications</h3>
-                        <p class="mt-1 text-sm text-gray-500">New applications will appear here once submitted.</p>
+                        @if(auth()->user()->hasRole('assessor'))
+                            <p class="mt-1 text-sm text-gray-500">You don't have any applications assigned to you yet.</p>
+                        @else
+                            <p class="mt-1 text-sm text-gray-500">New applications will appear here once submitted.</p>
+                        @endif
                     </div>
                 @endif
             </div>

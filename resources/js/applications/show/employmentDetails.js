@@ -134,7 +134,7 @@
                                 displayFieldError(fieldName, messages[0]);
                             }
                         });
-                        displayError('Please correct the errors above.');
+                        displayError('Please correct the errors below.');
                     } else {
                         displayError(data.message || 'An error occurred. Please try again.');
                     }

@@ -81,7 +81,17 @@ class ApplicationPolicy
      */
     public function assign(User $user, Application $application): bool
     {
-        return $user->hasRole('admin');
+        // Only admins can assign
+        if (!$user->hasRole('admin')) {
+            return false;
+        }
+
+        // Cannot reassign approved or declined applications
+        if (in_array($application->status, ['approved', 'declined'])) {
+            return false;
+        }
+
+        return true;
     }
 
     /**

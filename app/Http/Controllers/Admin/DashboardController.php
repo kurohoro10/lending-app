@@ -13,24 +13,37 @@ class DashboardController extends Controller
 {
     public function index()
     {
-        // Application statistics
+        $user       = auth()->user();
+        $isAssessor = $user->hasRole('assessor');
+
+        // Base query scoped to the assessor's own applications (or all for admins)
+        $baseQuery = $isAssessor
+            ? Application::where('assigned_to', $user->id)
+            : Application::query();
+
+        // Application statistics — scoped to what the current user can see
         $stats = [
-            'total_applications'       => Application::count(),
-            'draft'                    => Application::where('status', 'draft')->count(),
-            'submitted'                => Application::where('status', 'submitted')->count(),
-            'under_review'             => Application::where('status', 'under_review')->count(),
-            'additional_info_required' => Application::where('status', 'additional_info_required')->count(),
-            'approved'                 => Application::where('status', 'approved')->count(),
-            'declined'                 => Application::where('status', 'declined')->count(),
+            'total_applications'       => (clone $baseQuery)->count(),
+            'draft'                    => (clone $baseQuery)->where('status', 'draft')->count(),
+            'submitted'                => (clone $baseQuery)->where('status', 'submitted')->count(),
+            'under_review'             => (clone $baseQuery)->where('status', 'under_review')->count(),
+            'additional_info_required' => (clone $baseQuery)->where('status', 'additional_info_required')->count(),
+            'approved'                 => (clone $baseQuery)->where('status', 'approved')->count(),
+            'declined'                 => (clone $baseQuery)->where('status', 'declined')->count(),
         ];
 
-        // Unread answered questions — drives the alert banner and Responses column
-        $totalAnsweredQuestions = Question::where('status', 'answered')
-            ->whereNull('read_at')
-            ->count();
+        // Unread answered questions — scoped to the assessor's applications
+        $answeredQuestionsQuery = Question::where('status', 'answered')->whereNull('read_at');
+        if ($isAssessor) {
+            $answeredQuestionsQuery->whereHas('application', function ($q) use ($user) {
+                $q->where('assigned_to', $user->id);
+            });
+        }
+        $totalAnsweredQuestions = $answeredQuestionsQuery->count();
 
-        // Recent applications — include unread answered question count per application
-        $recentApplications = Application::with(['user', 'personalDetails', 'assignedTo'])
+        // Recent applications — scoped the same way as the index page
+        $recentApplications = (clone $baseQuery)
+            ->with(['user', 'personalDetails', 'assignedTo'])
             ->withCount(['questions' => function ($q) {
                 $q->where('status', 'answered')->whereNull('read_at');
             }])
@@ -48,31 +61,32 @@ class DashboardController extends Controller
 
         // My tasks (if assessor)
         $myTasks = [];
-        if (auth()->user()->isAssessor()) {
+        if ($user->isAssessor()) {
             $myTasks = Task::with(['application.personalDetails'])
-                ->where('assigned_to', auth()->id())
+                ->where('assigned_to', $user->id)
                 ->whereIn('status', ['pending', 'in_progress'])
                 ->orderBy('due_date')
                 ->limit(5)
                 ->get();
         }
 
-        // Applications by status (for chart)
-        $applicationsByStatus = Application::select('status', DB::raw('count(*) as count'))
+        // Applications by status (for chart) — scoped
+        $applicationsByStatus = (clone $baseQuery)
+            ->select('status', DB::raw('count(*) as count'))
             ->groupBy('status')
             ->get()
             ->pluck('count', 'status');
 
-        // Loan amount statistics
+        // Loan amount statistics — scoped
         $loanStats = [
-            'total_requested' => Application::sum('loan_amount'),
-            'total_approved'  => Application::where('status', 'approved')->sum('loan_amount'),
-            'average_loan'    => Application::avg('loan_amount'),
+            'total_requested' => (clone $baseQuery)->sum('loan_amount'),
+            'total_approved'  => (clone $baseQuery)->where('status', 'approved')->sum('loan_amount'),
+            'average_loan'    => (clone $baseQuery)->avg('loan_amount'),
         ];
 
         // Assessor workload (admin only)
         $assessorWorkload = [];
-        if (auth()->user()->isAdmin()) {
+        if ($user->isAdmin()) {
             $assessorWorkload = User::role('assessor')
                 ->withCount([
                     'assignedApplications as assigned_count' => function ($query) {

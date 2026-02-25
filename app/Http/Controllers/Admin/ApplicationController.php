@@ -29,6 +29,10 @@ class ApplicationController extends Controller
             }])
             ->latest();
 
+        if (auth()->user()->hasRole('assessor')) {
+            $query->where('assigned_to', auth()->id());
+        }
+
         if ($request->filled('status')) {
             $query->where('status', $request->status);
         }
@@ -44,14 +48,25 @@ class ApplicationController extends Controller
             });
         }
 
-        if ($request->filled('assigned_to')) {
+        if ($request->filled('assigned_to') && auth()->user()->hasRole('admin')) {
             $query->where('assigned_to', $request->assigned_to);
         }
 
         $applications = $query->paginate(20);
-        $assessors    = User::role('assessor')->get();
 
-        $totalAnsweredQuestions = Question::where('status', 'answered')->whereNull('read_at')->count();
+        $assessors = auth()->user()->hasRole('admin')
+        ? User::role('assessor')->get()
+        : collect();
+
+        $totalAnsweredQuestionsQuery  = Question::where('status', 'answered')->whereNull('read_at');
+
+        if (auth()->user()->hasRole('assessor')) {
+            $totalAnsweredQuestionsQuery->whereHas('application', function ($q) {
+                $q->where('assigned_to', auth()->id());
+            });
+        }
+
+        $totalAnsweredQuestions = $totalAnsweredQuestionsQuery->count();
 
         return view('admin.applications.index', compact('applications', 'assessors', 'totalAnsweredQuestions'));
     }
@@ -157,15 +172,70 @@ class ApplicationController extends Controller
 
     public function assign(Request $request, Application $application): RedirectResponse
     {
+        $this->authorize('assign', $application);
+
+        // ✅ Prevent reassignment for approved or declined applications
+        if (in_array($application->status, ['approved', 'declined'])) {
+            return back()->with('error', 'Cannot reassign applications that are approved or declined.');
+        }
+
         $validated = $request->validate([
             'assigned_to' => 'required|exists:users,id',
         ]);
 
-        $application->update($validated);
+        $oldAssignee = $application->assigned_to;
+        $newAssignee = $validated['assigned_to'];
 
-        ActivityLog::logActivity('assigned', 'Application assigned to assessor', $application);
+        // ✅ Check if assignment actually changed
+        if ($oldAssignee == $newAssignee) {
+            return back()->with('info', 'Application is already assigned to this assessor.');
+        }
 
-        return back()->with('success', 'Application assigned successfully.');
+        DB::beginTransaction();
+        try {
+            // ✅ Update assignment
+            $application->update([
+                'assigned_to' => $newAssignee,
+            ]);
+
+            // ✅ Automatically change status to "under_review" when assigned
+            if ($application->status === 'submitted') {
+                $application->update([
+                    'status' => 'under_review',
+                ]);
+
+                ActivityLog::logActivity(
+                    'status_changed',
+                    'Status automatically changed to under_review when application was assigned',
+                    $application,
+                    ['old_status' => 'submitted'],
+                    ['new_status' => 'under_review']
+                );
+            }
+
+            // Get assignee names for logging
+            $oldAssigneeName = $oldAssignee ? User::find($oldAssignee)?->name : 'Unassigned';
+            $newAssigneeName = User::find($newAssignee)?->name ?? 'Unknown';
+
+            ActivityLog::logActivity(
+                'assigned',
+                "Application assigned to {$newAssigneeName}" . ($oldAssignee ? " (previously: {$oldAssigneeName})" : ''),
+                $application,
+                ['old_assignee' => $oldAssignee],
+                ['new_assignee' => $newAssignee]
+            );
+
+            DB::commit();
+
+            return back()->with('success', "Application successfully assigned to {$newAssigneeName}.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            Log::error('Failed to assign application: ' . $e->getMessage(), [
+                'application_id' => $application->id,
+            ]);
+            return back()->with('error', 'Failed to assign application. Please try again.');
+        }
     }
 
     public function returnToClient(Request $request, Application $application): RedirectResponse

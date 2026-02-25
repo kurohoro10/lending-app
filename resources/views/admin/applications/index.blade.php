@@ -1,8 +1,17 @@
 <x-app-layout>
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
-            {{ __('Applications Management') }}
-        </h2>
+        <div class="flex items-center justify-between">
+            <div>
+                <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+                    {{ __('Applications Management') }}
+                </h2>
+                @if(auth()->user()->hasRole('assessor'))
+                    <p class="text-sm text-gray-600 mt-1">
+                        Showing applications assigned to you
+                    </p>
+                @endif
+            </div>
+        </div>
     </x-slot>
 
     <div class="py-12">
@@ -17,14 +26,19 @@
             <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg mb-6">
                 <div class="p-6">
                     <form method="GET" action="{{ route('admin.applications.index') }}">
-                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                        <div class="grid grid-cols-1 {{ auth()->user()->hasRole('admin') ? 'md:grid-cols-4' : 'md:grid-cols-3' }} gap-4">
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Search</label>
-                                <input type="text" name="search" value="{{ request('search') }}" placeholder="Application # or Name" class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
+                                <input type="text"
+                                    name="search"
+                                    value="{{ request('search') }}"
+                                    placeholder="Application # or Name"
+                                    class="mt-1 focus:ring-indigo-500 focus:border-indigo-500 block w-full shadow-sm sm:text-sm border-gray-300 rounded-md">
                             </div>
                             <div>
                                 <label class="block text-sm font-medium text-gray-700">Status</label>
-                                <select name="status" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                <select name="status"
+                                        class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
                                     <option value="">All Statuses</option>
                                     <option value="draft" {{ request('status') == 'draft' ? 'selected' : '' }}>Draft</option>
                                     <option value="submitted" {{ request('status') == 'submitted' ? 'selected' : '' }}>Submitted</option>
@@ -34,17 +48,26 @@
                                     <option value="declined" {{ request('status') == 'declined' ? 'selected' : '' }}>Declined</option>
                                 </select>
                             </div>
-                            <div>
-                                <label class="block text-sm font-medium text-gray-700">Assigned To</label>
-                                <select name="assigned_to" class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-                                    <option value="">All Assessors</option>
-                                    @foreach($assessors as $assessor)
-                                        <option value="{{ $assessor->id }}" {{ request('assigned_to') == $assessor->id ? 'selected' : '' }}>{{ $assessor->name }}</option>
-                                    @endforeach
-                                </select>
-                            </div>
+
+                            {{-- Only show "Assigned To" filter for admins --}}
+                            @if(auth()->user()->hasRole('admin'))
+                                <div>
+                                    <label class="block text-sm font-medium text-gray-700">Assigned To</label>
+                                    <select name="assigned_to"
+                                            class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+                                        <option value="">All Assessors</option>
+                                        @foreach($assessors as $assessor)
+                                            <option value="{{ $assessor->id }}" {{ request('assigned_to') == $assessor->id ? 'selected' : '' }}>
+                                                {{ $assessor->name }}
+                                            </option>
+                                        @endforeach
+                                    </select>
+                                </div>
+                            @endif
+
                             <div class="flex items-end">
-                                <button type="submit" class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                                <button type="submit"
+                                        class="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
                                     Filter
                                 </button>
                             </div>
@@ -64,7 +87,12 @@
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                                    <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
+
+                                    {{-- Only show "Assigned" column for admins --}}
+                                    @if(auth()->user()->hasRole('admin'))
+                                        <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned</th>
+                                    @endif
+
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
                                     <th scope="col" class="px-3 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Responses</th>
                                     <th scope="col" class="px-3 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -120,11 +148,16 @@
                                                 {{ $label }}
                                             </span>
                                         </td>
-                                        <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
-                                            <div class="truncate max-w-[100px]" title="{{ $application->assignedTo->name ?? 'Unassigned' }}">
-                                                {{ $application->assignedTo ? Str::limit($application->assignedTo->name, 12) : '—' }}
-                                            </div>
-                                        </td>
+
+                                        {{-- Only show "Assigned" column for admins --}}
+                                        @if(auth()->user()->hasRole('admin'))
+                                            <td class="px-3 py-3 whitespace-nowrap text-sm text-gray-500">
+                                                <div class="truncate max-w-[100px]" title="{{ $application->assignedTo->name ?? 'Unassigned' }}">
+                                                    {{ $application->assignedTo ? Str::limit($application->assignedTo->name, 12) : '—' }}
+                                                </div>
+                                            </td>
+                                        @endif
+
                                         <td class="px-3 py-3 whitespace-nowrap text-xs text-gray-500">
                                             {{ $application->submitted_at ? $application->submitted_at->format('M d, Y') : '—' }}
                                         </td>
@@ -142,7 +175,7 @@
                                         </td>
                                         <td class="px-3 py-3 whitespace-nowrap text-right text-sm">
                                             <a href="{{ route('admin.applications.show', $application) }}"
-                                               class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
+                                            class="inline-flex items-center text-indigo-600 hover:text-indigo-900 font-medium">
                                                 Review
                                                 @if($application->questions_count > 0)
                                                     <span class="ml-1 inline-flex items-center justify-center w-4 h-4 text-xs font-bold text-white bg-green-500 rounded-full">
@@ -166,7 +199,11 @@
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                         </svg>
                         <h3 class="mt-2 text-sm font-medium text-gray-900">No applications found</h3>
-                        <p class="mt-1 text-sm text-gray-500">Try adjusting your filters.</p>
+                        @if(auth()->user()->hasRole('assessor'))
+                            <p class="mt-1 text-sm text-gray-500">You don't have any applications assigned to you yet.</p>
+                        @else
+                            <p class="mt-1 text-sm text-gray-500">Try adjusting your filters.</p>
+                        @endif
                     </div>
                 @endif
             </div>
