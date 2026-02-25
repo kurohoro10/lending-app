@@ -486,75 +486,72 @@
 
     <!-- Calculator JavaScript -->
     <script>
-        // Loan Calculator Logic
-        const loanSlider = document.getElementById('loanSlider');
-        const termSlider = document.getElementById('termSlider');
-        const rateSlider = document.getElementById('rateSlider');
+        // Store the apply URL rendered by Blade (safe, server-side)
+        const applyUrl = "{{ route('applications.create') }}";
 
-        const loanFill = document.getElementById('loanFill');
-        const termFill = document.getElementById('termFill');
-        const rateFill = document.getElementById('rateFill');
+        document.addEventListener('DOMContentLoaded', function () {
+            const loanSlider = document.getElementById('loanSlider');
+            const termSlider = document.getElementById('termSlider');
+            const rateSlider = document.getElementById('rateSlider');
 
-        const loanAmountDisplay = document.getElementById('loanAmount');
-        const loanTermDisplay = document.getElementById('loanTerm');
-        const interestRateDisplay = document.getElementById('interestRate');
-        const monthlyPaymentDisplay = document.getElementById('monthlyPayment');
-        const totalInterestDisplay = document.getElementById('totalInterest');
-        const totalRepaymentDisplay = document.getElementById('totalRepayment');
+            const loanFill = document.getElementById('loanFill');
+            const termFill = document.getElementById('termFill');
+            const rateFill = document.getElementById('rateFill');
 
-        function formatCurrency(amount) {
-            return '$' + Math.round(amount).toLocaleString();
-        }
+            const loanAmountDisplay = document.getElementById('loanAmount');
+            const loanTermDisplay = document.getElementById('loanTerm');
+            const interestRateDisplay = document.getElementById('interestRate');
+            const monthlyPaymentDisplay = document.getElementById('monthlyPayment');
+            const totalInterestDisplay = document.getElementById('totalInterest');
+            const totalRepaymentDisplay = document.getElementById('totalRepayment');
 
-        function updateSliderFill(slider, fill) {
-            const min = parseFloat(slider.min);
-            const max = parseFloat(slider.max);
-            const value = parseFloat(slider.value);
-            const percentage = ((value - min) / (max - min)) * 100;
-            fill.style.width = percentage + '%';
-        }
+            function formatCurrency(amount) {
+                return '$' + Math.round(amount).toLocaleString();
+            }
 
-        function calculateLoan() {
-            const principal = parseFloat(loanSlider.value);
-            const termMonths = parseInt(termSlider.value);
-            const annualRate = parseFloat(rateSlider.value);
-            const monthlyRate = annualRate / 100 / 12;
+            function updateSliderFill(slider, fill) {
+                const min = parseFloat(slider.min);
+                const max = parseFloat(slider.max);
+                const value = parseFloat(slider.value);
+                const percentage = ((value - min) / (max - min)) * 100;
+                fill.style.width = percentage + '%';
+            }
 
-            // Calculate monthly payment using loan payment formula
-            const monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
-            const totalRepayment = monthlyPayment * termMonths;
-            const totalInterest = totalRepayment - principal;
+            function calculateLoan() {
+                const principal = parseFloat(loanSlider.value);
+                const termMonths = parseInt(termSlider.value);
+                const annualRate = parseFloat(rateSlider.value);
+                const monthlyRate = annualRate / 100 / 12;
 
-            // Update displays
-            loanAmountDisplay.textContent = formatCurrency(principal);
-            loanTermDisplay.textContent = termMonths + ' months';
-            interestRateDisplay.textContent = annualRate + '%';
-            monthlyPaymentDisplay.textContent = formatCurrency(monthlyPayment);
-            totalInterestDisplay.textContent = formatCurrency(totalInterest);
-            totalRepaymentDisplay.textContent = formatCurrency(totalRepayment);
+                const monthlyPayment = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
+                const totalRepayment = monthlyPayment * termMonths;
+                const totalInterest = totalRepayment - principal;
 
-            // Update slider fills
-            updateSliderFill(loanSlider, loanFill);
-            updateSliderFill(termSlider, termFill);
-            updateSliderFill(rateSlider, rateFill);
-        }
+                loanAmountDisplay.textContent = formatCurrency(principal);
+                loanTermDisplay.textContent = termMonths + ' months';
+                interestRateDisplay.textContent = annualRate + '%';
+                monthlyPaymentDisplay.textContent = formatCurrency(monthlyPayment);
+                totalInterestDisplay.textContent = formatCurrency(totalInterest);
+                totalRepaymentDisplay.textContent = formatCurrency(totalRepayment);
 
-        // Event listeners
-        loanSlider.addEventListener('input', calculateLoan);
-        termSlider.addEventListener('input', calculateLoan);
-        rateSlider.addEventListener('input', calculateLoan);
+                updateSliderFill(loanSlider, loanFill);
+                updateSliderFill(termSlider, termFill);
+                updateSliderFill(rateSlider, rateFill);
+            }
 
-        // Initial calculation
-        calculateLoan();
+            loanSlider.addEventListener('input', calculateLoan);
+            termSlider.addEventListener('input', calculateLoan);
+            rateSlider.addEventListener('input', calculateLoan);
 
-        // Apply with calculator values
+            // Run on load
+            calculateLoan();
+        });
+
         function applyWithCalculatorValues() {
             const amount = document.getElementById('loanSlider').value;
             const term = document.getElementById('termSlider').value;
             const rate = document.getElementById('rateSlider').value;
-
-            // Redirect to application page with values
-            window.location.href = '{{ route("applications.create") }}?amount=' + amount + '&term=' + term + '&rate=' + rate;
+            window.location.href = applyUrl + '?amount=' + amount + '&term=' + term + '&rate=' + rate;
         }
     </script>
 </body>

@@ -26,12 +26,21 @@
             to { opacity: 1; }
         }
 
+        @keyframes spin {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
         .animate-slide-up {
             animation: slideInUp 0.6s ease-out forwards;
         }
 
         .animate-fade-in {
             animation: fadeIn 0.5s ease-out forwards;
+        }
+
+        .animate-spin {
+            animation: spin 1s linear infinite;
         }
 
         .pulse-glow {
@@ -47,7 +56,6 @@
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.12);
         }
 
-        /* Custom styled inputs */
         .form-input {
             width: 100%;
             padding: 0.75rem 1rem;
@@ -86,7 +94,6 @@
             text-transform: uppercase;
         }
 
-        /* Section badge */
         .section-badge {
             display: inline-flex;
             align-items: center;
@@ -102,7 +109,6 @@
             flex-shrink: 0;
         }
 
-        /* Checkbox custom */
         .custom-checkbox {
             appearance: none;
             -webkit-appearance: none;
@@ -140,7 +146,6 @@
             box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
         }
 
-        /* Input with icon */
         .input-icon-wrapper {
             position: relative;
         }
@@ -160,17 +165,6 @@
             padding-left: 2rem;
         }
 
-        /* Progress steps */
-        .step-connector {
-            position: absolute;
-            top: 1.25rem;
-            left: calc(50% + 1.5rem);
-            right: calc(-50% + 1.5rem);
-            height: 2px;
-            background: linear-gradient(to right, #6366F1, #E5E7EB);
-        }
-
-        /* Gradient text */
         .gradient-text {
             background: linear-gradient(to right, #6366F1, #8B5CF6);
             -webkit-background-clip: text;
@@ -178,7 +172,6 @@
             background-clip: text;
         }
 
-        /* Select custom arrow */
         .form-select {
             appearance: none;
             -webkit-appearance: none;
@@ -189,7 +182,6 @@
             padding-right: 2.5rem;
         }
 
-        /* Submit button */
         .submit-btn {
             background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
             color: white;
@@ -215,7 +207,13 @@
             transform: scale(0.98);
         }
 
-        /* Cancel button */
+        .submit-btn:disabled {
+            transform: none !important;
+            box-shadow: none !important;
+            filter: grayscale(0.4);
+            cursor: not-allowed;
+        }
+
         .cancel-btn {
             background: white;
             color: #4B5563;
@@ -238,7 +236,6 @@
             background: #FAFAFA;
         }
 
-        /* Info panel */
         .info-panel {
             background: linear-gradient(135deg, #EEF2FF 0%, #F5F3FF 100%);
             border: 1px solid rgba(99, 102, 241, 0.2);
@@ -246,7 +243,6 @@
             padding: 1rem 1.25rem;
         }
 
-        /* Next steps cards */
         .next-step-item {
             display: flex;
             align-items: flex-start;
@@ -274,17 +270,96 @@
             flex-shrink: 0;
         }
 
-        .submit-btn:disabled {
-            transform: none !important;
-            box-shadow: none !important;
-            filter: grayscale(0.4);
-            cursor: not-allowed;
+        /* Range slider */
+        .range-wrapper {
+            position: relative;
+            width: 100%;
+        }
+
+        .range-background {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 100%;
+            height: 8px;
+            background: #E5E7EB;
+            border-radius: 4px;
+            pointer-events: none;
+        }
+
+        .range-fill {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            height: 8px;
+            background: linear-gradient(to right, #6366F1 0%, #8B5CF6 100%);
+            border-radius: 4px;
+            pointer-events: none;
+            transition: width 0.1s ease;
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            appearance: none;
+            background: transparent;
+            cursor: pointer;
+            width: 100%;
+            position: relative;
+            z-index: 2;
+        }
+
+        input[type="range"]::-webkit-slider-track {
+            background: transparent;
+            height: 8px;
+        }
+
+        input[type="range"]::-moz-range-track {
+            background: transparent;
+            height: 8px;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            appearance: none;
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+            border: 4px solid white;
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            border: 4px solid white;
+            background: linear-gradient(135deg, #6366F1 0%, #8B5CF6 100%);
+            height: 24px;
+            width: 24px;
+            border-radius: 50%;
+            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.5);
+            cursor: grab;
+            transition: all 0.2s ease;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover,
+        input[type="range"]::-webkit-slider-thumb:active {
+            transform: scale(1.15);
+            box-shadow: 0 6px 16px rgba(99, 102, 241, 0.6);
+        }
+
+        input[type="range"]:focus {
+            outline: none;
+        }
+
+        input[type="range"]:focus::-webkit-slider-thumb {
+            box-shadow: 0 0 0 6px rgba(99, 102, 241, 0.2), 0 4px 12px rgba(99, 102, 241, 0.5);
         }
     </style>
 </head>
 <body class="antialiased bg-gradient-to-br from-gray-50 to-indigo-50 min-h-screen">
 
-    <!-- Floating Navigation (matches welcome page exactly) -->
+    <!-- Floating Navigation -->
     <nav class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-white/90 backdrop-blur-lg rounded-full shadow-xl border border-gray-200 max-w-4xl w-full mx-4">
         <div class="flex justify-between items-center">
             <div class="flex items-center">
@@ -369,7 +444,7 @@
                         <form method="POST" action="{{ route('applications.store') }}">
                             @csrf
 
-                            <!-- ── Section 1: Account Info (guests only) ── -->
+                            <!-- Section 1: Account Info (guests only) -->
                             @guest
                             <div class="mb-10 pb-10 border-b border-gray-100">
                                 <div class="flex items-center mb-6">
@@ -450,7 +525,7 @@
                             </div>
                             @endauth
 
-                            <!-- ── Section 2: Loan Details ── -->
+                            <!-- Section 2: Loan Details -->
                             <div class="mb-10 pb-10 border-b border-gray-100">
                                 <div class="flex items-center mb-6">
                                     <div class="section-badge">{{ auth()->check() ? '1' : '2' }}</div>
@@ -465,14 +540,11 @@
                                         <label for="loan_amount" class="form-label">Loan Amount Requested <span class="text-indigo-500">*</span></label>
                                         <div class="input-icon-wrapper">
                                             <span class="input-icon">$</span>
-
-                                            <!-- Loan Amount Field -->
                                             <input type="number" name="loan_amount" id="loan_amount" step="0.01" min="1000"
                                                 value="{{ old('loan_amount', $calculatorValues['loan_amount']) }}"
                                                 placeholder="100,000"
                                                 class="form-input input-with-icon @error('loan_amount') error @enderror"
                                                 required>
-
                                         </div>
                                         @error('loan_amount')
                                             <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -512,13 +584,10 @@
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
                                             <label for="term_months" class="form-label">Loan Term <span class="text-indigo-500">*</span></label>
-
-                                            <!-- Term Months Field -->
                                             <input type="number" name="term_months" id="term_months" min="1" max="360"
                                                 value="{{ old('term_months', $calculatorValues['term_months']) }}"
                                                 class="form-input @error('term_months') error @enderror"
                                                 required>
-
                                             <p class="mt-1 text-xs text-gray-400">Months — typically 12–360</p>
                                             @error('term_months')
                                                 <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -544,7 +613,7 @@
                                 </div>
                             </div>
 
-                            <!-- ── Section 3: Consent ── -->
+                            <!-- Section 3: Consent -->
                             <div class="mb-8">
                                 <div class="flex items-center mb-6">
                                     <div class="section-badge">{{ auth()->check() ? '2' : '3' }}</div>
@@ -592,7 +661,6 @@
                                     @enderror
                                 </div>
 
-                                <!-- Compliance Notice -->
                                 <div class="info-panel mt-5 flex items-start gap-3">
                                     <div class="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
                                         <svg class="h-4 w-4 text-indigo-600" viewBox="0 0 20 20" fill="currentColor">
@@ -648,12 +716,9 @@
                                 <div class="py-2 range-wrapper">
                                     <div class="range-background"></div>
                                     <div class="range-fill" id="calcLoanFill"></div>
-
-                                    <!-- Loan Amount Slider -->
                                     <input type="range" min="10000" max="1000000"
                                         value="{{ $calculatorValues['loan_amount'] }}"
                                         step="10000" id="calcLoanSlider" class="w-full">
-
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-400 mt-2">
                                     <span>$10K</span>
@@ -670,12 +735,9 @@
                                 <div class="py-2 range-wrapper">
                                     <div class="range-background"></div>
                                     <div class="range-fill" id="calcTermFill"></div>
-
-                                    <!-- Term Slider -->
                                     <input type="range" min="12" max="84"
                                         value="{{ $calculatorValues['term_months'] }}"
                                         step="12" id="calcTermSlider" class="w-full">
-
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-400 mt-2">
                                     <span>12 months</span>
@@ -692,12 +754,9 @@
                                 <div class="py-2 range-wrapper">
                                     <div class="range-background"></div>
                                     <div class="range-fill" id="calcRateFill"></div>
-
-                                    <!-- Interest Rate Slider -->
                                     <input type="range" min="5" max="15"
                                         value="{{ $calculatorValues['interest_rate'] }}"
                                         step="0.5" id="calcRateSlider" class="w-full">
-
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-400 mt-2">
                                     <span>5%</span>
@@ -721,7 +780,6 @@
                                 </div>
                             </div>
 
-                            <!-- Use These Values Button -->
                             <button type="button" onclick="useCalculatorValues()" class="w-full py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm hover:shadow-lg transition transform hover:scale-105">
                                 Use These Values in Form →
                             </button>
@@ -857,23 +915,94 @@
 
     <script>
         // ==========================================
-        // SUBMIT BUTTON LOADING STATE
+        // CALCULATOR
         // ==========================================
-        document.addEventListener('DOMContentLoaded', () => {
-            const form      = document.querySelector('form');
-            const submitBtn = document.getElementById('submitBtn');
-            const privacy   = document.getElementById('privacy_consent');
-            const terms     = document.getElementById('terms_consent');
+        function formatCurrency(amount) {
+            return '$' + Math.round(amount).toLocaleString();
+        }
 
-            // Store original button content
-            const originalButtonHTML = submitBtn.innerHTML;
+        function updateSliderFill(slider, fill) {
+            const min        = parseFloat(slider.min);
+            const max        = parseFloat(slider.max);
+            const value      = parseFloat(slider.value);
+            const percentage = ((value - min) / (max - min)) * 100;
+            fill.style.width = percentage + '%';
+        }
 
-            // Function to show loading state
+        function calculateLoan() {
+            const loanSlider = document.getElementById('calcLoanSlider');
+            const termSlider = document.getElementById('calcTermSlider');
+            const rateSlider = document.getElementById('calcRateSlider');
+
+            const principal  = parseFloat(loanSlider.value);
+            const termMonths = parseInt(termSlider.value);
+            const annualRate = parseFloat(rateSlider.value);
+            const monthlyRate = annualRate / 100 / 12;
+
+            const monthlyPayment  = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
+            const totalRepayment  = monthlyPayment * termMonths;
+            const totalInterest   = totalRepayment - principal;
+
+            document.getElementById('calcLoanAmount').textContent    = formatCurrency(principal);
+            document.getElementById('calcLoanTerm').textContent       = termMonths + ' months';
+            document.getElementById('calcInterestRate').textContent   = annualRate + '%';
+            document.getElementById('calcMonthlyPayment').textContent = formatCurrency(monthlyPayment);
+            document.getElementById('calcTotalInterest').textContent  = formatCurrency(totalInterest);
+            document.getElementById('calcTotalRepayment').textContent = formatCurrency(totalRepayment);
+
+            updateSliderFill(loanSlider, document.getElementById('calcLoanFill'));
+            updateSliderFill(termSlider, document.getElementById('calcTermFill'));
+            updateSliderFill(rateSlider, document.getElementById('calcRateFill'));
+        }
+
+        // Copies calculator values into the main form inputs
+        function useCalculatorValues() {
+            document.getElementById('loan_amount').value = document.getElementById('calcLoanSlider').value;
+            document.getElementById('term_months').value = document.getElementById('calcTermSlider').value;
+
+            // Brief flash to confirm the copy
+            ['loan_amount', 'term_months'].forEach(id => {
+                const el = document.getElementById(id);
+                el.style.borderColor = '#6366F1';
+                el.style.boxShadow   = '0 0 0 4px rgba(99,102,241,0.15)';
+                setTimeout(() => {
+                    el.style.borderColor = '';
+                    el.style.boxShadow   = '';
+                }, 1200);
+            });
+        }
+
+        // ==========================================
+        // MAIN INIT
+        // ==========================================
+        document.addEventListener('DOMContentLoaded', function () {
+
+            // Attach slider listeners
+            document.getElementById('calcLoanSlider').addEventListener('input', calculateLoan);
+            document.getElementById('calcTermSlider').addEventListener('input', calculateLoan);
+            document.getElementById('calcRateSlider').addEventListener('input', calculateLoan);
+
+            // Initial calculation
+            calculateLoan();
+
+            // ── Submit button state ──
+            const form             = document.querySelector('form');
+            const submitBtn        = document.getElementById('submitBtn');
+            const privacy          = document.getElementById('privacy_consent');
+            const terms            = document.getElementById('terms_consent');
+            const originalBtnHTML  = submitBtn.innerHTML;
+
+            function updateSubmitState() {
+                const enabled      = privacy.checked && terms.checked;
+                submitBtn.disabled = !enabled;
+                submitBtn.classList.toggle('opacity-50', !enabled);
+                submitBtn.classList.toggle('cursor-not-allowed', !enabled);
+            }
+
             function showLoadingState() {
                 submitBtn.disabled = true;
                 submitBtn.classList.add('opacity-75', 'cursor-wait');
                 submitBtn.classList.remove('hover:scale-105', 'hover:shadow-lg');
-
                 submitBtn.innerHTML = `
                     <svg class="animate-spin h-5 w-5 mr-2" viewBox="0 0 24 24">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" fill="none"></circle>
@@ -883,66 +1012,41 @@
                 `;
             }
 
-            // Function to restore button state (in case of validation error)
             function restoreButtonState() {
                 submitBtn.disabled = false;
                 submitBtn.classList.remove('opacity-75', 'cursor-wait');
                 submitBtn.classList.add('hover:scale-105', 'hover:shadow-lg');
-                submitBtn.innerHTML = originalButtonHTML;
-                updateSubmitState(); // Re-check if button should be enabled
+                submitBtn.innerHTML = originalBtnHTML;
+                updateSubmitState();
             }
 
-            // Function to update submit button enabled/disabled state
-            function updateSubmitState() {
-                const enabled      = privacy.checked && terms.checked;
-                submitBtn.disabled = !enabled;
-                submitBtn.classList.toggle('opacity-50', !enabled);
-                submitBtn.classList.toggle('cursor-not-allowed', !enabled);
-            }
-
-            // Handle form submission
-            form.addEventListener('submit', function(e) {
-                // Check if consents are checked
+            form.addEventListener('submit', function () {
                 if (privacy.checked && terms.checked) {
-                    // Show loading state
                     showLoadingState();
-
-                    // If there are validation errors on the backend, the page will reload
-                    // and the button will automatically return to normal state
-
-                    // Optional: Add a timeout to restore button if submission takes too long
-                    // (This handles cases where backend validation fails)
                     setTimeout(() => {
-                        // Check if we're still on the same page (form didn't submit successfully)
                         if (document.getElementById('submitBtn')) {
                             restoreButtonState();
                         }
-                    }, 10000); // 10 seconds timeout
+                    }, 10000);
                 }
             });
 
-            // Restore button state if there are validation errors on page load
+            // Restore if there are server-side validation errors
             @if($errors->any())
                 restoreButtonState();
             @endif
 
-            // Event listeners for consent checkboxes
             privacy.addEventListener('change', updateSubmitState);
             terms.addEventListener('change', updateSubmitState);
-
-            // Initial state
             updateSubmitState();
 
-            // Initial calculation with passed values
-            calculateLoan();
-
-            // If values were passed from welcome page, show notification
+            // ── Calculator-values-loaded toast ──
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.has('amount')) {
                 setTimeout(() => {
-                    const tempMessage     = document.createElement('div');
-                    tempMessage.className = 'fixed top-24 right-6 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in';
-                    tempMessage.innerHTML = `
+                    const toast       = document.createElement('div');
+                    toast.className   = 'fixed top-24 right-6 bg-green-500 text-white px-6 py-3 rounded-xl shadow-2xl z-50 animate-fade-in';
+                    toast.innerHTML   = `
                         <div class="flex items-center gap-2">
                             <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
@@ -950,40 +1054,16 @@
                             <span class="font-semibold">Calculator values loaded!</span>
                         </div>
                     `;
-                    document.body.appendChild(tempMessage);
-
+                    document.body.appendChild(toast);
                     setTimeout(() => {
-                        tempMessage.style.opacity    = '0';
-                        tempMessage.style.transform  = 'translateY(-10px)';
-                        tempMessage.style.transition = 'all 0.3s ease';
-                        setTimeout(() => tempMessage.remove(), 300);
+                        toast.style.opacity   = '0';
+                        toast.style.transform = 'translateY(-10px)';
+                        toast.style.transition = 'all 0.3s ease';
+                        setTimeout(() => toast.remove(), 300);
                     }, 3000);
                 }, 500);
             }
         });
-
-        // Add CSS for spinner animation (if not already in your styles)
-        const style       = document.createElement('style');
-        style.textContent = `
-            @keyframes spin {
-                from {
-                    transform: rotate(0deg);
-                }
-                to {
-                    transform: rotate(360deg);
-                }
-            }
-
-            .animate-spin {
-                animation: spin 1s linear infinite;
-            }
-
-            /* Smooth transition for button state changes */
-            .submit-btn {
-                transition: all 0.3s ease;
-            }
-        `;
-        document.head.appendChild(style);
     </script>
 </body>
 </html>
