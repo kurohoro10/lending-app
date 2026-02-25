@@ -45,7 +45,7 @@ class UserSeeder extends Seeder
         $this->command->info('✓ Created Assessor: assessor1@example.com');
 
         $assessor2 = User::create([
-            'name' => 'Assesso 2',
+            'name' => 'Assessor 2',
             'email' => 'assessor2@example.com',
             'password' => Hash::make('password'),
             'email_verified_at' => now(),

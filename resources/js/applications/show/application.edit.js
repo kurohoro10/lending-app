@@ -102,8 +102,9 @@
             bar.setAttribute('aria-valuenow', progress.percentage);
         }
 
-        const completedText = document.querySelector('.text-sm.font-semibold.text-gray-700');
-        const percentText = document.querySelector('.text-sm.font-bold.text-indigo-600');
+        // Use specific class instead of generic Tailwind classes
+        const completedText = document.querySelector('.progress-steps-label');
+        const percentText = document.querySelector('.progress-steps-percent');
 
         if (completedText) {
             completedText.textContent = `${progress.completed} of ${progress.total} sections completed`;
@@ -164,10 +165,8 @@
     }
 
     function checkExpensesComplete() {
-        // Check if there are any expense rows in the form
         const expenseRows = document.querySelectorAll('[data-expense-row], .expense-input-row');
 
-        // Check if any have values saved (look for non-zero amounts)
         let hasSavedExpenses = false;
 
         expenseRows.forEach(row => {
@@ -177,7 +176,6 @@
             }
         });
 
-        // Also check "other" rows that have names
         const otherRows = document.querySelectorAll('[data-other-row]');
         otherRows.forEach(row => {
             const nameInput = row.querySelector('input[type="text"]');

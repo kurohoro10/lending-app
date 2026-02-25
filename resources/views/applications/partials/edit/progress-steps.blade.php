@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/progress-steps.blade.php --}}
 <div class="bg-gradient-to-r from-indigo-50 to-purple-50 overflow-hidden shadow-xl sm:rounded-2xl mb-8 border border-indigo-100">
     <div class="p-8">
         <div class="mb-6">
@@ -100,7 +101,7 @@
         </div>
 
         <!-- Progress Percentage -->
-            @php
+        @php
             $completedSteps = 1; // Loan details always completed at this point
             if($application->hasCompletePersonalDetails()) $completedSteps++;
             if($application->residentialAddresses->count() > 0) $completedSteps++;
@@ -111,8 +112,8 @@
 
         <div class="mt-6">
             <div class="flex justify-between items-center mb-2">
-                <span class="text-sm font-semibold text-gray-700">{{ $completedSteps }} of 5 sections completed</span>
-                <span class="text-sm font-bold text-indigo-600">{{ number_format($percentage, 0) }}%</span>
+                <span class="progress-steps-label text-sm font-semibold text-gray-700">{{ $completedSteps }} of 5 sections completed</span>
+                <span class="progress-steps-percent text-sm font-bold text-indigo-600">{{ number_format($percentage, 0) }}%</span>
             </div>
             <div class="w-full bg-gray-200 rounded-full h-3 overflow-hidden"
                 role="progressbar"
