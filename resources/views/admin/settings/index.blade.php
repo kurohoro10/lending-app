@@ -59,12 +59,22 @@
                 'settings'   => $settings,
             ])
 
-            {{-- ── CreditSense ─────────────────────────────────────────────── --}}
+            {{-- ── Basiq ───────────────────────────────────────────────────── --}}
             @include('admin.settings.partials.group', [
-                'groupKey'   => 'creditsense',
-                'groupLabel' => 'CreditSense',
-                'groupHint'  => 'Bank statement analysis integration credentials.',
-                'icon'       => 'document',
+                'groupKey'   => 'basiq',
+                'groupLabel' => 'Basiq (Bank Statements)',
+                'groupHint'  => 'Australian CDR-accredited bank account linking. Nearly full AU/NZ institution coverage. Switch API Key and Environment when moving from Sandbox to Production.',
+                'icon'       => 'basiq',
+                'fields'     => $fields,
+                'settings'   => $settings,
+            ])
+
+            {{-- ── Bank / Credit Check API ─────────────────────────────────── --}}
+            @include('admin.settings.partials.group', [
+                'groupKey'   => 'bank_api',
+                'groupLabel' => 'Bank / Credit Check API',
+                'groupHint'  => 'Generic bank statement and credit check integration. Works with any provider — configure credentials and define the field map below.',
+                'icon'       => 'bank',
                 'fields'     => $fields,
                 'settings'   => $settings,
             ])

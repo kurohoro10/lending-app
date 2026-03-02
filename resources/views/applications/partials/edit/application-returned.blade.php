@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/application-returned.blade.php --}}
 @if($application->isReturned())
 <div class="mb-6 bg-orange-50 border-l-4 border-orange-400 rounded-lg p-5"
      role="alert"

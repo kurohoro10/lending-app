@@ -258,29 +258,123 @@
                             @csrf
 
                             <!-- Name Field -->
-                            <div>
-                                <label for="name" class="block text-sm font-semibold text-gray-700 mb-2">
-                                    Full Name
-                                    <span class="text-red-500" aria-label="required">*</span>
-                                </label>
-                                <div class="relative">
-                                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
-                                        <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
-                                        </svg>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
+                                <div>
+                                    <label for="first_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        First Name
+                                        <span class="text-red-500" aria-hidden="true">*</span>
+                                        <span class="sr-only">(required)</span>
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                        </div>
+                                        <input
+                                            id="first_name"
+                                            type="text"
+                                            name="first_name"
+                                            value="{{ old('first_name') }}"
+                                            required
+                                            autofocus
+                                            autocomplete="given-name"
+                                            aria-required="true"
+                                            aria-describedby="first_name-error"
+                                            class="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                            placeholder="Jane"
+                                        >
                                     </div>
-                                    <input
-                                        id="name"
-                                        type="text"
-                                        name="name"
-                                        value="{{ old('name') }}"
-                                        required
-                                        autofocus
-                                        autocomplete="name"
-                                        aria-required="true"
-                                        class="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
-                                        placeholder="John Doe"
-                                    >
+                                    @error('first_name')
+                                        <p id="first_name-error" class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="middle_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Middle Name
+                                        <span class="text-gray-400 font-normal text-xs">(optional)</span>
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                        </div>
+                                        <input
+                                            id="middle_name"
+                                            type="text"
+                                            name="middle_name"
+                                            value="{{ old('middle_name') }}"
+                                            autocomplete="additional-name"
+                                            aria-describedby="middle_name-error"
+                                            class="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                            placeholder="Marie"
+                                        >
+                                    </div>
+                                    @error('middle_name')
+                                        <p id="middle_name-error" class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="last_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Last Name
+                                        <span class="text-red-500" aria-hidden="true">*</span>
+                                        <span class="sr-only">(required)</span>
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"/>
+                                            </svg>
+                                        </div>
+                                        <input
+                                            id="last_name"
+                                            type="text"
+                                            name="last_name"
+                                            value="{{ old('last_name') }}"
+                                            required
+                                            autocomplete="family-name"
+                                            aria-required="true"
+                                            aria-describedby="last_name-error"
+                                            class="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                            placeholder="Smith"
+                                        >
+                                    </div>
+                                    @error('last_name')
+                                        <p id="last_name-error" class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>
+                                    @enderror
+                                </div>
+
+                                <div>
+                                    <label for="name_extension" class="block text-sm font-semibold text-gray-700 mb-2">
+                                        Name Extension
+                                    </label>
+                                    <div class="relative">
+                                        <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                            <svg class="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 7h.01M7 3h5c.512 0 1.024.195 1.414.586l7 7a2 2 0 010 2.828l-7 7a2 2 0 01-2.828 0l-7-7A1.994 1.994 0 013 12V7a4 4 0 014-4z"/>
+                                            </svg>
+                                        </div>
+                                        <input
+                                            id="name_extension"
+                                            type="text"
+                                            name="name_extension"
+                                            value="{{ old('name_extension') }}"
+                                            autocomplete="honorific-suffix"
+                                            aria-describedby="name_extension-hint name_extension-error"
+                                            class="block w-full pl-12 pr-4 py-3.5 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
+                                            placeholder="Jr."
+                                        >
+                                    </div>
+                                    <p id="name_extension-hint" class="mt-1 text-xs text-gray-400">
+                                        Optional — only if applicable
+                                        <span class="text-gray-400 font-normal text-xs">(e.g. Jr., Sr., III)</span>
+                                    </p>
+                                    @error('name_extension')
+                                        <p id="name_extension-error" class="mt-1 text-xs text-red-600" role="alert">{{ $message }}</p>
+                                    @enderror
                                 </div>
                             </div>
 

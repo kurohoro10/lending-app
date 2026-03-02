@@ -7,14 +7,13 @@ use App\Models\Setting;
 use App\Models\ActivityLog;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\View\View;
+use Illuminate\Support\Facades\Http;
 
 class SettingsController extends Controller
 {
-    /**
-     * All managed keys with their group, label, type, and whether
-     * the value should be masked in the UI.
-     */
     private const FIELDS = [
         // ── Twilio ───────────────────────────────────────────────────────────
         'twilio_sid' => [
@@ -98,27 +97,77 @@ class SettingsController extends Controller
             'hint'      => 'The display name shown to email recipients.',
         ],
 
-        // ── CreditSense ───────────────────────────────────────────────────────
-        'creditsense_client' => [
-            'group'     => 'creditsense',
-            'label'     => 'Client Code',
-            'type'      => 'text',
+        // ── Basiq ─────────────────────────────────────────────────────────────
+        'basiq_env' => [
+            'group'     => 'basiq',
+            'label'     => 'Environment',
+            'type'      => 'select',
             'is_secret' => false,
-            'hint'      => 'Your CreditSense client identifier, e.g. MYCOMPANY.',
+            'options'   => [
+                'sandbox'    => 'Sandbox',
+                'production' => 'Production',
+            ],
+            'hint' => 'Controls which API key is expected and enables sandbox-specific test flows. Switch to Production when go-live ready.',
         ],
-        'creditsense_api_key' => [
-            'group'     => 'creditsense',
+        'basiq_api_key' => [
+            'group'     => 'basiq',
             'label'     => 'API Key',
             'type'      => 'password',
             'is_secret' => true,
-            'hint'      => 'Provided by CreditSense on account activation.',
+            'hint'      => 'Found in the Basiq Dashboard under Application → API Keys. Use your Sandbox key for testing; replace with the Production key when going live.',
         ],
-        'creditsense_base_url' => [
-            'group'     => 'creditsense',
+        'basiq_base_url' => [
+            'group'     => 'basiq',
             'label'     => 'Base URL',
             'type'      => 'url',
             'is_secret' => false,
-            'hint'      => 'CreditSense API base URL, e.g. https://api.creditsense.com.au',
+            'hint'      => 'Default: https://au-api.basiq.io — only change if Basiq instructs you to use a different endpoint.',
+        ],
+
+        // ── Bank / Credit Check API ───────────────────────────────────────────
+        'bank_api_provider_name' => [
+            'group'     => 'bank_api',
+            'label'     => 'Provider Name',
+            'type'      => 'text',
+            'is_secret' => false,
+            'hint'      => 'Human-readable label, e.g. CreditSense, Illion, Equifax Connect.',
+        ],
+        'bank_api_client' => [
+            'group'     => 'bank_api',
+            'label'     => 'Client Code',
+            'type'      => 'text',
+            'is_secret' => false,
+            'hint'      => 'Your client identifier issued by the provider.',
+        ],
+        'bank_api_key' => [
+            'group'     => 'bank_api',
+            'label'     => 'API Key',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'Secret key provided by the bank/credit check provider.',
+        ],
+        'bank_api_base_url' => [
+            'group'     => 'bank_api',
+            'label'     => 'Base URL',
+            'type'      => 'url',
+            'is_secret' => false,
+            'hint'      => 'API base URL, e.g. https://api.creditsense.com.au',
+        ],
+        'bank_api_webhook_secret' => [
+            'group'     => 'bank_api',
+            'label'     => 'Webhook Secret',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'Used to verify incoming webhook signatures from the provider. Leave blank if not supported.',
+        ],
+        'bank_api_field_map' => [
+            'group'     => 'bank_api',
+            'label'     => 'Field Map (JSON)',
+            'type'      => 'textarea',
+            'is_secret' => false,
+            'hint'      => 'Maps internal field names (left) to the provider\'s response paths (right). '
+                         . 'Use dot notation for nested keys, e.g. "income_monthly": "income.monthlyAverage". '
+                         . 'Must be valid JSON.',
         ],
     ];
 
@@ -127,9 +176,10 @@ class SettingsController extends Controller
         $settings = Setting::pluck('value', 'key');
 
         $groups = [
-            'twilio'      => ['label' => 'Twilio (SMS & WhatsApp)', 'icon' => 'phone'],
-            'mail'        => ['label' => 'Email / SMTP',            'icon' => 'mail'],
-            'creditsense' => ['label' => 'CreditSense',             'icon' => 'document'],
+            'twilio'   => ['label' => 'Twilio (SMS & WhatsApp)', 'icon' => 'phone'],
+            'mail'     => ['label' => 'Email / SMTP',            'icon' => 'mail'],
+            'basiq'    => ['label' => 'Basiq (Bank Statements)', 'icon' => 'basiq'],
+            'bank_api' => ['label' => 'Bank / Credit Check API', 'icon' => 'bank'],
         ];
 
         return view('admin.settings.index', [
@@ -141,7 +191,6 @@ class SettingsController extends Controller
 
     public function update(Request $request, string $group): RedirectResponse
     {
-        // Only allow keys that belong to the requested group
         $groupFields = collect(self::FIELDS)
             ->filter(fn($field) => $field['group'] === $group)
             ->keys()
@@ -153,15 +202,32 @@ class SettingsController extends Controller
 
         $input = $request->only($groupFields);
 
+        foreach ($groupFields as $key) {
+            $fieldMeta = self::FIELDS[$key];
+            if (($fieldMeta['type'] ?? '') === 'textarea' && !empty($input[$key])) {
+                json_decode($input[$key]);
+                if (json_last_error() !== JSON_ERROR_NONE) {
+                    return back()
+                        ->withErrors([$key => "The {$fieldMeta['label']} field must be valid JSON."])
+                        ->withInput();
+                }
+            }
+        }
+
         foreach ($input as $key => $value) {
             $isSecret = self::FIELDS[$key]['is_secret'] ?? false;
 
-            // If a secret field was submitted blank, keep the existing value
             if ($isSecret && blank($value)) {
                 continue;
             }
 
             Setting::set($key, $value, $isSecret);
+        }
+
+        // If Basiq credentials changed, bust the cached token so the next
+        // real API call fetches a fresh one with the updated key.
+        if ($group === 'basiq') {
+            Cache::forget('basiq_access_token');
         }
 
         ActivityLog::logActivity(
@@ -172,6 +238,175 @@ class SettingsController extends Controller
             ['group' => $group, 'keys' => $groupFields]
         );
 
-        return back()->with('success', ucfirst($group) . ' settings saved successfully.');
+        return back()->with('success', ucfirst(str_replace('_', ' ', $group)) . ' settings saved successfully.');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Basiq token management
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Return a valid Basiq access token, fetching a fresh one if the cache
+     * has expired. Tokens live 60 minutes; we cache for 55 to give a buffer.
+     *
+     * This uses the credentials already SAVED in settings. It is the method
+     * all jobs/services should call at runtime.
+     */
+    public function getBasiqToken(): string
+    {
+        return Cache::remember('basiq_access_token', now()->addMinutes(55), function () {
+            $apiKey  = Setting::get('basiq_api_key');
+            $baseUrl = rtrim(Setting::get('basiq_base_url', 'https://au-api.basiq.io'), '/');
+
+            return $this->fetchBasiqToken($apiKey, $baseUrl);
+        });
+    }
+
+    /**
+     * Fetch a fresh Basiq access token.
+     *
+     * @param string $apiKey
+     * @param string $baseUrl
+     * @return string
+     * @throws \Exception
+     */
+    private function fetchBasiqToken(string $apiKey, string $baseUrl): string
+    {
+        $response = Http::timeout(10)
+            ->withHeaders([
+                'basiq-version' => '3.0',
+                'Accept'        => 'application/json',
+                'Authorization' => 'Basic ' . trim($apiKey),
+                'content-type' => 'application/x-www-form-urlencoded',
+            ])
+            ->asForm()
+            ->post("{$baseUrl}/token", [
+                'scope' => 'SERVER_ACCESS',
+            ]);
+
+        if (! $response->successful()) {
+            $body   = $response->json();
+            $detail = $body['data'][0]['detail'] ?? $body['message'] ?? 'Unknown error';
+            throw new \Exception("Basiq /token failed: {$detail}");
+        }
+
+        return $response->json('access_token');
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Test connection (Settings UI)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Test Basiq credentials by running two steps:
+     *   1. POST /token   — exchange the API key for a bearer token
+     *   2. GET  /institutions — verify the token works against a real endpoint
+     *
+     * Accepts override values from the request body so the admin can test
+     * credentials they have TYPED but not yet saved. When the form fields are
+     * blank (admin didn't re-enter the secret), falls back to saved settings.
+     *
+     * Does NOT use the cache — we always want a live round-trip here.
+     *
+     * POST /admin/settings/basiq/test-connection
+     */
+    public function testBasiqConnection(Request $request): JsonResponse
+    {
+        $request->validate([
+            'api_key'  => 'nullable|string',
+            'base_url' => 'nullable|url',
+            'env'      => 'nullable|string|in:sandbox,production',
+        ]);
+
+        $apiKey  = $request->input('api_key')  ?: Setting::get('basiq_api_key');
+        $baseUrl = rtrim(
+            $request->input('base_url') ?: Setting::get('basiq_base_url', 'https://au-api.basiq.io'),
+            '/'
+        );
+        $env = $request->input('env') ?: Setting::get('basiq_env', 'sandbox');
+
+        if (blank($apiKey)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'API Key is required before testing.',
+            ], 422);
+        }
+
+        try {
+            // ── Step 1: obtain a fresh bearer token ───────────────────────────
+            // Deliberately bypass the cache — this is a live credential check.
+            $accessToken = $this->fetchBasiqToken($apiKey, $baseUrl);
+
+            // ── Step 2: hit a lightweight read endpoint to confirm the token ──
+            $institutionsResponse = Http::timeout(10)
+                ->withToken($accessToken)
+                ->withHeaders([
+                    'basiq-version' => '3.0',
+                    'Accept'        => 'application/json',
+                ])
+                ->get("{$baseUrl}/institutions", [
+                    'limit' => 1,
+                ]);
+
+            if (! $institutionsResponse->successful()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Token obtained but /institutions endpoint failed — check Base URL.',
+                ], 422);
+            }
+
+            ActivityLog::logActivity(
+                'basiq_test_connection',
+                "Basiq test connection succeeded ({$env})",
+                null,
+                null,
+                ['env' => $env, 'base_url' => $baseUrl]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "Connected successfully ({$env}). API key is valid and institutions are accessible.",
+                'env'     => $env,
+            ]);
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not reach the Basiq API. Check your server\'s outbound internet access and the Base URL.',
+            ], 503);
+        } catch (\Exception $e) {
+            // fetchBasiqToken throws a plain Exception with a readable message
+            return response()->json([
+                'success' => false,
+                'message' => $e->getMessage(),
+            ], 422);
+        } catch (\Throwable $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unexpected error: ' . $e->getMessage(),
+            ], 500);
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Helpers
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * Resolve the active bank API field map as an associative array.
+     *
+     * @return array<string, string>
+     */
+    public static function bankApiFieldMap(): array
+    {
+        $raw = Setting::get('bank_api_field_map');
+
+        if (blank($raw)) {
+            return [];
+        }
+
+        $map = json_decode($raw, true);
+
+        return is_array($map) ? $map : [];
     }
 }

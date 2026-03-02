@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/loan-details.blade.php --}}
 <!-- Loan Details Section -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
     <!-- Accordion Header -->

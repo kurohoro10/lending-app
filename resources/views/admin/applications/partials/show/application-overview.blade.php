@@ -1,3 +1,4 @@
+{{-- resources/views/admin/applications/partials/show/application-overview.blade.php --}}
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
     <div class="p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Application Overview</h3>

@@ -1,3 +1,4 @@
+{{-- resources/views/admin/applications/partials/show/questions.blade.php --}}
 <!-- Questions & Answers Section -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg" id="qa-section">
     <div class="p-6">

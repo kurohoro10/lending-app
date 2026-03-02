@@ -1,3 +1,4 @@
+{{-- resources/views/admin/applications/pdf.blade.php --}}
 <!DOCTYPE html>
 <html>
 <head>

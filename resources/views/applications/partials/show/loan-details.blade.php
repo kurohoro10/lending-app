@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/show/loan-details.blade.php --}}
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
     <div class="p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Loan Details</h3>

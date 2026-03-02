@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/show/pending-questions.blade.php --}}
 <!-- Pending Questions Warning - Minimalistic Design -->
 @if($application->questions->where('status', 'pending')->count() > 0)
 <div id="pending-questions-warning" class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 transition-all duration-300">

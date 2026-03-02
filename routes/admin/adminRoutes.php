@@ -1,4 +1,5 @@
 <?php
+// routes/admin/adminRoutes.php
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
 use App\Http\Controllers\Admin\DashboardController;
@@ -106,3 +107,7 @@ Route::get('/settings',           [SettingsController::class, 'index'])
     ->name('settings.index');
 Route::patch('/settings/{group}', [SettingsController::class, 'update'])
     ->name('settings.update');
+
+Route::post('settings/basiq/test-connection',
+    [SettingsController::class, 'testBasiqConnection']
+)->name('settings.basiq.test-connection');

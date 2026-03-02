@@ -30,7 +30,10 @@ class User extends Authenticatable implements MustVerifyEmail
      * @var array<int, string>
      */
     protected $fillable = [
-        'name',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'name_extension',
         'email',
         'password',
     ];
@@ -54,6 +57,7 @@ class User extends Authenticatable implements MustVerifyEmail
      */
     protected $appends = [
         'profile_photo_url',
+        'name',
     ];
 
     /**
@@ -133,5 +137,24 @@ class User extends Authenticatable implements MustVerifyEmail
     public function sendEmailVerificationNotification()
     {
         $this->notify(new CustomVerifyEmail);
+    }
+
+    /**
+     * Accessor for full display name.
+     * Ensures name is always computed from structured fields.
+     */
+    public function getNameAttribute(): string
+    {
+        return collect([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+            $this->name_extension,
+        ])->filter()->implode(' ') ?: 'Unnamed User';
+    }
+
+    public function isSystem(): bool
+    {
+        return $this->hasRole('system');
     }
 }

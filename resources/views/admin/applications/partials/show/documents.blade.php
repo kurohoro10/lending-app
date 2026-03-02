@@ -1,3 +1,4 @@
+{{-- resources/views/admin/applications/partials/show/documents.blade.php --}}
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
     <div class="p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Documents</h3>

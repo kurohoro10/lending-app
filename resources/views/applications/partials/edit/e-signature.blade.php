@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/e-signature.blade.php --}}
 <!-- Electronic Signature Section - Required Before Submit -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border-2 border-red-300">
     <button type="button"

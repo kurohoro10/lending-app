@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/personal-details-form.blade.php --}}
 <!-- Personal Details Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
     <button type="button"
@@ -24,7 +25,7 @@
     </button>
 
     <div id="personal-details-content"
-        class="transition-all duration-300 ease-in-out p-6"
+        class="transition-all duration-300 ease-in-out"
         aria-labelledby="personal-details-header">
         <div class="p-6">
             @if($application->hasCompletePersonalDetails())
@@ -50,12 +51,48 @@
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="col-span-2">
-                        <label for="full_name" class="block text-sm font-semibold text-gray-700 mb-2">Full Name *</label>
-                        <input type="text" name="full_name" id="full_name"
-                            value="{{ old('full_name', $application->personalDetails->full_name ?? '') }}"
-                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl @error('full_name') border-red-500 @enderror" required>
-                        <p id="full_name-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                    <div class="md:col-span-2">
+                        <div class="flex flex-col gap-6 lg:flex-row">
+                            <div class="flex-1 min-w-0">
+                                <label for="first_name" class="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
+                                <input type="text" name="first_name" id="first_name"
+                                    value="{{ $application->user->first_name }}"
+                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
+                                    readonly
+                                    aria-readonly="true"
+                                    title="First name is linked to your account and cannot be changed here.">
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <label for="middle_name" class="block text-sm font-semibold text-gray-700 mb-2">Middle Name</label>
+                                <input type="text" name="middle_name" id="middle_name"
+                                    value="{{ $application->user->middle_name }}"
+                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
+                                    readonly
+                                    aria-readonly="true"
+                                    title="Middle name is linked to your account and cannot be changed here.">
+                            </div>
+
+                            <div class="flex-1 min-w-0">
+                                <label for="last_name" class="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
+                                <input type="text" name="last_name" id="last_name"
+                                    value="{{ $application->user->last_name }}"
+                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
+                                    readonly
+                                    aria-readonly="true"
+                                    title="Last name is linked to your account and cannot be changed here.">
+                            </div>
+
+                            <div class="w-full lg:w-32 shrink-0">
+                                <label for="name_extension" class="block text-sm font-semibold text-gray-700 mb-2">Name Extension</label>
+                                <input type="text" name="name_extension" id="name_extension"
+                                    value="{{ $application->user->name_extension }}"
+                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
+                                    readonly
+                                    aria-readonly="true"
+                                    title="Name extension is linked to your account and cannot be changed here.">
+                            </div>
+                        </div>
                     </div>
 
                     <div>
@@ -63,12 +100,11 @@
                         <input type="email"
                             name="email"
                             id="email"
-                            value="{{ old('email', $application->personalDetails?->email ?? '') }}"
+                            value="{{ old('email', $application->user?->email ?? '') }}"
                             class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
                             readonly
                             aria-readonly="true"
                             title="Email is linked to your account and cannot be changed here.">
-                        <p id="email-error" class="mt-2 text-sm text-red-600 hidden"></p>
                     </div>
 
                     <div>
@@ -136,7 +172,7 @@
                         <p id="citizenship_status-error" class="mt-2 text-sm text-red-600 hidden"></p>
                     </div>
 
-                    <div class="col-span-2">
+                    <div class="md:col-span-2">
                         <label for="spouse_name" class="block text-sm font-semibold text-gray-700 mb-2">Spouse Name (if married)</label>
                         <input type="text" name="spouse_name" id="spouse_name"
                             value="{{ old('spouse_name', $application->personalDetails->spouse_name ?? '') }}"

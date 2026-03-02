@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/employment-details-form.blade.php --}}
 <!-- Employment & Income Details Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
     <button type="button"

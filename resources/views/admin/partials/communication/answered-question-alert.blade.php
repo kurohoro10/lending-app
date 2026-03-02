@@ -1,3 +1,4 @@
+{{-- resources/views/admin/applications/partials/communication/answered-question-alert.blade.php --}}
 <div class="mb-6 bg-green-50 border-l-4 border-green-400 rounded-lg p-4 shadow-sm animate-pulse-subtle"
         role="alert"
         aria-live="polite">

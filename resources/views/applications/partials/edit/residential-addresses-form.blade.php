@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/residential-addresses-form.blade.php --}}
 <!-- Residential Addresses Section - Enhanced with Fetch API -->
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
     <button type="button"

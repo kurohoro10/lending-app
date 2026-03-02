@@ -12,7 +12,11 @@ class PersonalDetail extends Model
 
     protected $fillable = [
         'application_id',
-        'full_name',
+        'user_id',
+        'first_name',
+        'middle_name',
+        'last_name',
+        'name_extension',
         'mobile_phone',
         'email',
         'marital_status',
@@ -28,6 +32,11 @@ class PersonalDetail extends Model
         'number_of_dependants' => 'integer',
     ];
 
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
@@ -36,5 +45,15 @@ class PersonalDetail extends Model
     public function getAgeAttribute(): ?int
     {
         return $this->date_of_birth ? $this->date_of_birth->age : null;
+    }
+
+    public function getFullNameAttribute(): string
+    {
+        return collect([
+            $this->first_name,
+            $this->middle_name,
+            $this->last_name,
+            $this->name_extension,
+        ])->filter()->implode(' ');
     }
 }

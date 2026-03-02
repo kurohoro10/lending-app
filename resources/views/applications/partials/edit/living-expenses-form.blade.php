@@ -1,4 +1,4 @@
-{{-- resources/views/applications/partials/living-expenses-form.blade.php --}}
+{{-- resources/views/applications/partials/edit/living-expenses-form.blade.php --}}
 
 @php
     $standardCategories = [

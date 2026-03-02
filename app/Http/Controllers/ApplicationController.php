@@ -63,9 +63,12 @@ class ApplicationController extends Controller
 
         if (!$isAuthenticated) {
             $rules = array_merge($rules, [
-                'name'     => 'required|string|max:255',
-                'email'    => 'required|email|unique:users,email',
-                'password' => 'required|string|min:8|confirmed',
+                'first_name'     => 'required|string|max:100',
+                'middle_name'    => 'nullable|string|max:100',
+                'last_name'      => 'required|string|max:100',
+                'name_extension' => 'nullable|string|max:20',
+                'email'          => 'required|email|unique:users,email',
+                'password'       => 'required|string|min:8|confirmed',
             ]);
         }
 
@@ -77,9 +80,12 @@ class ApplicationController extends Controller
                 $user = auth()->user();
             } else {
                 $user = User::create([
-                    'name'     => $validated['name'],
-                    'email'    => $validated['email'],
-                    'password' => Hash::make($validated['password']),
+                    'first_name'      => $validated['first_name'],
+                    'middle_name'     => $validated['middle_name'] ?? null,
+                    'last_name'       => $validated['last_name'],
+                    'name_extension'  => $validated['name_extension'] ?? null,
+                    'email'           => $validated['email'],
+                    'password'        => Hash::make($validated['password']),
                 ]);
                 $user->assignRole('client');
             }
@@ -92,11 +98,6 @@ class ApplicationController extends Controller
                 'security_type'       => $validated['security_type'],
                 'submission_ip'       => $request->ip(),
             ]);
-
-            $application->personalDetails()->updateOrCreate(
-                ['application_id' => $application->id],
-                ['email' => $user->email, 'full_name' => $user->name]
-            );
 
             $declarations = [
                 [

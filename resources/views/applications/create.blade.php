@@ -1,3 +1,4 @@
+{{-- resources/views/applications/create.blade.php --}}
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
 <head>
@@ -456,17 +457,75 @@
                                 </div>
 
                                 <div class="space-y-5">
-                                    <div>
-                                        <label for="name" class="form-label">Full Name <span class="text-indigo-500">*</span></label>
-                                        <input type="text" name="name" id="name" value="{{ old('name') }}" required
-                                               placeholder="Jane Smith"
-                                               class="form-input @error('name') error @enderror">
-                                        @error('name')
-                                            <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
-                                                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
-                                                {{ $message }}
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                        <div>
+                                            <label for="first_name" class="form-label">
+                                                First Name <span class="text-indigo-500" aria-hidden="true">*</span>
+                                                <span class="sr-only">(required)</span>
+                                            </label>
+                                            <input type="text" name="first_name" id="first_name"
+                                                value="{{ old('first_name') }}"
+                                                required
+                                                autocomplete="given-name"
+                                                aria-required="true"
+                                                aria-describedby="first_name-error"
+                                                placeholder="Jane"
+                                                class="form-input @error('first_name') error @enderror">
+                                            @error('first_name')
+                                                <p id="first_name-error" class="mt-1.5 text-xs text-red-500 flex items-center gap-1" role="alert">
+                                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                                    {{ $message }}
+                                                </p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="middle_name" class="form-label">
+                                                Middle Name <span class="text-gray-400 normal-case font-normal">(optional)</span>
+                                            </label>
+                                            <input type="text" name="middle_name" id="middle_name"
+                                                value="{{ old('middle_name') }}"
+                                                autocomplete="additional-name"
+                                                placeholder="Marie"
+                                                class="form-input">
+                                        </div>
+
+                                        <div>
+                                            <label for="last_name" class="form-label">
+                                                Last Name <span class="text-indigo-500" aria-hidden="true">*</span>
+                                                <span class="sr-only">(required)</span>
+                                            </label>
+                                            <input type="text" name="last_name" id="last_name"
+                                                value="{{ old('last_name') }}"
+                                                required
+                                                autocomplete="family-name"
+                                                aria-required="true"
+                                                aria-describedby="last_name-error"
+                                                placeholder="Smith"
+                                                class="form-input @error('last_name') error @enderror">
+                                            @error('last_name')
+                                                <p id="last_name-error" class="mt-1.5 text-xs text-red-500 flex items-center gap-1" role="alert">
+                                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
+                                                    {{ $message }}
+                                                </p>
+                                            @enderror
+                                        </div>
+
+                                        <div>
+                                            <label for="name_extension" class="form-label">
+                                                Name Extension
+                                            </label>
+                                            <input type="text" name="name_extension" id="name_extension"
+                                                value="{{ old('name_extension') }}"
+                                                autocomplete="honorific-suffix"
+                                                aria-describedby="name_extension-hint"
+                                                placeholder="Jr."
+                                                class="form-input">
+                                            <p id="name_extension-hint" class="mt-1 text-xs text-gray-400">
+                                                Optional — only if applicable
+                                                <span class="text-gray-400 normal-case font-normal">(e.g. Jr., Sr., III)</span>
                                             </p>
-                                        @enderror
+                                        </div>
                                     </div>
 
                                     <div>

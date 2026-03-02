@@ -1,3 +1,4 @@
+{{-- resources/views/admin/applications/partials/show/final-signature.blade.php --}}
 <div class="bg-white rounded-lg shadow p-6 mb-6">
     <h3 class="text-lg font-semibold text-gray-900 mb-4">Electronic Signature</h3>
 

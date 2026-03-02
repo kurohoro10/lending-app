@@ -145,7 +145,7 @@
 
     function checkPersonalDetailsComplete() {
         const fields = [
-            'full_name', 'mobile_phone', 'email', 'marital_status',
+            'mobile_phone', 'marital_status',
             'number_of_dependants', 'date_of_birth', 'citizenship_status'
         ];
         return fields.every(field => {

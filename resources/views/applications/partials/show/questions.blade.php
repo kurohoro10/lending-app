@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/show/questions.blade.php --}}
 <!-- Questions Section - Matching Documents Style Exactly -->
 @if($application->questions->count() > 0)
 <div id="client-questions-section" class="bg-white overflow-hidden shadow-xl sm:rounded-lg transition-all duration-500">

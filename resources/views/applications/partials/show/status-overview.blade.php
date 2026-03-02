@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/show/status-overview.blade.php --}}
 @if($application->isReturned())
 <div class="bg-orange-50 border border-orange-200 rounded-lg p-5" role="alert">
     <div class="flex items-start">

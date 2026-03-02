@@ -1,3 +1,4 @@
+//resources/js/applications/show/personalDetails.js
 (() => {
     const personalDetailsAccordionBtn = document.getElementById('personal-details-btn');
     const form = document.getElementById('personal-details');

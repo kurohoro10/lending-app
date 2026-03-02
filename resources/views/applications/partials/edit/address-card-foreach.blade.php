@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/edit/address-card-foreach.blade.php --}}
 {{--
     Replace the existing address card @foreach in residential-addresses.blade.php.
     The data-start-date / data-end-date attributes are read by the JS coverage calculator on page load.

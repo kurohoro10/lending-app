@@ -1,3 +1,4 @@
+{{-- resources/views/applications/partials/show/living-expenses.blade.php --}}
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
     <div class="p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Living Expenses</h3>
