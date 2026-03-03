@@ -15,47 +15,75 @@
             @endif
 
             {{-- ── Statistics Cards ──────────────────────────────────────────── --}}
+            @php
+                $statCards = [
+                    ['key' => 'total_applications',       'label' => 'Total',         'color' => 'indigo', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 'route' => route('admin.applications.index')],
+                    ['key' => 'draft',                    'label' => 'Draft',         'color' => 'gray',   'icon' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'],
+                    ['key' => 'submitted',                'label' => 'Submitted',     'color' => 'blue',   'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
+                    ['key' => 'under_review',             'label' => 'Under Review',  'color' => 'yellow', 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'],
+                    ['key' => 'additional_info_required', 'label' => 'Info Required', 'color' => 'orange', 'icon' => 'M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z'],
+                    ['key' => 'approved',                 'label' => 'Approved',      'color' => 'green',  'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                    ['key' => 'declined',                 'label' => 'Declined',      'color' => 'red',    'icon' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                ];
+
+                // Task cards — shown conditionally per role
+                if (auth()->user()->hasRole('admin')) {
+                    $statCards[] = ['key' => 'all_tasks',    'label' => 'All Tasks',     'color' => 'violet', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'route' => route('admin.tasks.index')];
+                    $statCards[] = ['key' => 'overdue_tasks', 'label' => 'Overdue Tasks', 'color' => 'red',    'icon' => 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'route' => route('admin.tasks.index', ['filter' => 'overdue'])];
+                } elseif (auth()->user()->isAssessor()) {
+                    $statCards[] = ['key' => 'my_tasks',     'label' => 'My Tasks',      'color' => 'violet', 'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01', 'route' => route('admin.tasks.index')];
+                    $statCards[] = ['key' => 'overdue_tasks', 'label' => 'Overdue',       'color' => 'red',    'icon' => 'M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z', 'route' => route('admin.tasks.index', ['filter' => 'overdue'])];
+                }
+
+                $iconBg   = ['indigo' => 'bg-indigo-500', 'gray' => 'bg-gray-400',   'blue' => 'bg-blue-500',   'yellow' => 'bg-yellow-500', 'orange' => 'bg-orange-500', 'green' => 'bg-green-500', 'red' => 'bg-red-500', 'violet' => 'bg-violet-500'];
+                $footerBg = ['indigo' => 'bg-indigo-50',  'gray' => 'bg-gray-50',    'blue' => 'bg-blue-50',    'yellow' => 'bg-yellow-50',  'orange' => 'bg-orange-50',  'green' => 'bg-green-50',  'red' => 'bg-red-50',  'violet' => 'bg-violet-50'];
+                $linkCls  = ['indigo' => 'text-indigo-600 hover:text-indigo-800', 'gray' => 'text-gray-500 hover:text-gray-700', 'blue' => 'text-blue-600 hover:text-blue-800', 'yellow' => 'text-yellow-600 hover:text-yellow-800', 'orange' => 'text-orange-600 hover:text-orange-800', 'green' => 'text-green-600 hover:text-green-800', 'red' => 'text-red-600 hover:text-red-800', 'violet' => 'text-violet-600 hover:text-violet-800'];
+            @endphp
+
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-
-                @php
-                    $statCards = [
-                        ['key' => 'total_applications',       'label' => 'Total',         'color' => 'indigo', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 'route' => route('admin.applications.index')],
-                        ['key' => 'draft',                    'label' => 'Draft',         'color' => 'gray',   'icon' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'],
-                        ['key' => 'submitted',                'label' => 'Submitted',     'color' => 'blue',   'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-                        ['key' => 'under_review',             'label' => 'Under Review',  'color' => 'yellow', 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'],
-                        ['key' => 'additional_info_required', 'label' => 'Info Required', 'color' => 'orange', 'icon' => 'M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z'],
-                        ['key' => 'approved',                 'label' => 'Approved',      'color' => 'green',  'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                        ['key' => 'declined',                 'label' => 'Declined',      'color' => 'red',    'icon' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                    ];
-                    $iconBg   = ['indigo' => 'bg-indigo-500', 'gray' => 'bg-gray-400',   'blue' => 'bg-blue-500',   'yellow' => 'bg-yellow-500', 'orange' => 'bg-orange-500', 'green' => 'bg-green-500', 'red' => 'bg-red-500'];
-                    $footerBg = ['indigo' => 'bg-indigo-50', 'gray' => 'bg-gray-50',    'blue' => 'bg-blue-50',    'yellow' => 'bg-yellow-50',  'orange' => 'bg-orange-50',  'green' => 'bg-green-50',  'red' => 'bg-red-50'];
-                    $linkCls  = ['indigo' => 'text-indigo-600 hover:text-indigo-800', 'gray' => 'text-gray-500 hover:text-gray-700', 'blue' => 'text-blue-600 hover:text-blue-800', 'yellow' => 'text-yellow-600 hover:text-yellow-800', 'orange' => 'text-orange-600 hover:text-orange-800', 'green' => 'text-green-600 hover:text-green-800', 'red' => 'text-red-600 hover:text-red-800'];
-                @endphp
-
                 @foreach($statCards as $card)
-                    <div class="bg-white overflow-hidden shadow rounded-lg">
+                    @php
+                        $isTaskCard = in_array($card['key'], ['my_tasks', 'all_tasks', 'overdue_tasks']);
+                        $isOverdue  = $card['key'] === 'overdue_tasks';
+                        $count      = $stats[$card['key']] ?? 0;
+                    @endphp
+                    <div class="bg-white overflow-hidden shadow rounded-lg {{ $isOverdue && $count > 0 ? 'ring-2 ring-red-300' : '' }}"
+                        @if($isOverdue && $count > 0) aria-label="{{ $count }} overdue task(s) require attention" @endif>
                         <div class="p-5">
                             <div class="flex items-center">
-                                <div class="flex-shrink-0 {{ $iconBg[$card['color']] }} rounded-md p-3">
+                                <div class="flex-shrink-0 {{ $iconBg[$card['color']] }} rounded-md p-3 relative">
                                     <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $card['icon'] }}"/>
                                     </svg>
+                                    {{-- Pulse dot for overdue with items --}}
+                                    @if($isOverdue && $count > 0)
+                                        <span class="absolute -top-1 -right-1 flex h-3 w-3" aria-hidden="true">
+                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                                        </span>
+                                    @endif
                                 </div>
                                 <div class="ml-5 w-0 flex-1">
                                     <dt class="text-sm font-medium text-gray-500 truncate">{{ $card['label'] }}</dt>
-                                    <dd class="text-lg font-semibold text-gray-900">{{ $stats[$card['key']] }}</dd>
+                                    <dd class="flex items-baseline gap-1">
+                                        <span class="text-lg font-semibold {{ $isOverdue && $count > 0 ? 'text-red-600' : 'text-gray-900' }}">
+                                            {{ $count }}
+                                        </span>
+                                        @if($isTaskCard && !$isOverdue && $count > 0)
+                                            <span class="text-xs text-gray-400 font-normal">pending</span>
+                                        @endif
+                                    </dd>
                                 </div>
                             </div>
                         </div>
                         <div class="{{ $footerBg[$card['color']] }} px-5 py-2">
                             <a href="{{ $card['route'] ?? route('admin.applications.index', ['status' => $card['key']]) }}"
-                               class="text-xs font-medium {{ $linkCls[$card['color']] }}">
+                            class="text-xs font-medium {{ $linkCls[$card['color']] }} focus:outline-none focus:underline">
                                 View →
                             </a>
                         </div>
                     </div>
                 @endforeach
-
             </div>
 
             {{-- ── My Tasks (assessors only) ──────────────────────────────── --}}

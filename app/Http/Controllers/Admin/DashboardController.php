@@ -32,6 +32,18 @@ class DashboardController extends Controller
             'declined'                 => (clone $baseQuery)->where('status', 'declined')->count(),
         ];
 
+        $stats['my_tasks']  = auth()->user()->isAssessor()
+            ? Task::where('assigned_to', auth()->id())->whereNull('completed_at')->count()
+            : 0;
+
+        $stats['all_tasks'] = auth()->user()->hasRole('admin')
+            ? Task::whereNull('completed_at')->count()
+            : 0;
+
+        $stats['overdue_tasks'] = auth()->user()->hasRole('admin')
+            ? Task::whereNull('completed_at')->where('due_date', '<', now())->count()
+            : Task::where('assigned_to', auth()->id())->whereNull('completed_at')->where('due_date', '<', now())->count();
+
         // Unread answered questions — scoped to the assessor's applications
         $answeredQuestionsQuery = Question::where('status', 'answered')->whereNull('read_at');
         if ($isAssessor) {
