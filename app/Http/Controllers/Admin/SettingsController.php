@@ -169,6 +169,68 @@ class SettingsController extends Controller
                          . 'Use dot notation for nested keys, e.g. "income_monthly": "income.monthlyAverage". '
                          . 'Must be valid JSON.',
         ],
+
+        // ── CreditSense ────────────────────────────────────────────────────────────
+        'creditsense_client_code' => [
+            'group'     => 'creditsense',
+            'label'     => 'Client Code',
+            'type'      => 'text',
+            'is_secret' => false,
+            'hint'      => 'Your organisation client code provided by CreditSense (e.g. DEMO). Used in the iframe JS initialisation.',
+        ],
+        'creditsense_api_key' => [
+            'group'     => 'creditsense',
+            'label'     => 'API Key',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'API key for querying the CreditSense REST API to retrieve reports and create quicklinks.',
+        ],
+        'creditsense_base_url' => [
+            'group'     => 'creditsense',
+            'label'     => 'API Base URL',
+            'type'      => 'url',
+            'is_secret' => false,
+            'hint'      => 'Default: https://au-api.creditsense.com.au — only change if CreditSense instructs otherwise.',
+        ],
+        'creditsense_webhook_secret' => [
+            'group'     => 'creditsense',
+            'label'     => 'Webhook Secret',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'Used to verify the HMAC signature on incoming webhook payloads. Obtain from your CreditSense account manager.',
+        ],
+        'creditsense_env' => [
+            'group'     => 'creditsense',
+            'label'     => 'Environment',
+            'type'      => 'select',
+            'is_secret' => false,
+            'options'   => [
+                'sandbox'    => 'Sandbox',
+                'production' => 'Production',
+            ],
+            'hint' => 'Sandbox uses test credentials and does not submit real bank data. Switch to Production when go-live ready.',
+        ],
+        'creditsense_js_cdn' => [
+            'group'     => 'creditsense',
+            'label'     => 'JS SDK CDN URL',
+            'type'      => 'url',
+            'is_secret' => false,
+            'hint'      => 'CreditSense-provided CDN URL for CS-Integrated-Iframe-v1.min.js. Your account manager will supply this.',
+        ],
+
+        // Add to FIELDS constant, before bank_api group:
+        'active_bank_provider' => [
+            'group'     => 'bank_connect',
+            'label'     => 'Active Bank Connection Provider',
+            'type'      => 'select',
+            'is_secret' => false,
+            'options'   => [
+                'basiq'       => 'Basiq (CDR-accredited)',
+                'creditsense' => 'CreditSense (iframe SDK)',
+                'bank_api'    => 'Generic Bank / Credit Check API',
+            ],
+            'hint' => 'Only one provider is active at a time. Changing this takes effect immediately for all new applicants.',
+        ],
     ];
 
     public function index(): View
@@ -176,10 +238,12 @@ class SettingsController extends Controller
         $settings = Setting::pluck('value', 'key');
 
         $groups = [
-            'twilio'   => ['label' => 'Twilio (SMS & WhatsApp)', 'icon' => 'phone'],
-            'mail'     => ['label' => 'Email / SMTP',            'icon' => 'mail'],
-            'basiq'    => ['label' => 'Basiq (Bank Statements)', 'icon' => 'basiq'],
-            'bank_api' => ['label' => 'Bank / Credit Check API', 'icon' => 'bank'],
+            'twilio'       => ['label' => 'Twilio (SMS & WhatsApp)',    'icon' => 'phone'],
+            'mail'         => ['label' => 'Email / SMTP',               'icon' => 'mail'],
+            'basiq'        => ['label' => 'Basiq (Bank Statements)',     'icon' => 'basiq'],
+            'creditsense'  => ['label' => 'CreditSense (Bank Analysis)', 'icon' => 'creditsense'], // ← ADD
+            'bank_api'     => ['label' => 'Bank / Credit Check API',    'icon' => 'bank'],
+            'bank_connect' => ['label' => 'Bank Connection', 'icon' => 'bank'],
         ];
 
         return view('admin.settings.index', [
@@ -228,6 +292,10 @@ class SettingsController extends Controller
         // real API call fetches a fresh one with the updated key.
         if ($group === 'basiq') {
             Cache::forget('basiq_access_token');
+        }
+
+        if ($group === 'creditsense') {
+            Cache::forget('creditsense_access_token');
         }
 
         ActivityLog::logActivity(
@@ -408,5 +476,81 @@ class SettingsController extends Controller
         $map = json_decode($raw, true);
 
         return is_array($map) ? $map : [];
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // CreditSense token management & test connection
+    // ─────────────────────────────────────────────────────────────────────────
+
+    /**
+     * POST /admin/settings/creditsense/test-connection
+     *
+     * Validates the client code + API key by hitting the CreditSense
+     * /applications endpoint with a minimal query. Returns success/failure
+     * so the admin can confirm credentials before saving.
+     */
+    public function testCreditSenseConnection(Request $request): JsonResponse
+    {
+        $request->validate([
+            'api_key'     => 'nullable|string',
+            'base_url'    => 'nullable|url',
+            'client_code' => 'nullable|string',
+            'env'         => 'nullable|string|in:sandbox,production',
+        ]);
+
+        $apiKey      = $request->input('api_key')     ?: Setting::get('creditsense_api_key');
+        $clientCode  = $request->input('client_code') ?: Setting::get('creditsense_client_code');
+        $baseUrl     = rtrim(
+            $request->input('base_url') ?: Setting::get('creditsense_base_url', 'https://au-api.creditsense.com.au'),
+            '/'
+        );
+        $env = $request->input('env') ?: Setting::get('creditsense_env', 'sandbox');
+
+        if (blank($apiKey)) {
+            return response()->json(['success' => false, 'message' => 'API Key is required before testing.'], 422);
+        }
+        if (blank($clientCode)) {
+            return response()->json(['success' => false, 'message' => 'Client Code is required before testing.'], 422);
+        }
+
+        try {
+            // CreditSense REST API uses HTTP Basic auth: client_code:api_key
+            $response = Http::timeout(10)
+                ->withBasicAuth($clientCode, $apiKey)
+                ->withHeaders(['Accept' => 'application/json'])
+                ->get("{$baseUrl}/v2/applications", ['limit' => 1]);
+
+            if ($response->unauthorized()) {
+                return response()->json(['success' => false, 'message' => 'Authentication failed — check your Client Code and API Key.'], 422);
+            }
+
+            if ($response->failed()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => "API responded with HTTP {$response->status()}. Check the Base URL and credentials.",
+                ], 422);
+            }
+
+            ActivityLog::logActivity(
+                'creditsense_test_connection',
+                "CreditSense test connection succeeded ({$env})",
+                null, null,
+                ['env' => $env, 'base_url' => $baseUrl]
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => "Connected successfully ({$env}). Client Code and API Key are valid.",
+                'env'     => $env,
+            ]);
+
+        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Could not reach the CreditSense API. Check the Base URL and your server\'s outbound access.',
+            ], 503);
+        } catch (\Throwable $e) {
+            return response()->json(['success' => false, 'message' => 'Unexpected error: ' . $e->getMessage()], 500);
+        }
     }
 }

@@ -6,12 +6,13 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CommentController;
 use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\CommunicationController;
-use App\Http\Controllers\Admin\CreditCheckController;
+use App\Http\Controllers\Admin\CreditControllers\CreditCheckController;
 use App\Http\Controllers\Admin\LivingExpenseVerificationController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\Question\QuestionController;
+use App\Http\Controllers\Admin\Question\QuestionController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
 
 /*
 |--------------------------------------------------------------------------
@@ -89,6 +90,16 @@ Route::patch('credit-checks/{creditCheck}',            [CreditCheckController::c
     ->name('creditChecks.update');
 Route::get('credit-checks/{creditCheck}',              [CreditCheckController::class, 'show'])
     ->name('creditChecks.show');
+
+// CreditSense
+Route::post('applications/{application}/creditsense/fetch-report', [CreditSenseController::class, 'fetchReport'])
+    ->name('creditsense.fetchReport');
+Route::post('applications/{application}/creditsense/quicklink', [CreditSenseController::class, 'createQuicklink'])
+    ->name('creditsense.quicklink');
+
+// Settings — CreditSense test connection
+Route::post('settings/creditsense/test-connection', [SettingsController::class, 'testCreditSenseConnection'])
+    ->name('settings.creditsense.test-connection');
 
 // Living Expense Verification
 Route::patch('living-expenses/{livingExpense}/verify', [LivingExpenseController::class, 'verify'])

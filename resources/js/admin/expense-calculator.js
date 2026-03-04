@@ -1,338 +1,428 @@
 // resources/js/admin/expense-calculator.js
 // Expense Verification Calculator modal.
-// Loads client-stated expenses via AJAX, renders an editable comparison
-// table, auto-calculates totals, and saves verified amounts via AJAX.
-// Bank statement column intentionally omitted — add when CreditSense is confirmed.
+// Loads client-stated expenses + Basiq bank data via AJAX, renders an
+// editable comparison table, auto-calculates totals, and saves verified
+// amounts via AJAX.
 
 (() => {
-    // ── Frequency multipliers (to monthly) ──────────────────────────────────
-    const FREQUENCIES = {
-        weekly:      { label: 'Weekly',      perMonth: 52 / 12 },
-        fortnightly: { label: 'Fortnightly', perMonth: 26 / 12 },
-        monthly:     { label: 'Monthly',     perMonth: 1 },
-        quarterly:   { label: 'Quarterly',   perMonth: 1 / 3 },
-        annually:    { label: 'Annually',    perMonth: 1 / 12 },
-    };
+    if (window.__expenseModalInitialized) return;
+    window.__expenseModalInitialized = true;
 
     // ── Element references ───────────────────────────────────────────────────
-    const modal       = document.getElementById('expense-calculator-modal');
-    const backdrop    = document.getElementById('expense-modal-backdrop');
-    const closeBtn    = document.getElementById('expense-modal-close');
-    const cancelBtn   = document.getElementById('expense-modal-cancel');
-    const saveBtn     = document.getElementById('expense-save-btn');
-    const saveSpinner = document.getElementById('expense-save-spinner');
-    const saveStatus  = document.getElementById('expense-save-status');
-    const addRowBtn   = document.getElementById('expense-add-row');
-    const loadingEl   = document.getElementById('expense-loading');
-    const tableArea   = document.getElementById('expense-table-area');
-    const rowsBody    = document.getElementById('expense-rows');
-    const openBtn     = document.getElementById('open-expense-calculator');
+    const modal         = document.getElementById('expense-calculator-modal');
+    const backdrop      = document.getElementById('expense-modal-backdrop');
+    const closeBtn      = document.getElementById('expense-modal-close');
+    const cancelBtn     = document.getElementById('expense-modal-cancel');
+    const loading       = document.getElementById('expense-loading');
+    const tableArea     = document.getElementById('expense-table-area');
+    const tbody         = document.getElementById('expense-rows');
+    const addRowBtn     = document.getElementById('expense-add-row');
+    const saveBtn       = document.getElementById('expense-save-btn');
+    const saveStatus    = document.getElementById('expense-save-status');
+    const spinner       = document.getElementById('expense-save-spinner');
+    const form          = document.getElementById('expense-calc-form');
+    const unmatchedArea = document.getElementById('basiq-unmatched-area');
+    const unmatchedList = document.getElementById('basiq-unmatched-list');
+    // Any element with [data-expense-modal-open] can open the modal —
+    // covers both the quick-actions bar button and the living-expenses card button.
+    const triggerBtns = document.querySelectorAll('[data-expense-modal-open]');
 
-    const totalClientStated = document.getElementById('total-client-stated');
-    const totalVerified     = document.getElementById('total-verified');
-    const totalAnnual       = document.getElementById('total-annual');
+    // Bail early if the modal isn't on this page
+    if (!modal || !triggerBtns.length || !form) return;
 
-    if (!modal || !openBtn) return;
+    let previousFocus = null;
 
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ?? '';
-    const dataRoute = openBtn.dataset.dataRoute;
-    const saveRoute = document.getElementById('expense-calc-form')?.dataset.saveRoute;
+    // ── Frequency multipliers (amount → monthly) ─────────────────────────────
+    const FREQ_TO_MONTHLY = {
+        weekly:      52 / 12,
+        fortnightly: 26 / 12,
+        monthly:     1,
+        quarterly:   1 / 3,
+        annually:    1 / 12,
+    };
 
-    let rowIndex = 0;
+    const toMonthly = (amount, freq) =>
+        (parseFloat(amount) || 0) * (FREQ_TO_MONTHLY[freq] ?? 1);
+
+    const fmt = n =>
+        '$' + Number(n || 0).toLocaleString('en-AU', {
+            minimumFractionDigits: 2,
+            maximumFractionDigits: 2,
+        });
+
+    const escHtml = str =>
+        String(str ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
 
     // ── Open / Close ─────────────────────────────────────────────────────────
 
-    openBtn.addEventListener('click', openModal);
-    closeBtn?.addEventListener('click', closeModal);
-    cancelBtn?.addEventListener('click', closeModal);
-    backdrop?.addEventListener('click', closeModal);
-
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && !modal.classList.contains('hidden')) closeModal();
-    });
-
-    async function openModal() {
+    function openModal() {
+        previousFocus = document.activeElement;
         modal.classList.remove('hidden');
         document.body.style.overflow = 'hidden';
-        showLoading(true);
-        clearStatus();
-        closeBtn?.focus();
-
-        try {
-            const res  = await fetch(dataRoute, {
-                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrfToken },
-            });
-            const data = await res.json();
-            renderModal(data);
-        } catch {
-            showLoading(false);
-            setStatus('Failed to load expense data. Please try again.', true);
-        }
+        closeBtn.focus();
+        loadData();
     }
 
     function closeModal() {
+        if (modal.classList.contains('hidden')) return;
         modal.classList.add('hidden');
         document.body.style.overflow = '';
-        openBtn?.focus();
+        if (previousFocus?.focus) {
+            previousFocus.focus();
+            previousFocus = null;
+        }
+    }
+
+    triggerBtns.forEach(btn => btn.addEventListener('click', openModal));
+    [closeBtn, cancelBtn, backdrop].forEach(el => el?.addEventListener('click', closeModal));
+    modal.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+    // ── Data loading ─────────────────────────────────────────────────────────
+
+    function loadData() {
+        // Reset to loading state
+        loading.classList.remove('hidden');
+        tableArea.classList.add('hidden');
+        unmatchedArea.classList.add('hidden');
+        addRowBtn.classList.add('hidden');
+        saveBtn.classList.add('hidden');
+        tbody.innerHTML = '';
+        clearStatus();
+
+        // Derive the data route from the save route (swap /verify → /data)
+        const dataRoute = form.dataset.saveRoute.replace('/verify', '/data');
+
+        fetch(dataRoute, {
+            headers: {
+                'Accept':            'application/json',
+                'X-Requested-With':  'XMLHttpRequest',
+            },
+        })
+            .then(r => {
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                return r.json();
+            })
+            .then(renderModal)
+            .catch(() => {
+                loading.innerHTML =
+                    '<p class="text-red-500 text-sm" role="alert">Failed to load expense data. Please try again.</p>';
+            });
     }
 
     // ── Render ───────────────────────────────────────────────────────────────
 
     function renderModal(data) {
-        showLoading(false);
-        rowsBody.innerHTML = '';
-        rowIndex = 0;
+        loading.classList.add('hidden');
+        tableArea.classList.remove('hidden');
+        addRowBtn.classList.remove('hidden');
+        saveBtn.classList.remove('hidden');
 
-        // Use previously saved verified expenses if available, else client expenses
-        const baseRows = data.verified_expenses?.length
-            ? data.verified_expenses
-            : (data.client_expenses ?? []);
+        // ── Report badge ──────────────────────────────────────────────────────
+        const reportBadge   = document.getElementById('basiq-report-badge');
+        const noReportBadge = document.getElementById('basiq-no-report-badge');
 
-        if (baseRows.length === 0) {
-            appendRow();
+        if (data.basiq_report_available) {
+            reportBadge?.classList.remove('hidden');
+            noReportBadge?.classList.add('hidden');
+            const receivedAt = document.getElementById('basiq-report-received-at');
+            if (receivedAt && data.report_received_at) {
+                receivedAt.textContent = 'Basiq report: ' + data.report_received_at;
+            }
         } else {
-            baseRows.forEach(row => appendRow(row));
+            reportBadge?.classList.add('hidden');
+            noReportBadge?.classList.remove('hidden');
         }
 
-        tableArea.classList.remove('hidden');
-        saveBtn?.classList.remove('hidden');
-        addRowBtn?.classList.remove('hidden');
-        recalculateTotals();
-    }
+        // ── Build lookup of previously verified amounts ────────────────────
+        const previouslyVerified = {};
+        (data.verified_expenses || []).forEach(v => {
+            previouslyVerified[v.description] = v.verified_amount;
+        });
 
-    function showLoading(show) {
-        loadingEl?.classList.toggle('hidden', !show);
-        if (show) tableArea?.classList.add('hidden');
+        // ── Track which Basiq categories are matched to a client expense ──
+        const allBasiqCategories = {};
+        (data.basiq_categories || []).forEach(c => {
+            allBasiqCategories[c.label] = c.monthly_amount;
+        });
+        const matchedBasiqLabels = new Set();
+
+        // ── Render one row per client expense ─────────────────────────────
+        (data.client_expenses || []).forEach((exp, idx) => {
+            if (exp.basiq_label) matchedBasiqLabels.add(exp.basiq_label);
+
+            const prevVerified = previouslyVerified[exp.description] ?? exp.basiq_amount ?? exp.amount;
+            addRow(idx, exp.description, exp.amount, exp.frequency, exp.basiq_amount, prevVerified);
+        });
+
+        // If no rows at all, start with one blank row
+        if (!tbody.querySelectorAll('tr').length) {
+            addRow(0);
+        }
+
+        // ── Unmatched Basiq categories panel ──────────────────────────────
+        const unmatched = Object.entries(allBasiqCategories)
+            .filter(([label]) => !matchedBasiqLabels.has(label));
+
+        if (unmatched.length > 0) {
+            unmatchedArea.classList.remove('hidden');
+            unmatchedList.innerHTML = unmatched.map(([label, amount]) =>
+                `<button type="button"
+                         class="basiq-unmatched-chip inline-flex items-center gap-1 px-2.5 py-1
+                                bg-white border border-emerald-200 rounded-full text-xs text-emerald-800
+                                hover:bg-emerald-100 focus:outline-none focus:ring-2 focus:ring-emerald-400 transition"
+                         data-label="${escHtml(label)}"
+                         data-amount="${escHtml(String(amount))}"
+                         title="Click to add as a new expense row">
+                    + ${escHtml(label)} <span class="text-emerald-500">${fmt(amount)}</span>
+                 </button>`
+            ).join('');
+
+            unmatchedList.querySelectorAll('.basiq-unmatched-chip').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const count = tbody.querySelectorAll('tr').length;
+                    addRow(
+                        count,
+                        btn.dataset.label,
+                        btn.dataset.amount,
+                        'monthly',
+                        btn.dataset.amount,
+                        btn.dataset.amount
+                    );
+                    btn.remove();
+                    if (!unmatchedList.querySelector('.basiq-unmatched-chip')) {
+                        unmatchedArea.classList.add('hidden');
+                    }
+                    recalcTotals();
+                });
+            });
+        }
+
+        recalcTotals();
     }
 
     // ── Row management ───────────────────────────────────────────────────────
 
-    function appendRow(data = {}) {
-        const i   = rowIndex++;
-        const row = document.createElement('tr');
-        row.className = 'group hover:bg-gray-50 transition-colors';
+    function addRow(idx, description = '', amount = 0, frequency = 'monthly', basiqAmount = null, verifiedAmount = null) {
+        const tr = document.createElement('tr');
+        tr.className = 'group hover:bg-gray-50 transition-colors';
 
-        const freqOptions = Object.entries(FREQUENCIES)
-            .map(([val, { label }]) =>
-                `<option value="${val}" ${(data.frequency ?? 'monthly') === val ? 'selected' : ''}>${label}</option>`
-            ).join('');
+        const hasBasiq      = basiqAmount !== null && basiqAmount !== undefined && basiqAmount !== '';
+        const clientMonthly = toMonthly(amount, frequency);
+        const basiqMonthly  = hasBasiq ? parseFloat(basiqAmount) : null;
+        const verifiedVal   = verifiedAmount !== null && verifiedAmount !== undefined
+            ? parseFloat(verifiedAmount)
+            : clientMonthly;
 
-        const clientMonthly = data.amount != null
-            ? fmt(toMonthly(data.amount, data.frequency ?? 'monthly'))
-            : '—';
+        const diffClass = hasBasiq
+            ? (Math.abs(clientMonthly - basiqMonthly) > 50 ? 'text-amber-600 font-semibold' : 'text-emerald-600')
+            : 'text-gray-300';
 
-        const verifiedDefault = data.verified_amount ?? data.amount ?? '';
+        const freqOptions = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'annually']
+            .map(f => `<option value="${f}" ${f === frequency ? 'selected' : ''}>${f.charAt(0).toUpperCase() + f.slice(1)}</option>`)
+            .join('');
 
-        row.innerHTML = `
-            <td class="px-2 py-2">
+        tr.innerHTML = `
+            <td class="px-3 py-2">
                 <input type="text"
-                       name="expenses[${i}][description]"
-                       value="${esc(data.description ?? '')}"
+                       name="expenses[${idx}][description]"
+                       value="${escHtml(description)}"
                        placeholder="e.g. Rent"
                        required
-                       class="expense-description w-full rounded border-gray-200 text-sm px-2 py-1.5
-                              focus:ring-indigo-500 focus:border-indigo-500"
-                       aria-label="Expense description row ${i + 1}">
+                       aria-label="Expense description row ${idx + 1}"
+                       class="w-full border border-gray-200 rounded-md px-2 py-1.5 text-sm
+                              focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none">
             </td>
-            <td class="px-2 py-2">
-                <div class="relative">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">$</span>
-                    <input type="number"
-                           name="expenses[${i}][amount]"
-                           value="${data.amount ?? ''}"
-                           placeholder="0.00"
-                           min="0" step="0.01"
-                           required
-                           class="expense-amount w-full rounded border-gray-200 text-sm pl-6 pr-2 py-1.5 tabular-nums
-                                  focus:ring-indigo-500 focus:border-indigo-500"
-                           aria-label="Expense amount row ${i + 1}">
-                </div>
+            <td class="px-3 py-2">
+                <input type="number"
+                       name="expenses[${idx}][amount]"
+                       value="${escHtml(String(amount))}"
+                       min="0"
+                       step="0.01"
+                       required
+                       aria-label="Stated amount row ${idx + 1}"
+                       class="amount-input w-full border border-gray-200 rounded-md px-2 py-1.5
+                              text-sm text-right focus:ring-2 focus:ring-indigo-400
+                              focus:border-indigo-400 focus:outline-none">
             </td>
-            <td class="px-2 py-2">
-                <select name="expenses[${i}][frequency]"
-                        class="expense-frequency w-full rounded border-gray-200 text-sm px-2 py-1.5
-                               focus:ring-indigo-500 focus:border-indigo-500"
-                        aria-label="Expense frequency row ${i + 1}">
+            <td class="px-3 py-2">
+                <select name="expenses[${idx}][frequency]"
+                        aria-label="Frequency row ${idx + 1}"
+                        class="freq-select w-full border border-gray-200 rounded-md px-2 py-1.5
+                               text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400
+                               focus:outline-none">
                     ${freqOptions}
                 </select>
             </td>
-            <td class="px-3 py-2 text-right bg-indigo-50/40">
-                <span class="client-monthly tabular-nums text-indigo-700 text-sm font-medium">${clientMonthly}</span>
+            <td class="px-3 py-2 text-right tabular-nums text-indigo-700 font-medium client-monthly">
+                ${fmt(clientMonthly)}
             </td>
-            <td class="px-2 py-2 bg-violet-50/40">
-                <div class="relative">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">$</span>
-                    <input type="number"
-                           name="expenses[${i}][verified_amount]"
-                           value="${verifiedDefault}"
-                           placeholder="0.00"
-                           min="0" step="0.01"
-                           required
-                           class="expense-verified w-full rounded border-violet-200 text-sm pl-6 pr-2 py-1.5 tabular-nums
-                                  text-violet-800 focus:ring-violet-500 focus:border-violet-500"
-                           aria-label="Verified amount row ${i + 1}">
-                </div>
+            <td class="px-3 py-2 text-right tabular-nums ${diffClass} basiq-cell">
+                ${hasBasiq
+                    ? `${fmt(basiqMonthly)}<input type="hidden" name="expenses[${idx}][basiq_amount]" value="${basiqMonthly}">`
+                    : '<span class="text-gray-300 text-xs">—</span>'}
             </td>
-            <td class="px-3 py-2 text-right bg-gray-50">
-                <span class="row-annual tabular-nums text-gray-800 text-sm font-semibold">—</span>
-                <button type="button"
-                        class="remove-row ms-1 text-red-400 hover:text-red-600 opacity-0 group-hover:opacity-100
-                               focus:opacity-100 focus:outline-none transition"
-                        aria-label="Remove expense row ${i + 1}">
-                    <svg class="w-3.5 h-3.5 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                </button>
+            <td class="px-3 py-2">
+                <input type="number"
+                       name="expenses[${idx}][verified_amount]"
+                       value="${verifiedVal}"
+                       min="0"
+                       step="0.01"
+                       required
+                       aria-label="Verified amount row ${idx + 1}"
+                       class="verified-input w-full border border-violet-200 bg-violet-50 rounded-md
+                              px-2 py-1.5 text-sm text-right font-medium text-violet-700
+                              focus:ring-2 focus:ring-violet-400 focus:border-violet-400 focus:outline-none">
+            </td>
+            <td class="px-3 py-2 text-right tabular-nums text-gray-800 font-medium annual-cell">
+                ${fmt(verifiedVal * 12)}
             </td>
         `;
 
-        rowsBody.appendChild(row);
-        updateRowAnnual(row);
+        // "↑ use" quick-fill button — only injected when Basiq data exists
+        if (hasBasiq) {
+            const basiqCell = tr.querySelector('.basiq-cell');
+            const useBtn    = document.createElement('button');
+            useBtn.type     = 'button';
+            useBtn.className = 'ml-1 text-xs text-emerald-600 hover:text-emerald-800 focus:outline-none focus:underline';
+            useBtn.setAttribute('aria-label', `Use Basiq amount ${fmt(basiqMonthly)} as verified amount`);
+            useBtn.textContent = '↑ use';
+            useBtn.addEventListener('click', () => {
+                tr.querySelector('.verified-input').value = basiqMonthly;
+                recalcTotals();
+            });
+            basiqCell.appendChild(useBtn);
+        }
+
+        tbody.appendChild(tr);
+        bindRowListeners(tr);
     }
 
-    // ── Event delegation ─────────────────────────────────────────────────────
+    function bindRowListeners(tr) {
+        const amountInput   = tr.querySelector('.amount-input');
+        const freqSelect    = tr.querySelector('.freq-select');
+        const verifiedInput = tr.querySelector('.verified-input');
 
-    rowsBody?.addEventListener('input', (e) => {
-        const row = e.target.closest('tr');
-        if (!row) return;
-        if (e.target.matches('.expense-amount, .expense-frequency')) updateClientMonthly(row);
-        if (e.target.matches('.expense-verified'))                    updateRowAnnual(row);
-        recalculateTotals();
-    });
+        const updateRow = () => {
+            const monthly = toMonthly(amountInput.value, freqSelect.value);
+            tr.querySelector('.client-monthly').textContent = fmt(monthly);
+            tr.querySelector('.annual-cell').textContent    = fmt((parseFloat(verifiedInput.value) || 0) * 12);
+            recalcTotals();
+        };
 
-    rowsBody?.addEventListener('click', (e) => {
-        const removeBtn = e.target.closest('.remove-row');
-        if (!removeBtn) return;
-        if (rowsBody.querySelectorAll('tr').length <= 1) return; // keep at least one row
-        removeBtn.closest('tr').remove();
-        recalculateTotals();
-    });
-
-    addRowBtn?.addEventListener('click', () => {
-        appendRow();
-        rowsBody.lastElementChild?.querySelector('.expense-description')?.focus();
-    });
-
-    // ── Calculation helpers ──────────────────────────────────────────────────
-
-    function toMonthly(amount, frequency) {
-        return parseFloat(amount) * (FREQUENCIES[frequency]?.perMonth ?? 1);
+        amountInput.addEventListener('input', updateRow);
+        freqSelect.addEventListener('change', updateRow);
+        verifiedInput.addEventListener('input', updateRow);
     }
 
-    function updateClientMonthly(row) {
-        const amount    = parseFloat(row.querySelector('.expense-amount')?.value) || 0;
-        const frequency = row.querySelector('.expense-frequency')?.value ?? 'monthly';
-        const el        = row.querySelector('.client-monthly');
-        if (el) el.textContent = fmt(toMonthly(amount, frequency));
-    }
+    // ── Totals ───────────────────────────────────────────────────────────────
 
-    function updateRowAnnual(row) {
-        const verified = parseFloat(row.querySelector('.expense-verified')?.value) || 0;
-        const el       = row.querySelector('.row-annual');
-        if (el) el.textContent = fmt(verified * 12);
-    }
+    function recalcTotals() {
+        let clientTotal = 0, basiqTotal = 0, verifiedTotal = 0;
 
-    function recalculateTotals() {
-        let sumClient = 0, sumVerified = 0, sumAnnual = 0;
-
-        rowsBody.querySelectorAll('tr').forEach(row => {
-            const amount    = parseFloat(row.querySelector('.expense-amount')?.value) || 0;
-            const frequency = row.querySelector('.expense-frequency')?.value ?? 'monthly';
-            const verified  = parseFloat(row.querySelector('.expense-verified')?.value) || 0;
-
-            sumClient   += toMonthly(amount, frequency);
-            sumVerified += verified;
-            sumAnnual   += verified * 12;
+        tbody.querySelectorAll('tr').forEach(tr => {
+            clientTotal += parseFloat(
+                tr.querySelector('.client-monthly')?.textContent.replace(/[$,]/g, '') || 0
+            );
+            const basiqInput = tr.querySelector('input[name*="basiq_amount"]');
+            if (basiqInput) basiqTotal += parseFloat(basiqInput.value) || 0;
+            verifiedTotal += parseFloat(tr.querySelector('.verified-input')?.value || 0);
         });
 
-        if (totalClientStated) totalClientStated.textContent = fmt(sumClient);
-        if (totalVerified)     totalVerified.textContent     = fmt(sumVerified);
-        if (totalAnnual)       totalAnnual.textContent       = fmt(sumAnnual);
+        document.getElementById('total-client-stated').textContent = fmt(clientTotal);
+        document.getElementById('total-bank-provider').textContent         = fmt(basiqTotal);
+        document.getElementById('total-verified').textContent      = fmt(verifiedTotal);
+        document.getElementById('total-annual').textContent        = fmt(verifiedTotal * 12);
     }
 
-    function fmt(value) {
-        return new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }).format(value);
-    }
+    // ── Add row button ───────────────────────────────────────────────────────
 
-    function esc(str) {
-        return String(str)
-            .replace(/&/g, '&amp;')
-            .replace(/"/g, '&quot;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;');
-    }
+    addRowBtn.addEventListener('click', () => {
+        const count = tbody.querySelectorAll('tr').length;
+        addRow(count);
+        recalcTotals();
+        tbody.lastElementChild?.querySelector('input')?.focus();
+    });
 
     // ── Save ─────────────────────────────────────────────────────────────────
 
-    saveBtn?.addEventListener('click', async () => {
+    saveBtn.addEventListener('click', async () => {
         clearStatus();
+        saveBtn.disabled = true;
+        spinner.classList.remove('hidden');
 
-        const expenses = [];
-        let valid = true;
+        const rows = [];
+        let valid  = true;
 
-        rowsBody.querySelectorAll('tr').forEach(row => {
-            const description     = row.querySelector('.expense-description')?.value.trim();
-            const amount          = row.querySelector('.expense-amount')?.value;
-            const frequency       = row.querySelector('.expense-frequency')?.value;
-            const verified_amount = row.querySelector('.expense-verified')?.value;
+        tbody.querySelectorAll('tr').forEach((tr, idx) => {
+            const desc     = tr.querySelector(`input[name="expenses[${idx}][description]"]`)?.value?.trim();
+            const amount   = tr.querySelector(`input[name="expenses[${idx}][amount]"]`)?.value;
+            const freq     = tr.querySelector(`select[name="expenses[${idx}][frequency]"]`)?.value;
+            const verified = tr.querySelector(`input[name="expenses[${idx}][verified_amount]"]`)?.value;
+            const basiq    = tr.querySelector(`input[name="expenses[${idx}][basiq_amount]"]`)?.value;
 
-            if (!description || amount === '' || verified_amount === '') {
+            if (!desc || amount === '' || !freq || verified === '') {
                 valid = false;
                 return;
             }
 
-            expenses.push({
-                description,
+            rows.push({
+                description:     desc,
                 amount:          parseFloat(amount),
-                frequency,
-                verified_amount: parseFloat(verified_amount),
+                frequency:       freq,
+                verified_amount: parseFloat(verified),
+                basiq_amount:    basiq !== undefined ? parseFloat(basiq) : null,
             });
         });
 
-        if (!valid || expenses.length === 0) {
-            setStatus('Please fill in all description, amount, and verified amount fields.', true);
+        if (!valid || rows.length === 0) {
+            setStatus('Please fill in all required fields.', true);
+            saveBtn.disabled = false;
+            spinner.classList.add('hidden');
             return;
         }
 
-        saveBtn.disabled = true;
-        saveSpinner?.classList.remove('hidden');
-        setStatus('Saving…');
-
         try {
-            const res  = await fetch(saveRoute, {
-                method: 'POST',
+            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
+            const res  = await fetch(form.dataset.saveRoute, {
+                method:  'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept':       'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
+                    'X-CSRF-TOKEN': csrf,
                 },
-                body: JSON.stringify({ expenses }),
+                body: JSON.stringify({ expenses: rows }),
             });
 
-            const data = await res.json();
-            if (!res.ok || !data.success) throw new Error(data.message ?? 'Failed to save.');
+            const json = await res.json();
 
-            setStatus('Verified expenses saved successfully.');
-            setTimeout(clearStatus, 3000);
-
-        } catch (err) {
-            setStatus(err.message || 'Something went wrong. Please try again.', true);
+            if (res.ok && json.success) {
+                setStatus('✓ Saved successfully', false);
+                setTimeout(closeModal, 1200);
+            } else {
+                setStatus(json.message || 'Save failed. Please try again.', true);
+            }
+        } catch {
+            setStatus('Network error. Please try again.', true);
         } finally {
             saveBtn.disabled = false;
-            saveSpinner?.classList.add('hidden');
+            spinner.classList.add('hidden');
         }
     });
 
     // ── Status helpers ───────────────────────────────────────────────────────
 
     function setStatus(message, isError = false) {
-        if (!saveStatus) return;
         saveStatus.textContent = message;
         saveStatus.className   = `text-sm ${isError ? 'text-red-600' : 'text-green-600'}`;
     }
 
     function clearStatus() {
-        if (saveStatus) { saveStatus.textContent = ''; saveStatus.className = 'text-sm'; }
+        saveStatus.textContent = '';
+        saveStatus.className   = 'text-sm text-gray-500';
     }
 
 })();

@@ -7,9 +7,10 @@ use App\Http\Controllers\ResidentialAddressController;
 use App\Http\Controllers\EmploymentDetailsController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\Question\QuestionController as QuestionController;
+use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\DeclarationController;
-use App\Http\Controllers\BasiqController;
+use App\Http\Controllers\CreditControllers\BasiqController;
+use App\Http\Controllers\CreditControllers\CreditSenseController;
 
 // Dashboard - Redirect based on role
 Route::get('/dashboard', function () {
@@ -28,13 +29,18 @@ Route::delete('applications/{application}',   [ApplicationController::class, 'de
 Route::post('applications/{application}/submit', [ApplicationController::class, 'submit'])->name('applications.submit');
 
 // Basiq Bank Statement Connection
-// Replaces the old: POST applications/{application}/bank-statements/complete
 Route::prefix('applications/{application}/basiq')->name('basiq.')->group(function () {
     Route::post('user',         [BasiqController::class, 'createUser'])->name('user');
     Route::post('client-token', [BasiqController::class, 'createClientToken'])->name('client-token');
     Route::post('complete',     [BasiqController::class, 'complete'])->name('complete');
     Route::post('auth-link', [BasiqController::class, 'createAuthLink'])
     ->name('auth-link');
+});
+
+// CreditSense Bank Statement Connection
+Route::prefix('applications/{application}/creditsense')->name('creditsense.')->group(function () {
+    Route::get('config',    [CreditSenseController::class, 'iframeConfig'])->name('config');
+    Route::post('complete', [CreditSenseController::class, 'complete'])->name('complete');
 });
 
 // Personal Details

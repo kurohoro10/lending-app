@@ -72,7 +72,6 @@
             await loadAndInitSdk();
 
         } catch (err) {
-            console.error('[Basiq]', err);
             showError(err.message ?? 'Unable to start bank connection. Please try again.');
             setLaunchLoading(false);
         }
@@ -85,8 +84,8 @@
     async function createBasiqUser() {
         const { userRoute, csrfToken } = window.BASIQ ?? {};
 
-        const res  = await fetch(userRoute, {
-            method:  'POST',
+        const res = await fetch(userRoute, {
+            method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'X-CSRF-TOKEN': csrfToken ?? '',
@@ -96,6 +95,21 @@
         const data = await res.json();
 
         if (!res.ok) {
+
+            // If Laravel validation errors exist
+            if (data.errors && typeof data.errors === 'object') {
+                let messages = [];
+
+                for (const field in data.errors) {
+                    data.errors[field].forEach(message => {
+                        messages.push(message);
+                    });
+                }
+
+                throw new Error(messages.join('\n'));
+            }
+
+            // Fallback error
             throw new Error(data.error ?? 'Failed to create bank connection user.');
         }
 

@@ -2,59 +2,48 @@
 @php
     $groupFields = collect($fields)->filter(fn($f) => $f['group'] === $groupKey);
     $headingId   = "settings-{$groupKey}-heading";
-    $isBasiq     = $groupKey === 'basiq';
+    $isBasiq       = $groupKey === 'basiq';
+    $isCreditSense = $groupKey === 'creditsense';
+    $borderless    = $borderless ?? false;
 @endphp
 
+@if(!$borderless)
 <section aria-labelledby="{{ $headingId }}"
          class="bg-white shadow-sm rounded-xl overflow-hidden border border-gray-200">
+@endif
 
-    {{-- Card header --}}
+    {{-- Card header — hidden when borderless (parent card owns the chrome) --}}
+    @if(!$borderless)
     <div class="px-6 py-4 border-b border-gray-100 bg-gray-50 flex items-center gap-3">
         <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center" aria-hidden="true">
-            @if($icon === 'phone')
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"/>
-                </svg>
-            @elseif($icon === 'mail')
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-            @elseif($icon === 'basiq')
-                {{-- Bank-link / connection icon representing Basiq --}}
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101"/>
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M10.172 13.828a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
-                </svg>
-            @elseif($icon === 'bank')
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M8 14v3m4-3v3m4-3v3M3 21h18M3 10h18M3 7l9-4 9 4M4 10h16v11H4V10z"/>
-                </svg>
-            @else
-                <svg class="w-4 h-4 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
-                </svg>
-            @endif
+            @include('admin.settings.partials.icon', ['icon' => $icon])
         </div>
         <div>
             <h3 id="{{ $headingId }}" class="text-sm font-semibold text-gray-900">{{ $groupLabel }}</h3>
             <p class="text-xs text-gray-500 mt-0.5">{{ $groupHint }}</p>
         </div>
     </div>
+    @else
+    {{-- Borderless: still need a visible heading for screen readers --}}
+    <h3 id="{{ $headingId }}" class="sr-only">{{ $groupLabel }}</h3>
+    @endif
 
     {{-- Form --}}
     <form method="POST"
           action="{{ route('admin.settings.update', $groupKey) }}"
           aria-labelledby="{{ $headingId }}"
           @if($isBasiq) id="form-basiq" @endif
+          @if($isCreditSense) id="form-creditsense" @endif
           novalidate>
         @csrf
         @method('PATCH')
+
+        @if($borderless)
+        {{-- Borderless hint shown inside form instead of card header --}}
+        <div class="px-6 pt-5 pb-1">
+            <p class="text-xs text-gray-400">{{ $groupHint }}</p>
+        </div>
+        @endif
 
         <div class="px-6 py-5 space-y-5">
             @foreach($groupFields as $key => $field)
@@ -95,14 +84,12 @@
                                              @error($key) border-red-300 focus:ring-red-500 focus:border-red-500 @enderror"
                                       aria-describedby="{{ $hintId }}{{ $errors->has($key) ? " error-{$key}" : '' }}"
                                       placeholder='{ "internal_field": "provider.response.path" }'>{{ $settings[$key] ?? '' }}</textarea>
-
                             <button type="button"
                                     data-json-format="{{ $fieldId }}"
                                     class="mt-1.5 inline-flex items-center gap-1 text-xs text-indigo-600 hover:text-indigo-800
                                            focus:outline-none focus:underline">
-                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M4 6h16M4 12h8m-8 6h16"/>
+                                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h8m-8 6h16"/>
                                 </svg>
                                 Format JSON
                             </button>
@@ -131,9 +118,7 @@
                                         aria-pressed="false">
                                     <svg class="icon-eye w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                              d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+                                              d="M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
                                     </svg>
                                     <svg class="icon-eye-off hidden w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
@@ -152,7 +137,7 @@
                 </div>
             @endforeach
 
-            {{-- ── Basiq: Test Connection ───────────────────────────────────── --}}
+            {{-- ── Basiq: Test Connection ───────────────────────────────── --}}
             @if($isBasiq)
                 <div class="pt-2 border-t border-gray-100">
                     <div class="flex items-center gap-3 flex-wrap">
@@ -162,35 +147,21 @@
                                        text-sm font-medium text-gray-700 hover:bg-gray-50
                                        focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
                                        transition disabled:opacity-50 disabled:cursor-not-allowed">
-                            <svg id="basiq-test-spinner"
-                                 class="hidden animate-spin w-4 h-4 text-indigo-600"
-                                 fill="none" viewBox="0 0 24 24">
+                            <svg id="basiq-test-spinner" class="hidden animate-spin w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                                 <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                 <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
                             </svg>
-                            <svg id="basiq-test-icon"
-                                 class="w-4 h-4 text-gray-500"
-                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                      d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            <svg id="basiq-test-icon" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
                             </svg>
                             Test Connection
                         </button>
-
-                        <span id="basiq-test-result"
-                              role="status"
-                              aria-live="polite"
-                              class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium">
-                        </span>
+                        <span id="basiq-test-result" role="status" aria-live="polite"
+                              class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"></span>
                     </div>
-
                     <p id="basiq-test-message" class="hidden mt-2 text-xs text-gray-500"></p>
-
-                    {{-- Two-step progress indicator --}}
-                    <ol id="basiq-test-steps"
-                        class="hidden mt-3 space-y-1 text-xs text-gray-400"
-                        aria-label="Test steps">
-                        <li id="step-token"     class="flex items-center gap-1.5">
+                    <ol id="basiq-test-steps" class="hidden mt-3 space-y-1 text-xs text-gray-400" aria-label="Test steps">
+                        <li id="step-token" class="flex items-center gap-1.5">
                             <span class="step-dot w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
                             Obtain access token from /token
                         </li>
@@ -201,13 +172,47 @@
                     </ol>
                 </div>
             @endif
+
+            {{-- ── CreditSense: Test Connection ─────────────────────────── --}}
+            @if($isCreditSense)
+                <div class="pt-2 border-t border-gray-100">
+                    <div class="flex items-center gap-3 flex-wrap">
+                        <button type="button"
+                                id="btn-cs-test"
+                                class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300 rounded-md
+                                       text-sm font-medium text-gray-700 hover:bg-gray-50
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
+                                       transition disabled:opacity-50 disabled:cursor-not-allowed">
+                            <svg id="cs-test-spinner" class="hidden animate-spin w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v8H4z"/>
+                            </svg>
+                            <svg id="cs-test-icon" class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"/>
+                            </svg>
+                            Test Connection
+                        </button>
+                        <span id="cs-test-result" role="status" aria-live="polite"
+                              class="hidden items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium"></span>
+                    </div>
+                    <p id="cs-test-message" class="hidden mt-2 text-xs text-gray-500"></p>
+                    <ol id="cs-test-steps" class="hidden mt-3 space-y-1 text-xs text-gray-400" aria-label="CreditSense test steps">
+                        <li id="cs-step-auth" class="flex items-center gap-1.5">
+                            <span class="step-dot w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
+                            Authenticate with client code + API key
+                        </li>
+                        <li id="cs-step-api" class="flex items-center gap-1.5">
+                            <span class="step-dot w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
+                            Verify /v2/applications endpoint
+                        </li>
+                    </ol>
+                </div>
+            @endif
         </div>
 
-        {{-- Footer / save --}}
-        <div class="px-6 py-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-            <p class="text-xs text-gray-400">
-                Changes take effect immediately — no deploy required.
-            </p>
+        {{-- Footer --}}
+        <div class="px-6 py-4 {{ $borderless ? 'border-t border-gray-100' : 'bg-gray-50 border-t border-gray-100' }} flex items-center justify-between">
+            <p class="text-xs text-gray-400">Changes take effect immediately — no deploy required.</p>
             <button type="submit"
                     class="inline-flex items-center px-4 py-2 bg-indigo-600 border border-transparent rounded-md
                            font-semibold text-xs text-white uppercase tracking-widest
@@ -216,24 +221,26 @@
                 Save {{ $groupLabel }}
             </button>
         </div>
-
     </form>
+
+@if(!$borderless)
 </section>
+@endif
 
 @once
 @push('scripts')
 <script>
-// ── JSON textarea formatter ───────────────────────────────────────────────────
+// ── JSON formatter ────────────────────────────────────────────────────────────
 document.addEventListener('click', function (e) {
     const btn = e.target.closest('[data-json-format]');
     if (!btn) return;
-    const textarea = document.getElementById(btn.dataset.jsonFormat);
-    if (!textarea) return;
+    const ta = document.getElementById(btn.dataset.jsonFormat);
+    if (!ta) return;
     try {
-        textarea.value = JSON.stringify(JSON.parse(textarea.value), null, 4);
-        textarea.classList.remove('border-red-300');
+        ta.value = JSON.stringify(JSON.parse(ta.value), null, 4);
+        ta.classList.remove('border-red-300');
     } catch (err) {
-        textarea.classList.add('border-red-300');
+        ta.classList.add('border-red-300');
         alert('Invalid JSON: ' + err.message);
     }
 });
@@ -252,108 +259,120 @@ document.addEventListener('click', function (e) {
     btn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
 });
 
-// ── Basiq test connection ─────────────────────────────────────────────────────
-(function () {
-    const btn = document.getElementById('btn-basiq-test');
+// ── Shared test-connection helper ─────────────────────────────────────────────
+function initTestConnection({ btnId, spinnerId, iconId, resultId, messageId, stepsId, steps, route, getPayload }) {
+    const btn     = document.getElementById(btnId);
     if (!btn) return;
+    const spinner = document.getElementById(spinnerId);
+    const icon    = document.getElementById(iconId);
+    const result  = document.getElementById(resultId);
+    const message = document.getElementById(messageId);
+    const stepsEl = document.getElementById(stepsId);
 
-    const spinner      = document.getElementById('basiq-test-spinner');
-    const icon         = document.getElementById('basiq-test-icon');
-    const resultBadge  = document.getElementById('basiq-test-result');
-    const messageLine  = document.getElementById('basiq-test-message');
-    const stepsEl      = document.getElementById('basiq-test-steps');
-    const stepToken    = document.getElementById('step-token');
-    const stepInst     = document.getElementById('step-institutions');
-
-    function setStep(el, state) {
-        // state: 'pending' | 'active' | 'ok' | 'fail'
+    function setStep(elId, state) {
+        const el  = document.getElementById(elId);
+        if (!el) return;
         const dot = el.querySelector('.step-dot');
         dot.className = 'step-dot w-1.5 h-1.5 rounded-full flex-shrink-0 ' + {
-            pending : 'bg-gray-300',
-            active  : 'bg-indigo-400 animate-pulse',
-            ok      : 'bg-green-500',
-            fail    : 'bg-red-500',
+            pending: 'bg-gray-300',
+            active:  'bg-indigo-400 animate-pulse',
+            ok:      'bg-green-500',
+            fail:    'bg-red-500',
         }[state];
     }
 
     btn.addEventListener('click', async function () {
-        const form    = document.getElementById('form-basiq');
-        const apiKey  = form.querySelector('[name="settings[basiq_api_key]"]');
-        const baseUrl = form.querySelector('[name="basiq_base_url"]')?.value ?? '';
-        const env     = form.querySelector('[name="basiq_env"]')?.value       ?? 'sandbox';
-
-        // Reset
-        resultBadge.className = 'hidden';
-        messageLine.className = 'hidden mt-2 text-xs text-gray-500';
-        messageLine.textContent = '';
+        result.className  = 'hidden';
+        message.className = 'hidden mt-2 text-xs text-gray-500';
+        message.textContent = '';
         stepsEl.classList.remove('hidden');
-        setStep(stepToken, 'pending');
-        setStep(stepInst,  'pending');
+        steps.forEach(s => setStep(s, 'pending'));
 
         btn.disabled = true;
         spinner.classList.remove('hidden');
         icon.classList.add('hidden');
-
-        // Animate step 1 active
-        setStep(stepToken, 'active');
+        setStep(steps[0], 'active');
 
         try {
-            const res = await fetch('{{ route("admin.settings.basiq.test-connection") }}', {
+            const res  = await fetch(route, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
                     'Accept':       'application/json',
                 },
-                body: JSON.stringify({ api_key: apiKey, base_url: baseUrl, env }),
+                body: JSON.stringify(getPayload()),
             });
-
             const data = await res.json();
 
             if (data.success) {
-                // Both steps passed (server does them sequentially)
-                setStep(stepToken, 'ok');
-                setStep(stepInst,  'ok');
-
-                resultBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
-                resultBadge.innerHTML = `
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    Connected`;
+                steps.forEach(s => setStep(s, 'ok'));
+                result.className  = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-green-100 text-green-800';
+                result.innerHTML  = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg> Connected';
             } else {
-                // Determine which step failed based on the error message content
-                const tokenFailed = data.message && data.message.toLowerCase().includes('auth');
-                setStep(stepToken, tokenFailed ? 'fail' : 'ok');
-                setStep(stepInst,  tokenFailed ? 'pending' : 'fail');
-
-                resultBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
-                resultBadge.innerHTML = `
-                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
-                    </svg>
-                    Failed`;
+                const firstFailed = data.message?.toLowerCase().includes('auth') ? 0 : 1;
+                steps.forEach((s, i) => setStep(s, i < firstFailed ? 'ok' : i === firstFailed ? 'fail' : 'pending'));
+                result.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-red-100 text-red-800';
+                result.innerHTML = '<svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg> Failed';
             }
-
             if (data.message) {
-                messageLine.textContent = data.message;
-                messageLine.classList.remove('hidden');
+                message.textContent = data.message;
+                message.classList.remove('hidden');
             }
-
         } catch (err) {
-            setStep(stepToken, 'fail');
-            setStep(stepInst,  'pending');
-            resultBadge.className = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
-            resultBadge.textContent = 'Network error';
-            messageLine.textContent = err.message;
-            messageLine.classList.remove('hidden');
+            setStep(steps[0], 'fail');
+            result.className    = 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800';
+            result.textContent  = 'Network error';
+            message.textContent = err.message;
+            message.classList.remove('hidden');
         } finally {
             btn.disabled = false;
             spinner.classList.add('hidden');
             icon.classList.remove('hidden');
         }
     });
-})();
+}
+
+// ── Basiq test ────────────────────────────────────────────────────────────────
+initTestConnection({
+    btnId:     'btn-basiq-test',
+    spinnerId: 'basiq-test-spinner',
+    iconId:    'basiq-test-icon',
+    resultId:  'basiq-test-result',
+    messageId: 'basiq-test-message',
+    stepsId:   'basiq-test-steps',
+    steps:     ['step-token', 'step-institutions'],
+    route:     '{{ route("admin.settings.basiq.test-connection") }}',
+    getPayload: () => {
+        const form = document.getElementById('form-basiq');
+        return {
+            api_key:  form?.querySelector('[name="basiq_api_key"]')?.value  ?? '',
+            base_url: form?.querySelector('[name="basiq_base_url"]')?.value ?? '',
+            env:      form?.querySelector('[name="basiq_env"]')?.value      ?? 'sandbox',
+        };
+    },
+});
+
+// ── CreditSense test ──────────────────────────────────────────────────────────
+initTestConnection({
+    btnId:     'btn-cs-test',
+    spinnerId: 'cs-test-spinner',
+    iconId:    'cs-test-icon',
+    resultId:  'cs-test-result',
+    messageId: 'cs-test-message',
+    stepsId:   'cs-test-steps',
+    steps:     ['cs-step-auth', 'cs-step-api'],
+    route:     '{{ route("admin.settings.creditsense.test-connection") }}',
+    getPayload: () => {
+        const form = document.getElementById('form-creditsense');
+        return {
+            api_key:      form?.querySelector('[name="creditsense_api_key"]')?.value      ?? '',
+            client_code:  form?.querySelector('[name="creditsense_client_code"]')?.value  ?? '',
+            base_url:     form?.querySelector('[name="creditsense_base_url"]')?.value     ?? '',
+            env:          form?.querySelector('[name="creditsense_env"]')?.value           ?? 'sandbox',
+        };
+    },
+});
 </script>
 @endpush
 @endonce

@@ -11,7 +11,7 @@ return new class extends Migration
         Schema::create('personal_details', function (Blueprint $table) {
             $table->id();
             $table->foreignId('application_id')->unique()->constrained()->onDelete('cascade');
-            $table->foreignId('user_id')->unique()->constrained()->onDelete('cascade');
+            $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->string('mobile_phone')->nullable();
             $table->enum('citizenship_status', [
                 'australian_citizen',

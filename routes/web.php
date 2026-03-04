@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\ApplicationController;
 
@@ -31,6 +32,15 @@ Route::get('terms-and-conditions', function () {
 Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])
     ->group(base_path('routes/clientRoutes.php'));
 
+// CreditSense (client-facing — authenticated)
+Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified'])
+    ->prefix('creditsense')
+    ->name('creditsense.')
+    ->group(function () {
+        Route::get('{application}/config',    [CreditSenseController::class, 'iframeConfig'])->name('config');
+        Route::post('{application}/complete', [CreditSenseController::class, 'complete'])->name('complete');
+    });
+
 /*
 |--------------------------------------------------------------------------
 | Admin/Assessor Routes
@@ -54,3 +64,8 @@ Route::post('/webhooks/twilio/status', function (\Illuminate\Http\Request $reque
     app(\App\Services\TwilioService::class)->updateStatus($messageSid, $status);
     return response('OK', 200);
 })->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);
+
+// CreditSense Webhook (no CSRF — verified by HMAC signature)
+Route::post('/webhooks/creditsense', [CreditSenseController::class, 'webhook'])
+    ->name('webhooks.creditsense')
+    ->withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class]);

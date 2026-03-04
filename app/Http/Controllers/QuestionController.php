@@ -2,91 +2,62 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Application;
-use App\Models\Question;
+use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
+use App\Models\Question;
+use App\Models\User;
+use App\Notifications\Admin\QuestionAnswered;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class QuestionController extends Controller
 {
-    public function answer(Request $request, Question $question)
+    /**
+     * Client answers a question — ownership check remains since clients share the same auth guard.
+     */
+    public function answer(Request $request, Question $question): JsonResponse
     {
-        $this->authorize('update', $question->application);
-
-        if ($question->status !== 'pending') {
-            return back()->with('error', 'This question has already been answered.');
+        if ($question->application->user_id !== auth()->id()) {
+            return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
         $validated = $request->validate([
-            'answer' => 'required|string',
+            'answer' => 'required|string|max:2000',
         ]);
 
         $question->update([
-            'answer' => $validated['answer'],
-            'answered_by' => auth()->id(),
+            'answer'      => $validated['answer'],
+            'status'      => 'answered',
             'answered_at' => now(),
-            'answer_ip' => $request->ip(),
-            'status' => 'answered',
+            'answered_by' => auth()->id(),
+            'answer_ip'   => $request->ip(),
         ]);
 
-        ActivityLog::logActivity(
-            'answered',
-            'Answered question',
-            $question,
-            null,
-            $validated
-        );
+        ActivityLog::logActivity('question_answered', 'Client answered question', $question->application);
 
-        // TODO: Send notification to assessor
+        $this->notifyAdminsOfAnswer($question);
 
-        return back()->with('success', 'Question answered successfully.');
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Your answer has been submitted successfully.',
+            'question_id' => $question->id,
+            'answer'      => $question->answer,
+            'answered_at' => $question->answered_at->format('d M Y H:i'),
+            'answer_ip'   => $question->answer_ip,
+        ]);
     }
 
-    // Admin methods
-    public function store(Request $request, Application $application)
+    private function notifyAdminsOfAnswer(Question $question): void
     {
-        $this->authorize('review', $application);
-
-        $validated = $request->validate([
-            'question' => 'required|string',
-            'question_type' => 'required|in:structured,free_text,document_request,clarification',
-            'options' => 'nullable|array',
-            'is_mandatory' => 'boolean',
-        ]);
-
-        $question = $application->questions()->create([
-            'asked_by' => auth()->id(),
-            'question' => $validated['question'],
-            'question_type' => $validated['question_type'],
-            'options' => $validated['options'] ?? null,
-            'is_mandatory' => $validated['is_mandatory'] ?? false,
-        ]);
-
-        ActivityLog::logActivity(
-            'asked',
-            'Asked question to client',
-            $question,
-            null,
-            $validated
-        );
-
-        // TODO: Send notification to client
-
-        return back()->with('success', 'Question sent to client successfully.');
-    }
-
-    public function destroy(Question $question)
-    {
-        $this->authorize('review', $question->application);
-
-        $question->update(['status' => 'withdrawn']);
-
-        ActivityLog::logActivity(
-            'withdrawn',
-            'Withdrew question',
-            $question
-        );
-
-        return back()->with('success', 'Question withdrawn successfully.');
+        try {
+            User::role('admin')->get()->each(
+                fn(User $admin) => $admin->notify(new QuestionAnswered($question))
+            );
+        } catch (\Exception $e) {
+            Log::error('Failed to send question answered notification: ' . $e->getMessage(), [
+                'question_id' => $question->id,
+            ]);
+        }
     }
 }

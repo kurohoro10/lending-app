@@ -1,4 +1,11 @@
 {{-- resources/views/admin/applications/partials/show/expense-calculator-modal.blade.php --}}
+@php
+    // Fallback if included standalone
+    $providerLabel    = $providerLabel    ?? 'Bank';
+    $hasReport        = $hasReport        ?? false;
+    $reportReceivedAt = $reportReceivedAt ?? null;
+@endphp
+
 <div id="expense-calculator-modal"
      class="hidden fixed inset-0 z-50 flex items-center justify-center p-4"
      role="dialog"
@@ -12,9 +19,9 @@
          aria-hidden="true"></div>
 
     {{-- Panel --}}
-    <div class="relative w-full max-w-5xl max-h-[92vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
+    <div class="relative w-full max-w-6xl max-h-[92vh] flex flex-col bg-white rounded-2xl shadow-2xl overflow-hidden">
 
-        {{-- ── Header ────────────────────────────────────────────────────── --}}
+        {{-- Header --}}
         <div class="flex items-center justify-between px-6 py-4 border-b border-gray-200 bg-gray-50 flex-shrink-0">
             <div>
                 <h2 id="expense-modal-title"
@@ -23,12 +30,35 @@
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                               d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 002 2v10a2 2 0 002 2z"/>
                     </svg>
-                    Expense Verification Calculator
+                    Expense Verification — {{ $providerLabel }}
                 </h2>
                 <p id="expense-modal-desc" class="text-xs text-gray-500 mt-0.5">
-                    Review client-stated expenses and set verified amounts.
+                    Compare client-stated expenses against {{ $providerLabel }} bank data, then set verified amounts.
                 </p>
             </div>
+
+            {{-- Provider report status badge --}}
+            <div class="mr-4">
+                @if($hasReport)
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-green-100 text-green-800">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        {{ $providerLabel }} report received
+                        @if($reportReceivedAt)
+                            {{ $reportReceivedAt->format('d M Y') }}
+                        @endif
+                    </span>
+                @else
+                    <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-yellow-100 text-yellow-800">
+                        <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                        </svg>
+                        No {{ $providerLabel }} report yet
+                    </span>
+                @endif
+            </div>
+
             <button type="button"
                     id="expense-modal-close"
                     class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg p-1 transition"
@@ -39,7 +69,7 @@
             </button>
         </div>
 
-        {{-- ── Loading state ──────────────────────────────────────────────── --}}
+        {{-- Loading --}}
         <div id="expense-loading"
              class="flex-1 flex items-center justify-center py-16"
              aria-live="polite"
@@ -53,7 +83,7 @@
             </div>
         </div>
 
-        {{-- ── Table ───────────────────────────────────────────────────────── --}}
+        {{-- Table --}}
         <div id="expense-table-area" class="hidden flex-1 overflow-auto px-6 pb-2">
             <form id="expense-calc-form"
                   data-save-route="{{ route('admin.expenses.verify', $application) }}"
@@ -61,39 +91,31 @@
 
                 <table class="w-full text-sm border-separate border-spacing-0 mt-4"
                        role="table"
-                       aria-label="Expense verification calculator">
+                       aria-label="Expense verification calculator with {{ $providerLabel }} bank data">
                     <thead class="sticky top-0 z-10">
                         <tr>
-                            <th scope="col"
-                                class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider
-                                       bg-gray-50 border-b border-gray-200 rounded-tl-lg">
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 rounded-tl-lg">
                                 Description
                             </th>
-                            <th scope="col"
-                                class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider
-                                       bg-gray-50 border-b border-gray-200 w-32">
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-32">
                                 Amount
                             </th>
-                            <th scope="col"
-                                class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider
-                                       bg-gray-50 border-b border-gray-200 w-36">
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-36">
                                 Frequency
                             </th>
-                            <th scope="col"
-                                class="px-3 py-3 text-right text-xs font-semibold text-indigo-600 uppercase tracking-wider
-                                       bg-indigo-50 border-b border-indigo-200 w-36">
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-indigo-600 uppercase tracking-wider bg-indigo-50 border-b border-indigo-200 w-36">
                                 Client Stated
                                 <span class="block text-indigo-400 font-normal normal-case tracking-normal">(monthly)</span>
                             </th>
-                            <th scope="col"
-                                class="px-3 py-3 text-right text-xs font-semibold text-violet-600 uppercase tracking-wider
-                                       bg-violet-50 border-b border-violet-200 w-36">
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-emerald-600 uppercase tracking-wider bg-emerald-50 border-b border-emerald-200 w-36">
+                                {{ $providerLabel }} Bank
+                                <span class="block text-emerald-400 font-normal normal-case tracking-normal">(monthly)</span>
+                            </th>
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-violet-600 uppercase tracking-wider bg-violet-50 border-b border-violet-200 w-36">
                                 Verified
                                 <span class="block text-violet-400 font-normal normal-case tracking-normal">(monthly)</span>
                             </th>
-                            <th scope="col"
-                                class="px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider
-                                       bg-gray-100 border-b border-gray-200 rounded-tr-lg w-36">
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-100 border-b border-gray-200 rounded-tr-lg w-36">
                                 Annual
                                 <span class="block text-gray-400 font-normal normal-case tracking-normal">(×12)</span>
                             </th>
@@ -104,16 +126,11 @@
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-300 bg-gray-50">
-                            <td colspan="3"
-                                class="px-3 py-3 text-sm font-bold text-gray-700 rounded-bl-lg">
-                                TOTAL
-                            </td>
-                            <td class="px-3 py-3 text-right font-bold text-indigo-700 tabular-nums"
-                                id="total-client-stated">$0.00</td>
-                            <td class="px-3 py-3 text-right font-bold text-violet-700 tabular-nums"
-                                id="total-verified">$0.00</td>
-                            <td class="px-3 py-3 text-right font-bold text-gray-900 tabular-nums rounded-br-lg"
-                                id="total-annual">$0.00</td>
+                            <td colspan="3" class="px-3 py-3 text-sm font-bold text-gray-700 rounded-bl-lg">TOTAL</td>
+                            <td class="px-3 py-3 text-right font-bold text-indigo-700 tabular-nums" id="total-client-stated">$0.00</td>
+                            <td class="px-3 py-3 text-right font-bold text-emerald-700 tabular-nums" id="total-bank-provider">$0.00</td>
+                            <td class="px-3 py-3 text-right font-bold text-violet-700 tabular-nums" id="total-verified">$0.00</td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900 tabular-nums rounded-br-lg" id="total-annual">$0.00</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -121,7 +138,20 @@
             </form>
         </div>
 
-        {{-- ── Footer ──────────────────────────────────────────────────────── --}}
+        {{-- Unmatched provider categories panel --}}
+        <div id="basiq-unmatched-area" class="hidden flex-shrink-0 px-6 py-3 border-t border-emerald-100 bg-emerald-50">
+            <p class="text-xs font-semibold text-emerald-700 mb-2 flex items-center gap-1">
+                <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                Additional {{ $providerLabel }} categories not matched to client expenses:
+            </p>
+            <div id="basiq-unmatched-list"
+                 class="flex flex-wrap gap-2"
+                 aria-label="Unmatched {{ $providerLabel }} categories"></div>
+        </div>
+
+        {{-- Footer --}}
         <div class="flex-shrink-0 flex items-center justify-between gap-4 px-6 py-4 border-t border-gray-200 bg-gray-50">
             <button type="button"
                     id="expense-add-row"
@@ -136,7 +166,7 @@
 
             <div class="flex items-center gap-3 ms-auto">
                 <p id="expense-save-status"
-                   class="text-sm"
+                   class="text-sm text-gray-500"
                    aria-live="polite"
                    aria-atomic="true"></p>
 
@@ -153,9 +183,7 @@
                                font-medium rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2
                                focus:ring-indigo-500 focus:ring-offset-2 disabled:opacity-60
                                disabled:cursor-not-allowed transition">
-                    <svg id="expense-save-spinner"
-                         class="hidden animate-spin w-4 h-4"
-                         fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                    <svg id="expense-save-spinner" class="hidden animate-spin w-4 h-4" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                         <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                         <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                     </svg>
@@ -163,6 +191,5 @@
                 </button>
             </div>
         </div>
-
     </div>
 </div>

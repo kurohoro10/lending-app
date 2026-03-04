@@ -15,7 +15,7 @@ return new class extends Migration
             $table->id();
             $table->string('key')->unique();
             $table->text('value')->nullable();
-            $table->boolean('is_secret')->default(false); // secrets are masked in the UI
+            $table->boolean('is_secret')->default(false);
             $table->timestamps();
         });
     }
