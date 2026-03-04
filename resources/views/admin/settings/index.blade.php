@@ -19,17 +19,6 @@
     <div class="py-8">
         <div class="max-w-4xl mx-auto sm:px-6 lg:px-8">
 
-            {{-- Flash messages --}}
-            @if(session('success'))
-                <div class="mb-6 rounded-lg bg-green-50 border border-green-200 p-4 flex items-center gap-3"
-                     role="status" aria-live="polite">
-                    <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/>
-                    </svg>
-                    <p class="text-sm text-green-800">{{ session('success') }}</p>
-                </div>
-            @endif
-
             @if($errors->any())
                 <div class="mb-6 rounded-lg bg-red-50 border border-red-200 p-4" role="alert">
                     <ul class="list-disc list-inside text-sm text-red-700 space-y-1">

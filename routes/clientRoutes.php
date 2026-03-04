@@ -29,18 +29,13 @@ Route::delete('applications/{application}',   [ApplicationController::class, 'de
 Route::post('applications/{application}/submit', [ApplicationController::class, 'submit'])->name('applications.submit');
 
 // Basiq Bank Statement Connection
+// Replaces the old: POST applications/{application}/bank-statements/complete
 Route::prefix('applications/{application}/basiq')->name('basiq.')->group(function () {
     Route::post('user',         [BasiqController::class, 'createUser'])->name('user');
     Route::post('client-token', [BasiqController::class, 'createClientToken'])->name('client-token');
     Route::post('complete',     [BasiqController::class, 'complete'])->name('complete');
     Route::post('auth-link', [BasiqController::class, 'createAuthLink'])
     ->name('auth-link');
-});
-
-// CreditSense Bank Statement Connection
-Route::prefix('applications/{application}/creditsense')->name('creditsense.')->group(function () {
-    Route::get('config',    [CreditSenseController::class, 'iframeConfig'])->name('config');
-    Route::post('complete', [CreditSenseController::class, 'complete'])->name('complete');
 });
 
 // Personal Details
@@ -91,3 +86,9 @@ Route::get('applications/{application}/declarations',  [DeclarationController::c
     ->name('applications.declarations.index');
 Route::post('applications/{application}/declarations', [DeclarationController::class, 'store'])
     ->name('applications.declarations.store');
+
+// CreditSense Bank Statement Connection
+Route::prefix('applications/{application}/creditsense')->name('creditsense.')->group(function () {
+    Route::get('config',    [CreditSenseController::class, 'iframeConfig'])->name('config');
+    Route::post('complete', [CreditSenseController::class, 'complete'])->name('complete');
+});

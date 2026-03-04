@@ -1,17 +1,18 @@
 <?php
 // routes/admin/adminRoutes.php
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Admin\ApplicationController as AdminApplicationController;
+use App\Http\Controllers\Admin\ApplicationController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\CommentController;
 use App\Http\Controllers\Admin\TaskController;
-use App\Http\Controllers\Admin\CommunicationController;
 use App\Http\Controllers\Admin\CreditControllers\CreditCheckController;
 use App\Http\Controllers\Admin\LivingExpenseVerificationController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\Admin\Question\QuestionController;
 use App\Http\Controllers\Admin\SettingsController;
+use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
+use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
 
 /*
@@ -23,17 +24,17 @@ use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
 Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
 
 // Applications
-Route::get('/applications',                                 [AdminApplicationController::class, 'index'])
+Route::get('/applications',                                 [ApplicationController::class, 'index'])
     ->name('applications.index');
-Route::get('/applications/{application}',                   [AdminApplicationController::class, 'show'])
+Route::get('/applications/{application}',                   [ApplicationController::class, 'show'])
     ->name('applications.show');
-Route::patch('/applications/{application}/status',          [AdminApplicationController::class, 'updateStatus'])
+Route::patch('/applications/{application}/status',          [ApplicationController::class, 'updateStatus'])
     ->name('applications.updateStatus');
-Route::patch('/applications/{application}/assign',          [AdminApplicationController::class, 'assign'])
+Route::patch('/applications/{application}/assign',          [ApplicationController::class, 'assign'])
     ->name('applications.assign');
-Route::get('/applications/{application}/export-pdf',        [AdminApplicationController::class, 'exportPdf'])
+Route::get('/applications/{application}/export-pdf',        [ApplicationController::class, 'exportPdf'])
     ->name('applications.exportPdf');
-Route::post('/applications/{application}/return-to-client', [AdminApplicationController::class, 'returnToClient'])
+Route::post('/applications/{application}/return-to-client', [ApplicationController::class, 'returnToClient'])
 ->name('applications.returnToClient');
 
 // Comments
@@ -67,21 +68,22 @@ Route::delete('questions/{question}',               [QuestionController::class, 
 Route::patch('questions/{question}/mark-read', [QuestionController::class, 'markAsRead'])
 ->name('questions.markAsRead');
 
-// Communications
-Route::get('applications/{application}/communications', [CommunicationController::class, 'index'])
-    ->name('communications.index');
-Route::post('applications/{application}/send-email',    [CommunicationController::class, 'sendEmail'])
-    ->name('communications.sendEmail');
-Route::post('applications/{application}/send-sms',      [CommunicationController::class, 'sendSms'])
-    ->name('communications.sendSms');
-Route::get('communications/{communication}',            [CommunicationController::class, 'show'])
-    ->name('communications.show');
+// Email
+Route::prefix('applications/{application}')->group(function () {
+    Route::get('email-templates',  [EmailCommunicationController::class, 'getTemplates'])->name('email.templates');
+    Route::post('send-email',      [EmailCommunicationController::class, 'send'])->name('email.send');
+    Route::get('emails',           [EmailCommunicationController::class, 'index'])->name('email.index');
+    Route::patch('emails/{communication}/read', [EmailCommunicationController::class, 'markRead'])->name('email.markRead');
 
-// Communication Templates
-Route::get('applications/{application}/email-templates', [CommunicationController::class, 'getEmailTemplates'])
-    ->name('communications.emailTemplates');
-Route::get('applications/{application}/sms-templates',   [CommunicationController::class, 'getSMSTemplates'])
-    ->name('communications.smsTemplates');
+    // SMS
+    Route::get('sms-templates',    [SmsCommunicationController::class, 'getTemplates'])->name('sms.templates');
+    Route::post('send-sms',        [SmsCommunicationController::class, 'send'])->name('sms.send');
+    Route::get('sms',              [SmsCommunicationController::class, 'index'])->name('sms.index');
+    Route::patch('sms/{communication}/read', [SmsCommunicationController::class, 'markRead'])->name('sms.markRead');
+
+    // Manual inbound email logging (admin use)
+    Route::post('email-incoming',  [EmailCommunicationController::class, 'incoming'])->name('email.incoming');
+});
 
 // Credit Checks
 Route::post('applications/{application}/credit-check', [CreditCheckController::class, 'request'])
@@ -90,16 +92,6 @@ Route::patch('credit-checks/{creditCheck}',            [CreditCheckController::c
     ->name('creditChecks.update');
 Route::get('credit-checks/{creditCheck}',              [CreditCheckController::class, 'show'])
     ->name('creditChecks.show');
-
-// CreditSense
-Route::post('applications/{application}/creditsense/fetch-report', [CreditSenseController::class, 'fetchReport'])
-    ->name('creditsense.fetchReport');
-Route::post('applications/{application}/creditsense/quicklink', [CreditSenseController::class, 'createQuicklink'])
-    ->name('creditsense.quicklink');
-
-// Settings — CreditSense test connection
-Route::post('settings/creditsense/test-connection', [SettingsController::class, 'testCreditSenseConnection'])
-    ->name('settings.creditsense.test-connection');
 
 // Living Expense Verification
 Route::patch('living-expenses/{livingExpense}/verify', [LivingExpenseController::class, 'verify'])
@@ -122,3 +114,13 @@ Route::patch('/settings/{group}', [SettingsController::class, 'update'])
 Route::post('settings/basiq/test-connection',
     [SettingsController::class, 'testBasiqConnection']
 )->name('settings.basiq.test-connection');
+
+// CreditSense
+Route::post('applications/{application}/creditsense/fetch-report', [CreditSenseController::class, 'fetchReport'])
+    ->name('creditsense.fetchReport');
+Route::post('applications/{application}/creditsense/quicklink',    [CreditSenseController::class, 'createQuicklink'])
+    ->name('creditsense.quicklink');
+
+// Settings test connections
+Route::post('settings/creditsense/test-connection', [SettingsController::class, 'testCreditSenseConnection'])
+    ->name('settings.creditsense.test-connection');
