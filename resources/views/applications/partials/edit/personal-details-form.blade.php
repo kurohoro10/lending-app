@@ -1,194 +1,321 @@
 {{-- resources/views/applications/partials/edit/personal-details-form.blade.php --}}
-<!-- Personal Details Section - Enhanced with Fetch API -->
+@php
+    $pd             = $application->personalDetails;
+    $maritalStatus  = old('marital_status', $pd?->marital_status ?? '');
+@endphp
+
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-2xl mb-6 border border-gray-200">
+
+    {{-- ── Header ──────────────────────────────────────────────────────── --}}
     <button type="button"
-        class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
-        id="personal-details-btn"
-        aria-expanded="true"
-        aria-controls="personal-details-content">
+            id="personal-details-btn"
+            aria-expanded="true"
+            aria-controls="personal-details-content"
+            class="w-full bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4 text-left
+                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-bold text-white flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path fill-rule="evenodd" d="M10 9a3 3 0 100-6 3 3 0 000 6zm-7 9a7 7 0 1114 0H3z" clip-rule="evenodd"/>
                     </svg>
                     Personal Details
                 </h3>
                 <p class="text-indigo-100 text-sm mt-1">Tell us about yourself</p>
             </div>
-
-            <!-- Chevron Icon -->
-            <svg id="personal-details-chevron" class="w-5 h-5 text-white transition-transform duration-200 transform rotate-180" fill="currentColor" viewBox="0 0 20 20">
+            <svg id="personal-details-chevron"
+                 class="w-5 h-5 text-white transition-transform duration-200 rotate-180"
+                 fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd"/>
             </svg>
         </div>
     </button>
 
-    <div id="personal-details-content"
-        class="transition-all duration-300 ease-in-out"
-        aria-labelledby="personal-details-header">
+    <div id="personal-details-content" class="transition-all duration-300 ease-in-out">
         <div class="p-6">
+
+            {{-- Completion badge --}}
             @if($application->hasCompletePersonalDetails())
-            <div class="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
+                <div class="mb-6 p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg"
+                     role="status">
+                    <div class="flex">
+                        <svg class="h-6 w-6 text-green-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                         </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-green-800">Personal details completed</p>
-                        <p class="text-xs text-green-700 mt-1">You can update your information below if needed</p>
+                        <div class="ml-3">
+                            <p class="text-sm font-semibold text-green-800">Personal details completed</p>
+                            <p class="text-xs text-green-700 mt-1">You can update your information below if needed.</p>
+                        </div>
                     </div>
                 </div>
-            </div>
             @endif
 
-            <!-- Success/Error Messages Container -->
-            <div id="form-messages" class="mb-4"></div>
+            {{-- Messages --}}
+            <div id="form-messages"
+                 class="mb-4"
+                 role="status"
+                 aria-live="polite"
+                 aria-atomic="true"></div>
 
-            <form id="personal-details" method="POST" action="{{ route('applications.personal-details.store', $application) }}">
+            <form id="personal-details"
+                  method="POST"
+                  action="{{ route('applications.personal-details.store', $application) }}"
+                  novalidate>
                 @csrf
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+                    {{-- ── Name fields (read-only) ──────────────────────── --}}
                     <div class="md:col-span-2">
                         <div class="flex flex-col gap-6 lg:flex-row">
-                            <div class="flex-1 min-w-0">
-                                <label for="first_name" class="block text-sm font-semibold text-gray-700 mb-2">First Name</label>
-                                <input type="text" name="first_name" id="first_name"
-                                    value="{{ $application->user->first_name }}"
-                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
-                                    readonly
-                                    aria-readonly="true"
-                                    title="First name is linked to your account and cannot be changed here.">
-                            </div>
-
-                            <div class="flex-1 min-w-0">
-                                <label for="middle_name" class="block text-sm font-semibold text-gray-700 mb-2">Middle Name</label>
-                                <input type="text" name="middle_name" id="middle_name"
-                                    value="{{ $application->user->middle_name }}"
-                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
-                                    readonly
-                                    aria-readonly="true"
-                                    title="Middle name is linked to your account and cannot be changed here.">
-                            </div>
-
-                            <div class="flex-1 min-w-0">
-                                <label for="last_name" class="block text-sm font-semibold text-gray-700 mb-2">Last Name</label>
-                                <input type="text" name="last_name" id="last_name"
-                                    value="{{ $application->user->last_name }}"
-                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
-                                    readonly
-                                    aria-readonly="true"
-                                    title="Last name is linked to your account and cannot be changed here.">
-                            </div>
-
-                            <div class="w-full lg:w-32 shrink-0">
-                                <label for="name_extension" class="block text-sm font-semibold text-gray-700 mb-2">Name Extension</label>
-                                <input type="text" name="name_extension" id="name_extension"
-                                    value="{{ $application->user->name_extension }}"
-                                    class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
-                                    readonly
-                                    aria-readonly="true"
-                                    title="Name extension is linked to your account and cannot be changed here.">
-                            </div>
+                            @foreach([
+                                ['first_name',      'First Name'],
+                                ['middle_name',     'Middle Name'],
+                                ['last_name',       'Last Name'],
+                                ['name_extension',  'Name Extension'],
+                            ] as [$field, $label])
+                                <div class="{{ $field === 'name_extension' ? 'w-full lg:w-32 shrink-0' : 'flex-1 min-w-0' }}">
+                                    <label for="{{ $field }}"
+                                           class="block text-sm font-semibold text-gray-700 mb-2">
+                                        {{ $label }}
+                                    </label>
+                                    <input type="text"
+                                           id="{{ $field }}"
+                                           name="{{ $field }}"
+                                           value="{{ $application->user->{$field} }}"
+                                           readonly
+                                           aria-readonly="true"
+                                           title="{{ $label }} is linked to your account and cannot be changed here."
+                                           class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500
+                                                  cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300">
+                                </div>
+                            @endforeach
                         </div>
                     </div>
 
+                    {{-- Email (read-only) --}}
                     <div>
-                        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">Email Address *</label>
+                        <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Email Address
+                        </label>
                         <input type="email"
-                            name="email"
-                            id="email"
-                            value="{{ old('email', $application->user?->email ?? '') }}"
-                            class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500 cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300"
-                            readonly
-                            aria-readonly="true"
-                            title="Email is linked to your account and cannot be changed here.">
+                               id="email"
+                               name="email"
+                               value="{{ $application->user?->email }}"
+                               readonly
+                               aria-readonly="true"
+                               title="Email is linked to your account and cannot be changed here."
+                               class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500
+                                      cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300">
                     </div>
 
+                    {{-- Mobile --}}
                     <div>
-                        <label for="mobile_phone" class="block text-sm font-semibold text-gray-700 mb-2">Mobile Phone *</label>
-                        <input type="tel" name="mobile_phone" id="mobile_phone"
-                            value="{{ old('mobile_phone', $application->personalDetails->mobile_phone ?? '') }}"
-                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl @error('mobile_phone') border-red-500 @enderror" required>
-                        <p id="mobile_phone-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        <label for="mobile_phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Mobile Phone <span class="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <input type="tel"
+                               id="mobile_phone"
+                               name="mobile_phone"
+                               value="{{ old('mobile_phone', $pd?->mobile_phone) }}"
+                               required
+                               aria-required="true"
+                               aria-describedby="mobile_phone-error"
+                               class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <p id="mobile_phone-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
+                    {{-- Date of Birth --}}
                     <div>
-                        <label for="date_of_birth" class="block text-sm font-semibold text-gray-700 mb-2">Date of Birth *</label>
-                        <input type="date" name="date_of_birth" id="date_of_birth"
-                            value="{{ old('date_of_birth', optional($application->personalDetails?->date_of_birth)->format('Y-m-d')) }}"
-                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl"
-                            required
-                            aria-describedby="date_of_birth-error">
+                        <label for="date_of_birth" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Date of Birth <span class="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <input type="date"
+                               id="date_of_birth"
+                               name="date_of_birth"
+                               value="{{ old('date_of_birth', $pd?->date_of_birth?->format('Y-m-d')) }}"
+                               required
+                               aria-required="true"
+                               aria-describedby="date_of_birth-error"
+                               max="{{ now()->subYears(18)->format('Y-m-d') }}"
+                               class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                         <p id="date_of_birth-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
+                    {{-- Gender --}}
                     <div>
-                        <label for="gender" class="block text-sm font-semibold text-gray-700 mb-2">Gender</label>
-                        <select name="gender" id="gender"
-                                class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Select...</option>
-                            <option value="male" {{ old('gender', $application->personalDetails->gender ?? '') == 'male' ? 'selected' : '' }}>Male</option>
-                            <option value="female" {{ old('gender', $application->personalDetails->gender ?? '') == 'female' ? 'selected' : '' }}>Female</option>
-                            <option value="other" {{ old('gender', $application->personalDetails->gender ?? '') == 'other' ? 'selected' : '' }}>Other</option>
-                            <option value="prefer_not_to_say" {{ old('gender', $application->personalDetails->gender ?? '') == 'prefer_not_to_say' ? 'selected' : '' }}>Prefer not to say</option>
+                        <label for="gender" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Gender
+                        </label>
+                        <select id="gender"
+                                name="gender"
+                                aria-describedby="gender-error"
+                                class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select…</option>
+                            @foreach(['male' => 'Male', 'female' => 'Female', 'other' => 'Other', 'prefer_not_to_say' => 'Prefer not to say'] as $val => $lbl)
+                                <option value="{{ $val }}" {{ old('gender', $pd?->gender) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
                         </select>
-                        <p id="gender-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        <p id="gender-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
+                    {{-- Contact Role --}}
                     <div>
-                        <label for="marital_status" class="block text-sm font-semibold text-gray-700 mb-2">Marital Status *</label>
-                        <select name="marital_status" id="marital_status" required
-                                class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="">Select...</option>
-                            <option value="single" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'single' ? 'selected' : '' }}>Single</option>
-                            <option value="married" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'married' ? 'selected' : '' }}>Married</option>
-                            <option value="defacto" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'defacto' ? 'selected' : '' }}>De Facto</option>
-                            <option value="divorced" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'divorced' ? 'selected' : '' }}>Divorced</option>
-                            <option value="widowed" {{ old('marital_status', $application->personalDetails->marital_status ?? '') == 'widowed' ? 'selected' : '' }}>Widowed</option>
+                        <label for="contact_role" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Contact Role
+                        </label>
+                        <select id="contact_role"
+                                name="contact_role"
+                                aria-describedby="contact_role-hint contact_role-error"
+                                class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select…</option>
+                            @foreach(['director' => 'Director', 'sole_trader' => 'Sole Trader', 'partner' => 'Partner', 'other' => 'Other'] as $val => $lbl)
+                                <option value="{{ $val }}" {{ old('contact_role', $pd?->contact_role) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
                         </select>
-                        <p id="marital_status-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        <p id="contact_role-hint" class="mt-1 text-xs text-gray-400">Your role in relation to this loan application.</p>
+                        <p id="contact_role-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
+                    {{-- Citizenship Status --}}
                     <div>
-                        <label for="number_of_dependants" class="block text-sm font-semibold text-gray-700 mb-2">Number of Dependants *</label>
-                        <input type="number" name="number_of_dependants" id="number_of_dependants" min="0"
-                            value="{{ old('number_of_dependants', $application->personalDetails->number_of_dependants ?? '0') }}"
-                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl" required>
-                        <p id="number_of_dependants-error" class="mt-2 text-sm text-red-600 hidden"></p>
-                    </div>
-
-                    <div>
-                        <label for="citizenship_status" class="block text-sm font-semibold text-gray-700 mb-2">Citizenship Status *</label>
-                        <select name="citizenship_status" id="citizenship_status" class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500" required>
-                            <option value="">Select...</option>
-                            <option value="australian_citizen" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'australian_citizen' ? 'selected' : '' }}>Australian Citizen</option>
-                            <option value="permanent_resident" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'permanent_resident' ? 'selected' : '' }}>Permanent Resident</option>
-                            <option value="temporary_resident" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'temporary_resident' ? 'selected' : '' }}>Temporary Resident</option>
-                            <option value="nz_citizen" {{ old('citizenship_status', $application->personalDetails->citizenship_status ?? '') == 'nz_citizen' ? 'selected' : '' }}>NZ Citizen</option>
+                        <label for="citizenship_status" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Citizenship Status <span class="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <select id="citizenship_status"
+                                name="citizenship_status"
+                                required
+                                aria-required="true"
+                                aria-describedby="citizenship_status-error"
+                                class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select…</option>
+                            @foreach([
+                                'australian_citizen' => 'Australian Citizen',
+                                'permanent_resident' => 'Permanent Resident',
+                                'temporary_resident' => 'Temporary Resident',
+                                'nz_citizen'         => 'NZ Citizen',
+                            ] as $val => $lbl)
+                                <option value="{{ $val }}" {{ old('citizenship_status', $pd?->citizenship_status) === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
                         </select>
-                        <p id="citizenship_status-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        <p id="citizenship_status-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
-                    <div class="md:col-span-2">
-                        <label for="spouse_name" class="block text-sm font-semibold text-gray-700 mb-2">Spouse Name (if married)</label>
-                        <input type="text" name="spouse_name" id="spouse_name"
-                            value="{{ old('spouse_name', $application->personalDetails->spouse_name ?? '') }}"
-                            class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
-                        <p id="spouse_name-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                    {{-- Marital Status --}}
+                    <div>
+                        <label for="marital_status" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Marital Status <span class="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <select id="marital_status"
+                                name="marital_status"
+                                required
+                                aria-required="true"
+                                aria-controls="spouse-fields"
+                                aria-describedby="marital_status-error"
+                                class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                       focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select…</option>
+                            @foreach(['single' => 'Single', 'married' => 'Married', 'defacto' => 'De Facto', 'divorced' => 'Divorced', 'widowed' => 'Widowed'] as $val => $lbl)
+                                <option value="{{ $val }}" {{ $maritalStatus === $val ? 'selected' : '' }}>{{ $lbl }}</option>
+                            @endforeach
+                        </select>
+                        <p id="marital_status-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
-                </div>
 
+                    {{-- Number of Dependants --}}
+                    <div>
+                        <label for="number_of_dependants" class="block text-sm font-semibold text-gray-700 mb-2">
+                            Number of Dependants <span class="text-red-500" aria-hidden="true">*</span>
+                        </label>
+                        <input type="number"
+                               id="number_of_dependants"
+                               name="number_of_dependants"
+                               value="{{ old('number_of_dependants', $pd?->number_of_dependants ?? 0) }}"
+                               min="0"
+                               required
+                               aria-required="true"
+                               aria-describedby="number_of_dependants-error"
+                               inputmode="numeric"
+                               class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <p id="number_of_dependants-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                    </div>
+
+                    {{-- ── Spouse fields (conditional: married) ─────────── --}}
+                    <fieldset id="spouse-fields"
+                              class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6
+                                     {{ in_array($maritalStatus, ['married', 'defacto']) ? '' : 'hidden' }}"
+                              aria-label="Spouse or partner details">
+
+                        {{-- Spouse Name --}}
+                        <div>
+                            <label for="spouse_name" class="block text-sm font-semibold text-gray-700 mb-2">
+                                Spouse / Partner Name
+                                <span id="spouse-name-required" class="text-red-500" aria-hidden="true">*</span>
+                            </label>
+                            <input type="text"
+                                   id="spouse_name"
+                                   name="spouse_name"
+                                   value="{{ old('spouse_name', $pd?->spouse_name) }}"
+                                   aria-describedby="spouse_name-error"
+                                   placeholder="Full legal name"
+                                   class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
+                                          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <p id="spouse_name-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                        </div>
+
+                        {{-- Spouse Income --}}
+                        <div>
+                            <label for="spouse_income" class="block text-sm font-semibold text-gray-700 mb-2">
+                                Spouse / Partner Annual Income
+                                <span class="text-red-500" aria-hidden="true">*</span>
+                            </label>
+                            <div class="relative mt-1">
+                                <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none"
+                                      aria-hidden="true">$</span>
+                                <input type="number"
+                                       id="spouse_income"
+                                       name="spouse_income"
+                                       value="{{ old('spouse_income', $pd?->spouse_income) }}"
+                                       min="0"
+                                       step="1"
+                                       inputmode="numeric"
+                                       aria-describedby="spouse_income-hint spouse_income-error"
+                                       placeholder="0"
+                                       class="block w-full py-3 pl-8 pr-4 border border-gray-300 rounded-xl shadow-sm
+                                              focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            </div>
+                            <p id="spouse_income-hint" class="mt-1 text-xs text-gray-400">Before tax, per year.</p>
+                            <p id="spouse_income-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                        </div>
+
+                    </fieldset>
+
+                </div>{{-- /grid --}}
+
+                {{-- Submit --}}
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" id="submit-button" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <button type="submit"
+                            id="submit-button"
+                            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600
+                                   text-white rounded-xl font-semibold text-sm uppercase tracking-wide
+                                   hover:shadow-lg transition transform hover:scale-105
+                                   disabled:opacity-50 disabled:cursor-not-allowed
+                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
-                        <span id="submit-button-text">{{ $application->personalDetails ? 'Update' : 'Save' }} Personal Details</span>
+                        <span id="submit-button-text">
+                            {{ $pd ? 'Update' : 'Save' }} Personal Details
+                        </span>
                     </button>
                 </div>
+
             </form>
         </div>
     </div>

@@ -1,24 +1,33 @@
 {{-- resources/views/applications/partials/show/pending-questions.blade.php --}}
-<!-- Pending Questions Warning - Minimalistic Design -->
-@if($application->questions->where('status', 'pending')->count() > 0)
-<div id="pending-questions-warning" class="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-6 transition-all duration-300">
-    <div class="flex items-start justify-between gap-4">
-        <div class="flex-1">
-            <p class="text-sm font-medium text-gray-900">
-                <span id="pending-count">{{ $application->questions->where('status', 'pending')->count() }}</span>
-                {{ $application->questions->where('status', 'pending')->count() === 1 ? 'question' : 'questions' }} need{{ $application->questions->where('status', 'pending')->count() === 1 ? 's' : '' }} your answer
-            </p>
-            <button type="button"
-                    onclick="scrollToQuestions()"
-                    class="mt-1 text-sm text-gray-600 hover:text-gray-900 underline decoration-1 underline-offset-2 hover:decoration-2 transition-all">
-                View questions
-            </button>
+@php $pendingCount = $application->questions->where('status', 'pending')->count(); @endphp
+
+@if($pendingCount > 0)
+    <div id="pending-questions-warning"
+         class="bg-amber-50 border border-amber-200 rounded-2xl p-4 transition-all duration-300"
+         role="alert"
+         aria-live="polite">
+        <div class="flex items-start justify-between gap-4">
+            <div class="flex-1">
+                <p class="text-sm font-semibold text-gray-900">
+                    <span id="pending-count">{{ $pendingCount }}</span>
+                    {{ $pendingCount === 1 ? 'question needs' : 'questions need' }} your answer
+                </p>
+                <button type="button"
+                        onclick="scrollToQuestions()"
+                        class="mt-1 text-sm text-gray-600 hover:text-gray-900 underline decoration-1
+                               underline-offset-2 hover:decoration-2 transition-all
+                               focus:outline-none focus:ring-2 focus:ring-amber-400 rounded">
+                    View questions
+                </button>
+            </div>
+            <span id="pending-badge"
+                  class="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full
+                         bg-amber-100 text-amber-700 text-xs font-semibold"
+                  aria-label="{{ $pendingCount }} pending">
+                {{ $pendingCount }}
+            </span>
         </div>
-        <span id="pending-badge" class="flex-shrink-0 flex items-center justify-center h-6 w-6 rounded-full bg-amber-100 text-amber-700 text-xs font-medium">
-            {{ $application->questions->where('status', 'pending')->count() }}
-        </span>
     </div>
-</div>
 @endif
 
 <script>

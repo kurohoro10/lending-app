@@ -78,6 +78,16 @@ class Application extends Model
         return $this->belongsTo(User::class, 'assigned_to');
     }
 
+    public function borrowerInformation(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\BorrowerInformation::class);
+    }
+
+    public function borrowerDirectors(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\BorrowerDirector::class);
+    }
+
     public function personalDetails(): HasOne
     {
         return $this->hasOne(PersonalDetail::class);
@@ -261,5 +271,30 @@ class Application extends Model
     public function isReturned(): bool
     {
         return $this->status === 'additional_info_required';
+    }
+
+    public function directorAssets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\DirectorAsset::class);
+    }
+
+    public function directorLiabilities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\DirectorLiability::class);
+    }
+
+    public function companyAssets(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\CompanyAsset::class);
+    }
+
+    public function companyLiabilities(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(\App\Models\CompanyLiability::class);
+    }
+
+    public function accountantDetail(): \Illuminate\Database\Eloquent\Relations\HasOne
+    {
+        return $this->hasOne(\App\Models\AccountantDetail::class);
     }
 }

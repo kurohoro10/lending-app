@@ -40,6 +40,15 @@
             <!-- Loan Details Section - Enhanced -->
             @include('applications.partials.edit.loan-details', ['applications' => $application])
 
+            {{-- Borrower Details Section --}}
+            @include('applications.partials.edit.borrower-information')
+
+            {{-- Company Assets and Liabilities Section --}}
+            @include('applications.partials.edit.company-assets-liabilities')
+
+            {{-- Accountant Detail Section --}}
+            @include('applications.partials.edit.accountant-details')
+
             <!-- Personal Details Section -->
             @include('applications.partials.edit.personal-details-form', ['application' => $application])
 
@@ -48,6 +57,9 @@
 
             <!-- Employment Details Section -->
             @include('applications.partials.edit.employment-details-form', ['application' => $application])
+
+            <!-- Director Assets and liabilities Section -->
+            @include('applications.partials.edit.director-assets-liabilities')
 
             <!-- Living Expenses Section -->
             @include('applications.partials.edit.living-expenses-form', ['application' => $application])

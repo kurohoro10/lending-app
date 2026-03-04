@@ -1,5 +1,5 @@
 /**
- * documents.js
+ * File: resources/js/applications/show/documents.js
  * Handles document upload, validation, listing, and deletion
  */
 

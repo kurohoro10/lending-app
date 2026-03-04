@@ -22,14 +22,17 @@ class PersonalDetail extends Model
         'marital_status',
         'number_of_dependants',
         'spouse_name',
+        'spouse_income',
         'date_of_birth',
         'gender',
         'citizenship_status',
+        'contact_role',
     ];
 
     protected $casts = [
         'date_of_birth' => 'date',
         'number_of_dependants' => 'integer',
+        'spouse_income'        => 'decimal:2',
     ];
 
     public function user(): BelongsTo
@@ -55,5 +58,14 @@ class PersonalDetail extends Model
             $this->last_name,
             $this->name_extension,
         ])->filter()->implode(' ');
+    }
+
+    /**
+     * Whether additional address history should be collected
+     * (less than 12 months at current address).
+     */
+    public function getNeedsAddressHistoryAttribute(): bool
+    {
+        return $this->months_at_address !== null && $this->months_at_address < 12;
     }
 }

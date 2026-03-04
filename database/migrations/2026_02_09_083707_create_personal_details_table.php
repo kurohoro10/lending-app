@@ -22,8 +22,10 @@ return new class extends Migration
             $table->enum('marital_status', ['single', 'married', 'divorced', 'widowed', 'defacto']);
             $table->integer('number_of_dependants')->default(0);
             $table->string('spouse_name')->nullable();
+            $table->decimal('spouse_income', 12, 2)->nullable();
             $table->date('date_of_birth')->nullable();
             $table->string('gender')->nullable();
+            $table->string('contact_role')->nullable();
             $table->timestamps();
 
             $table->index('application_id');

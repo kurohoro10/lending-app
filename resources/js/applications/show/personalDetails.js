@@ -1,185 +1,165 @@
-//resources/js/applications/show/personalDetails.js
+// resources/js/applications/show/personalDetails.js
 (() => {
-    const personalDetailsAccordionBtn = document.getElementById('personal-details-btn');
-    const form = document.getElementById('personal-details');
-    const dobInput = document.getElementById('date_of_birth');
-    const submitButton = document.getElementById('submit-button');
-    const submitButtonText = document.getElementById('submit-button-text');
-    const messagesContainer = document.getElementById('form-messages');
+    const accordionBtn   = document.getElementById('personal-details-btn');
+    const chevron        = document.getElementById('personal-details-chevron');
+    const content        = document.getElementById('personal-details-content');
+    const form           = document.getElementById('personal-details');
+    const dobInput       = document.getElementById('date_of_birth');
+    const submitBtn      = document.getElementById('submit-button');
+    const submitBtnText  = document.getElementById('submit-button-text');
+    const msgContainer   = document.getElementById('form-messages');
+    const maritalSelect  = document.getElementById('marital_status');
+    const spouseFields   = document.getElementById('spouse-fields');
 
-    if (personalDetailsAccordionBtn) {
-        personalDetailsAccordionBtn.addEventListener('click', () => {
-            toggleAccordion('personal-details');
+    if (!form) return;
+
+    // ── Accordion ─────────────────────────────────────────────────────────────
+    accordionBtn?.addEventListener('click', () => {
+        const isOpen = !content.classList.contains('hidden');
+        content.classList.toggle('hidden', isOpen);
+        chevron?.classList.toggle('rotate-180', !isOpen);
+        accordionBtn.setAttribute('aria-expanded', String(!isOpen));
+    });
+
+    // ── Spouse fields — show when married or defacto ──────────────────────────
+    function applySpouseVisibility(status) {
+        const show = ['married', 'defacto'].includes(status);
+        spouseFields.classList.toggle('hidden', !show);
+
+        // Update required attrs so browser + server validation align
+        ['spouse_name', 'spouse_income'].forEach(name => {
+            const el = document.getElementById(name) ||
+                       form.querySelector(`[name="${name}"]`);
+            if (el) {
+                if (show) {
+                    el.setAttribute('aria-required', 'true');
+                } else {
+                    el.removeAttribute('aria-required');
+                    el.value = '';
+                }
+            }
         });
     }
 
-    // Helper function to clear all error messages
-    function clearErrors() {
-        const errorElements = form.querySelectorAll('[id$="-error"]');
-        errorElements.forEach(element => {
-            element.classList.add('hidden');
-            element.textContent = '';
-        });
+    maritalSelect.addEventListener('change', () => applySpouseVisibility(maritalSelect.value));
+    applySpouseVisibility(maritalSelect.value); // apply on load
 
-        const inputs = form.querySelectorAll('input, select');
-        inputs.forEach(input => {
-            input.classList.remove('border-red-500');
-            input.removeAttribute('aria-invalid');
-        });
-
-        messagesContainer.innerHTML = '';
-    }
-
-    // Helper function to display field errors
-    function displayFieldError(fieldName, message) {
-        const errorElement = document.getElementById(`${fieldName}-error`);
-        const inputElement = document.getElementById(fieldName);
-
-        if (errorElement && inputElement) {
-            errorElement.textContent = message;
-            errorElement.classList.remove('hidden');
-            inputElement.classList.add('border-red-500');
-            inputElement.setAttribute('aria-invalid', 'true');
-        }
-    }
-
-    // Helper function to display success message
-    function displaySuccess(message) {
-        messagesContainer.innerHTML = `
-            <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-green-800">${message}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    // Helper function to display general error message
-    function displayError(message) {
-        messagesContainer.innerHTML = `
-            <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
-                <div class="flex">
-                    <div class="flex-shrink-0">
-                        <svg class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                        </svg>
-                    </div>
-                    <div class="ml-3">
-                        <p class="text-sm font-semibold text-red-800">${message}</p>
-                    </div>
-                </div>
-            </div>
-        `;
-        messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }
-
-    // Client-side age validation
+    // ── DOB validation ────────────────────────────────────────────────────────
     function validateAge() {
-        if (!dobInput.value) {
-            return true; // Let server handle if it's required
-        }
-
-        const birthDate = new Date(dobInput.value);
+        if (!dobInput?.value) return true;
+        const birth = new Date(dobInput.value);
         const today = new Date();
-
-        let age = today.getFullYear() - birthDate.getFullYear();
-        const monthDiff = today.getMonth() - birthDate.getMonth();
-
-        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-        }
-
+        let age = today.getFullYear() - birth.getFullYear();
+        const m = today.getMonth() - birth.getMonth();
+        if (m < 0 || (m === 0 && today.getDate() < birth.getDate())) age--;
         if (age < 18) {
             displayFieldError('date_of_birth', 'You must be at least 18 years old to apply.');
             dobInput.focus();
             return false;
         }
-
         return true;
     }
 
-    // Clear errors when user types
-    if (dobInput) {
-        dobInput.addEventListener('input', function () {
-            const errorElement = document.getElementById('date_of_birth-error');
-            errorElement.classList.add('hidden');
-            dobInput.classList.remove('border-red-500');
-            dobInput.removeAttribute('aria-invalid');
+    dobInput?.addEventListener('input', () => clearFieldError('date_of_birth'));
+
+    // ── Form submit ───────────────────────────────────────────────────────────
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        clearAllErrors();
+
+        if (!validateAge()) return;
+
+        submitBtn.disabled = true;
+        const originalText = submitBtnText.textContent;
+        submitBtnText.textContent = 'Saving…';
+
+        try {
+            const res  = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
+                    'Accept':       'application/json',
+                },
+                body: new FormData(form),
+            });
+
+            const data = await res.json();
+
+            if (res.ok) {
+                displaySuccess(data.message ?? 'Personal details saved successfully.');
+                if (originalText.includes('Save')) {
+                    submitBtnText.textContent = 'Update Personal Details';
+                }
+                document.dispatchEvent(new CustomEvent('progress:update'));
+            } else if (res.status === 422 && data.errors) {
+                Object.entries(data.errors).forEach(([field, msgs]) => {
+                    displayFieldError(field, msgs[0]);
+                });
+                displayError('Please correct the errors below.');
+            } else {
+                displayError(data.message ?? 'An error occurred. Please try again.');
+            }
+        } catch {
+            displayError('A network error occurred. Please check your connection and try again.');
+        } finally {
+            submitBtn.disabled = false;
+            if (submitBtnText.textContent === 'Saving…') {
+                submitBtnText.textContent = originalText;
+            }
+        }
+    });
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
+    function clearAllErrors() {
+        form.querySelectorAll('[id$="-error"]').forEach(el => {
+            el.classList.add('hidden');
+            el.textContent = '';
         });
+        form.querySelectorAll('input, select').forEach(el => {
+            el.classList.remove('border-red-500');
+            el.removeAttribute('aria-invalid');
+        });
+        msgContainer.innerHTML = '';
     }
 
-    // Handle form submission with Fetch API
-    if (form) {
-        form.addEventListener('submit', async function (event) {
-            event.preventDefault();
+    function clearFieldError(fieldId) {
+        const err = document.getElementById(`${fieldId}-error`);
+        const inp = document.getElementById(fieldId);
+        err?.classList.add('hidden');
+        inp?.classList.remove('border-red-500');
+        inp?.removeAttribute('aria-invalid');
+    }
 
-            // Clear previous errors
-            clearErrors();
+    function displayFieldError(field, msg) {
+        const err = document.getElementById(`${field}-error`);
+        const inp = document.getElementById(field) ?? form.querySelector(`[name="${field}"]`);
+        if (err) { err.textContent = msg; err.classList.remove('hidden'); }
+        if (inp) { inp.classList.add('border-red-500'); inp.setAttribute('aria-invalid', 'true'); }
+    }
 
-            // Validate age
-            if (!validateAge()) {
-                return;
-            }
+    function displaySuccess(msg) {
+        msgContainer.innerHTML = `
+            <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg" role="status">
+                <div class="flex">
+                    <svg class="h-6 w-6 text-green-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="ml-3 text-sm font-semibold text-green-800">${msg}</p>
+                </div>
+            </div>`;
+        msgContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
 
-            // Disable submit button and show loading state
-            submitButton.disabled = true;
-            const originalText = submitButtonText.textContent;
-            submitButtonText.textContent = 'Saving...';
-
-            try {
-                // Get form data
-                const formData = new FormData(form);
-
-                // Send fetch request
-                const response = await fetch(form.action, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
-                        'Accept': 'application/json',
-                    },
-                    body: formData
-                });
-
-                const data = await response.json();
-
-                if (response.ok) {
-                    // Success
-                    displaySuccess(data.message || 'Personal details saved successfully.');
-
-                    // Optional: Update button text if it's a create -> update scenario
-                    if (originalText.includes('Save')) {
-                        submitButtonText.textContent = 'Update Personal Details';
-                    }
-                } else {
-                    // Validation errors
-                    if (data.errors) {
-                        Object.keys(data.errors).forEach(fieldName => {
-                            const messages = data.errors[fieldName];
-                            if (Array.isArray(messages) && messages.length > 0) {
-                                displayFieldError(fieldName, messages[0]);
-                            }
-                        });
-                        displayError('Please correct the errors below.');
-                    } else {
-                        displayError(data.message || 'An error occurred. Please try again.');
-                    }
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                displayError('A network error occurred. Please check your connection and try again.');
-            } finally {
-                // Re-enable submit button
-                submitButton.disabled = false;
-                submitButtonText.textContent = originalText;
-            }
-        });
+    function displayError(msg) {
+        msgContainer.innerHTML = `
+            <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg" role="alert">
+                <div class="flex">
+                    <svg class="h-6 w-6 text-red-600 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
+                    </svg>
+                    <p class="ml-3 text-sm font-semibold text-red-800">${msg}</p>
+                </div>
+            </div>`;
+        msgContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 })();

@@ -37,21 +37,27 @@ class SettingsServiceProvider extends ServiceProvider
             }
 
             // ── Mail / SMTP ──────────────────────────────────────────────────
-            if ($settings->has('mail_host')) {
-                config(['mail.mailers.smtp.host'       => $settings['mail_host']]);
-                config(['mail.mailers.smtp.port'       => $settings['mail_port']]);
-                config(['mail.mailers.smtp.username'   => $settings['mail_username']]);
-                config(['mail.mailers.smtp.password'   => $settings['mail_password']]);
-                config(['mail.mailers.smtp.encryption' => $settings['mail_encryption']]);
-                config(['mail.from.address'            => $settings['mail_from_address']]);
-                config(['mail.from.name'               => $settings['mail_from_name']]);
-            }
+            config([
+                'mail.mailers.smtp.host'       => $settings['mail_host']        ?? config('mail.mailers.smtp.host'),
+                'mail.mailers.smtp.port'       => $settings['mail_port']        ?? config('mail.mailers.smtp.port'),
+                'mail.mailers.smtp.username'   => $settings['mail_username']    ?? config('mail.mailers.smtp.username'),
+                'mail.mailers.smtp.password'   => $settings['mail_password']    ?? config('mail.mailers.smtp.password'),
+                'mail.mailers.smtp.encryption' => $settings['mail_encryption']  ?? config('mail.mailers.smtp.encryption'),
+                'mail.from.address'            => $settings['mail_from_address']?? config('mail.from.address'),
+                'mail.from.name'               => $settings['mail_from_name']   ?? config('mail.from.name'),
+            ]);
 
             // ── CreditSense ──────────────────────────────────────────────────
-            if ($settings->has('creditsense_api_key')) {
-                config(['creditsense.api_key'    => $settings['creditsense_api_key']]);
-                config(['creditsense.client'     => $settings['creditsense_client']]);
-                config(['creditsense.base_url'   => $settings['creditsense_base_url']]);
+            if (
+                $settings->has('creditsense_api_key') &&
+                $settings->has('creditsense_client') &&
+                $settings->has('creditsense_base_url')
+            ) {
+                config([
+                    'creditsense.api_key'  => $settings['creditsense_api_key'],
+                    'creditsense.client'   => $settings['creditsense_client'],
+                    'creditsense.base_url' => $settings['creditsense_base_url'],
+                ]);
             }
 
         } catch (\Exception $e) {

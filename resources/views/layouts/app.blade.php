@@ -18,6 +18,8 @@
         window.EXPENSES_CONFIG = window.EXPENSES_CONFIG || {};
         window.CREDITSENSE = window.CREDITSENSE || {};
         window.APP_QUESTION = window.APP_QUESTION || {};
+        window.BORROWER_CONFIG = window.BORROWER_CONFIG || {};
+        window.DAL_CONFIG = window.DAL_CONFIG || {};
     </script>
 
     <!-- Scripts -->

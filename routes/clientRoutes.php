@@ -11,6 +11,11 @@ use App\Http\Controllers\QuestionController;
 use App\Http\Controllers\DeclarationController;
 use App\Http\Controllers\CreditControllers\BasiqController;
 use App\Http\Controllers\CreditControllers\CreditSenseController;
+use App\Http\Controllers\BorrowerInformationController;
+use App\Http\Controllers\BorrowerDirectorController;
+use App\Http\Controllers\DirectorAssetsLiabilitiesController;
+use App\Http\Controllers\CompanyAssetsLiabilitiesController;
+use App\Http\Controllers\AccountantDetailController;
 
 // Dashboard - Redirect based on role
 Route::get('/dashboard', function () {
@@ -92,3 +97,44 @@ Route::prefix('applications/{application}/creditsense')->name('creditsense.')->g
     Route::get('config',    [CreditSenseController::class, 'iframeConfig'])->name('config');
     Route::post('complete', [CreditSenseController::class, 'complete'])->name('complete');
 });
+
+// Borrower
+Route::post('applications/{application}/borrower-information',
+    [BorrowerInformationController::class, 'store']
+)->name('applications.borrower-information.store');
+
+// Borrower Director
+Route::prefix('applications/{application}/borrower-directors')->name('applications.directors.')->group(function () {
+    Route::post('/',                [BorrowerDirectorController::class, 'store'])->name('store');
+    Route::patch('{director}',      [BorrowerDirectorController::class, 'update'])->name('update');
+    Route::delete('{director}',     [BorrowerDirectorController::class, 'destroy'])->name('destroy');
+});
+
+// Director Assests and Liabilities
+Route::prefix('applications/{application}')->name('applications.')->group(function () {
+
+    // Assets
+    Route::post('director-assets',          [DirectorAssetsLiabilitiesController::class, 'storeAsset'])->name('assets.store');
+    Route::delete('director-assets/{asset}',[DirectorAssetsLiabilitiesController::class, 'destroyAsset'])->name('assets.destroy');
+
+    // Liabilities
+    Route::post('director-liabilities',                  [DirectorAssetsLiabilitiesController::class, 'storeLiability'])->name('liabilities.store');
+    Route::delete('director-liabilities/{liability}',    [DirectorAssetsLiabilitiesController::class, 'destroyLiability'])->name('liabilities.destroy');
+});
+
+Route::prefix('applications/{application}')->name('applications.')->group(function () {
+
+    // Company Assets
+    Route::post('company-assets',               [CompanyAssetsLiabilitiesController::class, 'storeAsset'])->name('company-assets.store');
+    Route::delete('company-assets/{asset}',     [CompanyAssetsLiabilitiesController::class, 'destroyAsset'])->name('company-assets.destroy');
+
+    // Company Liabilities
+    Route::post('company-liabilities',              [CompanyAssetsLiabilitiesController::class, 'storeLiability'])->name('company-liabilities.store');
+    Route::delete('company-liabilities/{liability}',[CompanyAssetsLiabilitiesController::class, 'destroyLiability'])->name('company-liabilities.destroy');
+});
+
+// Accountant Details
+Route::post(
+    'applications/{application}/accountant-details',
+    [AccountantDetailController::class, 'store']
+)->name('applications.accountant-details.store');

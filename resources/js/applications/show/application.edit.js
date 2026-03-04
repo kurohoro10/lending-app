@@ -1,5 +1,5 @@
 /**
- * File: resources/js/applications/application.edit.js
+ * File: resources/js/applications/show/application.edit.js
  * Purpose: Application edit page behavior with client-side progress tracking
  *          and dynamic submit section rendering - ENHANCED BUTTON VERSION
  */
