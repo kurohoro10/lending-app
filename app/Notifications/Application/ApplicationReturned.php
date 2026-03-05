@@ -23,6 +23,10 @@ class ApplicationReturned extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
+            ->replyTo(
+                'reply-' . $this->application->application_number . '@commercial-loan.endurego.com',
+                config('app.name')
+            )
             ->subject('Action Required - Application ' . $this->application->application_number)
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('Your loan application requires some amendments before it can proceed.')
@@ -30,7 +34,7 @@ class ApplicationReturned extends Notification
             ->line('**Reason:** ' . $this->application->return_reason)
             ->action('Update Your Application', route('applications.edit', $this->application))
             ->line('Please log in, make the necessary changes, and resubmit your application.')
-            ->line('If you have any questions, please contact our support team.');
+            ->line('If you have any questions, please reply to this email or contact our support team.');
     }
 
     public function toArray($notifiable): array

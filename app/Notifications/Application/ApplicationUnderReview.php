@@ -23,6 +23,10 @@ class ApplicationUnderReview extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
+            ->replyTo(
+                'reply-' . $this->application->application_number . '@commercial-loan.endurego.com',
+                config('app.name')
+            )
             ->subject('Application Under Review - ' . $this->application->application_number)
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('Your loan application is now under review by our assessment team.')
@@ -30,7 +34,8 @@ class ApplicationUnderReview extends Notification
             ->line('**Loan Amount:** $' . number_format($this->application->loan_amount, 2))
             ->line('**Expected Timeline:** We aim to complete our review within 2-3 business days.')
             ->action('View Application', route('applications.show', $this->application))
-            ->line('You will receive an update once our assessment is complete.');
+            ->line('You will receive an update once our assessment is complete.')
+            ->line('If you have any questions, please reply to this email.');
     }
 
     public function toArray($notifiable): array

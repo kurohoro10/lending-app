@@ -22,11 +22,16 @@ class CustomEmail extends Notification
         return ['mail'];
     }
 
-    public function toMail($notifiable): MailMessage
+   public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
+            ->replyTo(
+                'reply-' . $this->application->application_number . '@commercial-loan.endurego.com',
+                config('app.name')
+            )
             ->subject($this->subject)
             ->greeting('Hello!')
+            ->line('Dear ' . $notifiable->name . ',')
             ->line($this->messageBody)
             ->line('Application: ' . $this->application->application_number)
             ->action('View Application', route('applications.show', $this->application))

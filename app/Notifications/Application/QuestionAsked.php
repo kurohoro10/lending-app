@@ -26,6 +26,10 @@ class QuestionAsked extends Notification implements ShouldQueue
         $application = $this->question->application;
 
         $mail = (new MailMessage)
+            ->replyTo(
+                'reply-' . $application->application_number . '@commercial-loan.endurego.com',
+                config('app.name')
+            )
             ->subject('New Question on Your Application - ' . $application->application_number)
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('Our team has asked a question regarding your loan application and requires your response.');

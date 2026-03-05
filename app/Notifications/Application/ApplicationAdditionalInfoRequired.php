@@ -23,13 +23,17 @@ class ApplicationAdditionalInfoRequired extends Notification
     public function toMail($notifiable): MailMessage
     {
         return (new MailMessage)
+            ->replyTo(
+                'reply-' . $this->application->application_number . '@commercial-loan.endurego.com',
+                config('app.name')
+            )
             ->subject('Additional Information Required - ' . $this->application->application_number)
             ->greeting('Hello ' . $notifiable->name . ',')
             ->line('We need additional information to proceed with your loan application.')
             ->line('**Application Number:** ' . $this->application->application_number)
             ->line('Please log in to your account to view what information is required and provide the necessary details.')
             ->action('Update Application', route('applications.show', $this->application))
-            ->line('If you have any questions, please don\'t hesitate to contact us.');
+            ->line('If you have any questions, please reply to this email or contact our support team.');
     }
 
     public function toArray($notifiable): array

@@ -1,9 +1,8 @@
 <?php
 
-use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\ApplicationController;
 use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
-use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
+use App\Http\Controllers\ApplicationController;
+use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'))->name('welcome');
 
@@ -26,6 +25,10 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
 Route::withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
     ->prefix('webhooks')
     ->group(function () {
-        Route::post('twilio/sms',    [SmsCommunicationController::class, 'incoming'])->name('webhooks.sms.incoming');
-        Route::post('twilio/status', [SmsCommunicationController::class, 'deliveryStatus'])->name('webhooks.sms.status');
+
+        // Twilio SMS
+        Route::post('twilio/sms',    [SmsCommunicationController::class, 'incoming'])
+            ->name('webhooks.sms.incoming');
+        Route::post('twilio/status', [SmsCommunicationController::class, 'deliveryStatus'])
+            ->name('webhooks.sms.status');
     });
