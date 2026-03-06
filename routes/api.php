@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
+use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -12,3 +13,11 @@ Route::get('/user', function (Request $request) {
 // Inbound
 Route::withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
     ->post('/webhooks/email/incoming', [EmailCommunicationController::class, 'incoming']);
+
+// routes/api.php
+Route::prefix('webhooks')->group(function () {
+    Route::post('twilio/sms',    [SmsCommunicationController::class, 'incoming'])
+        ->name('webhooks.sms.incoming');
+    Route::post('twilio/status', [SmsCommunicationController::class, 'deliveryStatus'])
+        ->name('webhooks.sms.status');
+});

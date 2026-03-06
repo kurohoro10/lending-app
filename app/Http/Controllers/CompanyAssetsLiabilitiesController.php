@@ -1,5 +1,10 @@
 <?php
-// app/Http/Controllers/CompanyAssetsLiabilitiesController.php
+/**
+ * File: app/Http/Controllers/CompanyAssetsLiabilitiesController.php
+ *
+ * Handles storing company assets and liabilities with
+ * safe error handling and JSON / standard request support.
+ */
 
 namespace App\Http\Controllers;
 
@@ -8,69 +13,102 @@ use App\Models\CompanyAsset;
 use App\Models\CompanyLiability;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class CompanyAssetsLiabilitiesController extends Controller
 {
     // ── Assets ────────────────────────────────────────────────────────────────
 
-    public function storeAsset(Request $request, Application $application): JsonResponse
+    public function storeAsset(Request $request, Application $application)
     {
-        $this->authorizeCompany($application);
+        try {
+            $this->authorizeCompany($application);
 
-        $validated = $request->validate([
-            'asset_name' => 'required|string|max:255',
-            'notes'      => 'nullable|string|max:500',
-            'value'      => 'required|numeric|min:0',
-        ]);
+            $validated = $request->validate([
+                'asset_name' => 'required|string|max:255',
+                'notes'      => 'nullable|string|max:500',
+                'value'      => 'required|numeric|min:0',
+            ]);
 
-        $validated['application_id'] = $application->id;
-        $asset = CompanyAsset::create($validated);
+            $validated['application_id'] = $application->id;
 
-        return response()->json([
-            'success' => true,
-            'message' => 'Asset added.',
-            'asset'   => $this->formatAsset($asset),
-        ]);
-    }
+            $asset = CompanyAsset::create($validated);
 
-    public function destroyAsset(Application $application, CompanyAsset $asset): JsonResponse
-    {
-        $this->authorizeCompany($application);
-        abort_if($asset->application_id !== $application->id, 403);
-        $asset->delete();
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Asset added.',
+                    'asset'   => $this->formatAsset($asset),
+                ]);
+            }
 
-        return response()->json(['success' => true, 'message' => 'Asset removed.']);
+            return back()->with('success', 'Asset added successfully.');
+
+        } catch (\Throwable $e) {
+
+            Log::error('Failed to store company asset', [
+                'application_id' => $application->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $message = 'Unable to add asset. Please try again.';
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 500);
+            }
+
+            return back()->withErrors(['asset' => $message]);
+        }
     }
 
     // ── Liabilities ───────────────────────────────────────────────────────────
 
-    public function storeLiability(Request $request, Application $application): JsonResponse
+    public function storeLiability(Request $request, Application $application)
     {
-        $this->authorizeCompany($application);
+        try {
+            $this->authorizeCompany($application);
 
-        $validated = $request->validate([
-            'liability_name' => 'required|string|max:255',
-            'notes'          => 'nullable|string|max:500',
-            'value'          => 'required|numeric|min:0',
-        ]);
+            $validated = $request->validate([
+                'liability_name' => 'required|string|max:255',
+                'notes'          => 'nullable|string|max:500',
+                'value'          => 'required|numeric|min:0',
+            ]);
 
-        $validated['application_id'] = $application->id;
-        $liability = CompanyLiability::create($validated);
+            $validated['application_id'] = $application->id;
 
-        return response()->json([
-            'success'   => true,
-            'message'   => 'Liability added.',
-            'liability' => $this->formatLiability($liability),
-        ]);
-    }
+            $liability = CompanyLiability::create($validated);
 
-    public function destroyLiability(Application $application, CompanyLiability $liability): JsonResponse
-    {
-        $this->authorizeCompany($application);
-        abort_if($liability->application_id !== $application->id, 403);
-        $liability->delete();
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success'   => true,
+                    'message'   => 'Liability added.',
+                    'liability' => $this->formatLiability($liability),
+                ]);
+            }
 
-        return response()->json(['success' => true, 'message' => 'Liability removed.']);
+            return back()->with('success', 'Liability added successfully.');
+
+        } catch (\Throwable $e) {
+
+            Log::error('Failed to store company liability', [
+                'application_id' => $application->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $message = 'Unable to add liability. Please try again.';
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 500);
+            }
+
+            return back()->withErrors(['liability' => $message]);
+        }
     }
 
     // ── Helpers ───────────────────────────────────────────────────────────────

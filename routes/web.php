@@ -1,6 +1,5 @@
 <?php
 
-use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use App\Http\Controllers\ApplicationController;
 use Illuminate\Support\Facades\Route;
 
@@ -20,15 +19,3 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     ->prefix('admin')
     ->name('admin.')
     ->group(base_path('routes/admin/adminRoutes.php'));
-
-// Webhooks — no auth, no CSRF
-Route::withoutMiddleware([\App\Http\Middleware\VerifyCsrfToken::class])
-    ->prefix('webhooks')
-    ->group(function () {
-
-        // Twilio SMS
-        Route::post('twilio/sms',    [SmsCommunicationController::class, 'incoming'])
-            ->name('webhooks.sms.incoming');
-        Route::post('twilio/status', [SmsCommunicationController::class, 'deliveryStatus'])
-            ->name('webhooks.sms.status');
-    });

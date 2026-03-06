@@ -10,74 +10,102 @@ use App\Rules\LegalWorkingAge;
 
 class EmploymentDetailsController extends Controller
 {
+    /**
+     * File: app/Http/Controllers/EmploymentController.php
+     *
+     * Store employment details for an application.
+     * Handles validation, employment creation, and activity logging.
+     * Returns JSON for AJAX requests or redirects for standard requests.
+     */
     public function store(Request $request, Application $application)
     {
-        $this->authorize('update', $application);
+        try {
+            $this->authorize('update', $application);
 
-        if (!$application->personalDetails || !$application->personalDetails->date_of_birth) {
-            $errorMessage = 'Please complete Personal Details (Date of Birth) first.';
+            if (!$application->personalDetails || !$application->personalDetails->date_of_birth) {
+                $errorMessage = 'Please complete Personal Details (Date of Birth) first.';
+
+                if ($request->expectsJson() || $request->wantsJson()) {
+                    return response()->json([
+                        'success' => false,
+                        'message' => $errorMessage,
+                        'type' => 'employment',
+                    ], 422);
+                }
+
+                return back()->withErrors([
+                    'employment_start_date' => $errorMessage
+                ]);
+            }
+
+            $validated = $request->validate([
+                'employment_type' => 'required|in:payg,self_employed,company_director,contract,casual,retired,unemployed',
+                'employer_business_name' => 'nullable|required_unless:employment_type,retired,unemployed|string|max:255',
+                'abn' => 'nullable|string|max:20',
+                'employment_role' => 'nullable|string|max:255',
+                'position' => 'nullable|string|max:255',
+                'employment_start_date' => [
+                    'required',
+                    'date',
+                    new LegalWorkingAge($application->personalDetails->date_of_birth),
+                ],
+                'base_income' => 'required|numeric|min:0',
+                'additional_income' => 'nullable|numeric|min:0',
+                'income_frequency' => 'required|in:weekly,fortnightly,monthly,annual',
+                'employer_phone' => 'nullable|string|max:20',
+                'employer_address' => 'nullable|string',
+            ]);
+
+            $employment = $application->employmentDetails()->create($validated);
+
+            if ($employment->employment_start_date) {
+                $employment->calculateEmploymentLength();
+            }
+
+            // Calculate annual income for response
+            $employment->load('application');
+            $employment->annual_income = $employment->getAnnualIncome();
+
+            ActivityLog::logActivity(
+                'created',
+                'Added employment details',
+                $employment,
+                null,
+                $validated
+            );
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employment details added successfully.',
+                    'employment' => $employment,
+                    'type' => 'employment',
+                    'trigger_progress_update' => true
+                ], 201);
+            }
+
+            return back()->with('success', 'Employment details added successfully.');
+
+        } catch (\Throwable $e) {
+            \Log::error('Failed to store employment details', [
+                'application_id' => $application->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
+
+            $errorMessage = 'Something went wrong while saving employment details. Please try again.';
 
             if ($request->expectsJson() || $request->wantsJson()) {
                 return response()->json([
                     'success' => false,
                     'message' => $errorMessage,
-                    'type' => 'employment',
-                ], 422);
+                ], 500);
             }
 
             return back()->withErrors([
-                'employment_start_date' => $errorMessage
+                'general' => $errorMessage
             ]);
         }
-
-        $validated = $request->validate([
-            'employment_type' => 'required|in:payg,self_employed,company_director,contract,casual,retired,unemployed',
-            'employer_business_name' => 'nullable|required_unless:employment_type,retired,unemployed|string|max:255',
-            'abn' => 'nullable|string|max:20',
-            'employment_role' => 'nullable|string|max:255',
-            'position' => 'nullable|string|max:255',
-            'employment_start_date' => [
-                'required',
-                'date',
-                new LegalWorkingAge($application->personalDetails->date_of_birth),
-            ],
-            'base_income' => 'required|numeric|min:0',
-            'additional_income' => 'nullable|numeric|min:0',
-            'income_frequency' => 'required|in:weekly,fortnightly,monthly,annual',
-            'employer_phone' => 'nullable|string|max:20',
-            'employer_address' => 'nullable|string',
-        ]);
-
-        $employment = $application->employmentDetails()->create($validated);
-
-        if ($employment->employment_start_date) {
-            $employment->calculateEmploymentLength();
-        }
-
-        // Calculate annual income for response
-        $employment->load('application');
-        $employment->annual_income = $employment->getAnnualIncome();
-
-        ActivityLog::logActivity(
-            'created',
-            'Added employment details',
-            $employment,
-            null,
-            $validated
-        );
-
-        // Check if the request expects JSON (AJAX request)
-        if ($request->expectsJson() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Employment details added successfully.',
-                'employment' => $employment,
-                'type' => 'employment',
-                'trigger_progress_update' => true
-            ], 201);
-        }
-
-        return back()->with('success', 'Employment details added successfully.');
     }
 
     public function update(Request $request, Application $application, EmploymentDetail $employmentDetail)

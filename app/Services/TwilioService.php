@@ -12,6 +12,7 @@ use Twilio\Rest\Client;
 use Illuminate\Support\Facades\Log;
 use App\Models\Communication;
 use App\Models\Application;
+use App\Models\Setting;
 
 class TwilioService
 {
@@ -27,11 +28,11 @@ class TwilioService
             return;
         }
 
-        $sid   = config('twilio.sid');
-        $token = config('twilio.auth_token');
+        $sid   = Setting::get('twilio_sid')        ?: config('services.twilio.sid');
+        $token = Setting::get('twilio_auth_token') ?: config('services.twilio.auth_token');
 
-        $this->whatsappFrom = config('twilio.whatsapp_from');
-        $this->smsFrom      = config('twilio.sms_from');
+        $this->smsFrom      = Setting::get('twilio_sms_from')      ?: config('services.twilio.sms_from');
+        $this->whatsappFrom = Setting::get('twilio_whatsapp_from') ?: config('services.twilio.whatsapp_from');
 
         if (!$sid || !$token || !$this->smsFrom) {
             Log::warning('Twilio credentials incomplete. Service disabled.');
@@ -170,7 +171,7 @@ class TwilioService
         $application = $this->findApplicationByPhone($cleanFrom);
 
         if ($application) {
-            $this->logCommunication($application, $type, 'inbound', $cleanFrom, $body, $messageSid, 'received');
+            $this->logCommunication($application, $type, 'inbound', $cleanFrom, $body, $messageSid, 'delivered');
         }
 
         Log::info("Incoming {$type} from {$cleanFrom}: {$body}");
