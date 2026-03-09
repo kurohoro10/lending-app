@@ -1,14 +1,4 @@
 {{-- resources/views/admin/partials/communication/communication-modal.blade.php --}}
-{{--
-|--------------------------------------------------------------------------
-| Communication Off-Canvas Panel
-|--------------------------------------------------------------------------
-| Single trigger button with dot indicator for any unread messages.
-| Tab headers show per-channel unread counts.
-| Badges clear when the panel is opened.
-| Accessible: ARIA dialog, focus management, keyboard support.
-|--------------------------------------------------------------------------
---}}
 
 @php
     $unreadEmail = $application->communications()->emails()->whereNull('read_at')->where('direction', 'inbound')->count();
@@ -35,7 +25,7 @@
             Contact Client
         </button>
 
-        {{-- Dot indicator — visible when any unread messages exist --}}
+        {{-- Pulsing dot — visible when any unread messages exist --}}
         <span id="comm-dot-indicator"
               class="{{ $unreadTotal > 0 ? '' : 'hidden' }} absolute -top-1 -right-1 flex h-3 w-3"
               aria-hidden="true">
@@ -46,7 +36,7 @@
 
     {{-- ── Backdrop ───────────────────────────────────────────────────── --}}
     <div id="comm-backdrop"
-         class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40 transition-opacity"
+         class="hidden fixed inset-0 bg-gray-900/50 backdrop-blur-sm z-40"
          aria-hidden="true"></div>
 
     {{-- ── Off-canvas Panel ───────────────────────────────────────────── --}}
@@ -65,22 +55,34 @@
                 </h2>
                 <p class="text-xs text-gray-500">{{ $application->application_number }}</p>
             </div>
-            <button type="button"
-                    id="comm-close-btn"
-                    class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg p-1.5 transition"
-                    aria-label="Close communication panel">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M6 18L18 6M6 6l12 12"/>
-                </svg>
-            </button>
+
+            <div class="flex items-center gap-3">
+                {{-- Live polling indicator --}}
+                <span id="comm-live-indicator"
+                      class="hidden items-center gap-1.5 text-xs text-gray-400"
+                      aria-label="Live updates active">
+                    <span class="relative flex h-2 w-2" aria-hidden="true">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+                    </span>
+                    Live
+                </span>
+
+                <button type="button"
+                        id="comm-close-btn"
+                        class="text-gray-400 hover:text-gray-600 focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-lg p-1.5 transition"
+                        aria-label="Close communication panel">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                    </svg>
+                </button>
+            </div>
         </div>
 
         {{-- Tabs --}}
         <div class="border-b border-gray-200 bg-white">
             <nav class="-mb-px flex" role="tablist" aria-label="Communication channels">
 
-                {{-- Email tab --}}
                 <button type="button"
                         role="tab"
                         id="comm-tab-email"
@@ -94,12 +96,11 @@
                     <span id="comm-badge-email"
                           class="{{ $unreadEmail > 0 ? '' : 'hidden' }} inline-flex items-center justify-center
                                  min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold leading-none"
-                          aria-label="{{ $unreadEmail }} unread email{{ $unreadEmail !== 1 ? 's' : '' }}">
+                          aria-label="{{ $unreadEmail }} unread emails">
                         {{ $unreadEmail }}
                     </span>
                 </button>
 
-                {{-- SMS tab --}}
                 <button type="button"
                         role="tab"
                         id="comm-tab-sms"
@@ -114,7 +115,7 @@
                     <span id="comm-badge-sms"
                           class="{{ $unreadSms > 0 ? '' : 'hidden' }} inline-flex items-center justify-center
                                  min-w-[1.25rem] h-5 px-1 rounded-full bg-red-500 text-white text-xs font-bold leading-none"
-                          aria-label="{{ $unreadSms }} unread SMS{{ $unreadSms !== 1 ? ' messages' : ' message' }}">
+                          aria-label="{{ $unreadSms }} unread SMS messages">
                         {{ $unreadSms }}
                     </span>
                 </button>
@@ -146,36 +147,161 @@
 <script>
 (() => {
 
-    const APP_ID    = @js($application->id);
-    const CSRF      = document.querySelector('meta[name="csrf-token"]')?.content;
+    const APP_ID      = @js($application->id);
+    const CSRF        = document.querySelector('meta[name="csrf-token"]')?.content;
+    const CLIENT_NAME = @js($application->user->name);
 
-    const openBtn      = document.getElementById('comm-open-btn');
-    const dotIndicator = document.getElementById('comm-dot-indicator');
-    const backdrop     = document.getElementById('comm-backdrop');
-    const offcanvas    = document.getElementById('comm-offcanvas');
-    const closeBtn     = document.getElementById('comm-close-btn');
-    const tabs         = document.querySelectorAll('.comm-tab');
-    const panels       = document.querySelectorAll('.comm-tab-panel');
-    const badgeEmail   = document.getElementById('comm-badge-email');
-    const badgeSms     = document.getElementById('comm-badge-sms');
+    const openBtn       = document.getElementById('comm-open-btn');
+    const dotIndicator  = document.getElementById('comm-dot-indicator');
+    const backdrop      = document.getElementById('comm-backdrop');
+    const offcanvas     = document.getElementById('comm-offcanvas');
+    const closeBtn      = document.getElementById('comm-close-btn');
+    const liveIndicator = document.getElementById('comm-live-indicator');
+    const tabs          = document.querySelectorAll('.comm-tab');
+    const panels        = document.querySelectorAll('.comm-tab-panel');
+    const badgeEmail    = document.getElementById('comm-badge-email');
+    const badgeSms      = document.getElementById('comm-badge-sms');
 
-    // Track which channels have been cleared this session
-    const cleared = { email: false, sms: false };
+    const cleared  = { email: false, sms: false };
+    let activeTab  = 'email';
+    let pollTimer  = null;
+    const POLL_MS  = 10000; // 10 seconds
 
-    // ── Clear unread for a given channel ─────────────────────────────────────
+    // Timestamp of last message seen per channel — avoids re-rendering old ones
+    const lastSeen = { email: null, sms: null };
+
+    // ── Polling ───────────────────────────────────────────────────────────────
+    function startPolling() {
+        liveIndicator.classList.remove('hidden');
+        liveIndicator.classList.add('inline-flex');
+        pollTimer = setInterval(pollActiveChannel, POLL_MS);
+    }
+
+    function stopPolling() {
+        clearInterval(pollTimer);
+        pollTimer = null;
+        liveIndicator.classList.add('hidden');
+        liveIndicator.classList.remove('inline-flex');
+    }
+
+    async function pollActiveChannel() {
+        try {
+            const channel = activeTab;
+            const after   = lastSeen[channel];
+            const base    = channel === 'email'
+                ? `/admin/applications/${APP_ID}/emails/poll`
+                : `/admin/applications/${APP_ID}/sms/poll`;
+
+            const url = after ? `${base}?after=${encodeURIComponent(after)}` : base;
+
+            const res  = await fetch(url, {
+                headers: { Accept: 'application/json', 'X-CSRF-TOKEN': CSRF },
+            });
+
+            if (!res.ok) return;
+            const data = await res.json();
+            if (!data.success) return;
+
+            // Append any new inbound messages
+            if (data.messages?.length) {
+                data.messages.forEach(msg => appendMessage(channel, msg));
+                lastSeen[channel] = data.messages.at(-1).created_at;
+                scrollThread(channel);
+            }
+
+            // Keep badges in sync with server truth
+            updateBadge(badgeEmail, data.unread_email ?? 0);
+            updateBadge(badgeSms,   data.unread_sms   ?? 0);
+            syncDot(data.unread_email ?? 0, data.unread_sms ?? 0);
+
+        } catch { /* network blip — ignore */ }
+    }
+
+    // ── Append new inbound bubble to thread ───────────────────────────────────
+    function appendMessage(channel, msg) {
+        const scrollEl = document.getElementById(
+            channel === 'email' ? 'email-thread-scroll' : 'sms-thread-scroll'
+        );
+        if (!scrollEl) return;
+
+        // Skip if already rendered (guard against duplicate polls)
+        if (scrollEl.querySelector(`[data-comm-id="${msg.id}"]`)) return;
+
+        // Remove empty-state placeholder if present
+        const empty = scrollEl.querySelector('[data-empty-state]');
+        if (empty) empty.remove();
+
+        const wrapper = document.createElement('div');
+        wrapper.className = 'flex justify-start';
+        wrapper.setAttribute('data-comm-id', msg.id);
+
+        const inner = document.createElement('div');
+        inner.className = 'max-w-[80%] items-start flex flex-col gap-1';
+
+        const meta = document.createElement('span');
+        meta.className = 'text-xs text-gray-400 px-1 text-left';
+        meta.textContent = `${CLIENT_NAME} · ${msg.formatted}`;
+
+        const bubble = document.createElement('div');
+        bubble.className = 'rounded-2xl px-4 py-3 text-sm leading-relaxed shadow-sm ' +
+            'bg-white border border-gray-200 text-gray-800 rounded-tl-sm';
+
+        if (channel === 'email' && msg.subject) {
+            const subj = document.createElement('p');
+            subj.className = 'font-semibold text-xs mb-1.5 text-gray-500';
+            subj.textContent = `Re: ${msg.subject}`;
+            bubble.appendChild(subj);
+        }
+
+        const body = document.createElement('div');
+        body.className = 'whitespace-pre-wrap break-words';
+        body.textContent = msg.body;
+
+        bubble.appendChild(body);
+        inner.appendChild(meta);
+        inner.appendChild(bubble);
+        wrapper.appendChild(inner);
+        scrollEl.appendChild(wrapper);
+    }
+
+    function scrollThread(channel) {
+        const el = document.getElementById(
+            channel === 'email' ? 'email-thread-scroll' : 'sms-thread-scroll'
+        );
+        if (el) el.scrollTop = el.scrollHeight;
+    }
+
+    // ── Badge / dot helpers ───────────────────────────────────────────────────
+    function updateBadge(badgeEl, count) {
+        if (count > 0) {
+            badgeEl.textContent = count;
+            badgeEl.classList.remove('hidden');
+            badgeEl.setAttribute('aria-label', `${count} unread`);
+        } else {
+            badgeEl.classList.add('hidden');
+        }
+    }
+
+    function syncDot(emailCount, smsCount) {
+        const total = emailCount + smsCount;
+        dotIndicator.classList.toggle('hidden', total === 0);
+        openBtn.setAttribute('aria-label',
+            total > 0
+                ? `Contact client, ${total} unread message${total !== 1 ? 's' : ''}`
+                : 'Contact client'
+        );
+    }
+
+    // ── Mark channel read ─────────────────────────────────────────────────────
     async function clearUnread(channel) {
         if (cleared[channel]) return;
         cleared[channel] = true;
 
         const badge = channel === 'email' ? badgeEmail : badgeSms;
-
-        // Optimistically hide badge
         badge.classList.add('hidden');
 
-        // Hide dot only when both channels cleared
         if (cleared.email && cleared.sms) {
             dotIndicator.classList.add('hidden');
-            // Update aria-label to remove unread mention
             openBtn.setAttribute('aria-label', 'Contact client');
         }
 
@@ -189,31 +315,25 @@
                 },
                 body: JSON.stringify({ channel }),
             });
-        } catch (e) {
-            // Non-critical — badge is already hidden visually
-        }
+        } catch { /* non-critical */ }
     }
 
-    // ── Open panel ───────────────────────────────────────────────────────────
+    // ── Open / close ──────────────────────────────────────────────────────────
     function openPanel(tab = 'email') {
         activateTab(tab);
-
         backdrop.classList.remove('hidden');
         offcanvas.classList.remove('hidden');
-
         requestAnimationFrame(() => {
             offcanvas.classList.remove('translate-x-full');
             closeBtn.focus();
         });
-
         document.body.style.overflow = 'hidden';
-
-        // Clear unread for the initially active tab
         clearUnread(tab);
+        startPolling();
     }
 
-    // ── Close panel ──────────────────────────────────────────────────────────
     function closePanel() {
+        stopPolling();
         offcanvas.classList.add('translate-x-full');
         offcanvas.addEventListener('transitionend', function handler() {
             offcanvas.classList.add('hidden');
@@ -224,42 +344,33 @@
         openBtn.focus();
     }
 
-    // ── Activate tab ─────────────────────────────────────────────────────────
+    // ── Tab switching ─────────────────────────────────────────────────────────
     function activateTab(key) {
+        activeTab = key;
         tabs.forEach(t => {
             const active = t.dataset.commTab === key;
             t.setAttribute('aria-selected', active ? 'true' : 'false');
-            t.classList.toggle('border-indigo-600', active);
-            t.classList.toggle('text-indigo-600', active);
+            t.classList.toggle('border-indigo-600',  active);
+            t.classList.toggle('text-indigo-600',    active);
             t.classList.toggle('border-transparent', !active);
-            t.classList.toggle('text-gray-500', !active);
+            t.classList.toggle('text-gray-500',      !active);
         });
-
-        panels.forEach(p => {
-            const isActive = p.id === `comm-panel-${key}`;
-            p.classList.toggle('hidden', !isActive);
-        });
-
-        // Clear unread for the newly active tab
+        panels.forEach(p => p.classList.toggle('hidden', p.id !== `comm-panel-${key}`));
         clearUnread(key);
     }
 
-    // ── Event listeners ──────────────────────────────────────────────────────
-    openBtn.addEventListener('click', () => openPanel('email'));
+    // ── Events ────────────────────────────────────────────────────────────────
+    openBtn.addEventListener('click',  () => openPanel('email'));
     closeBtn.addEventListener('click', closePanel);
     backdrop.addEventListener('click', closePanel);
 
     document.addEventListener('keydown', e => {
-        if (e.key === 'Escape' && !offcanvas.classList.contains('hidden')) {
-            closePanel();
-        }
+        if (e.key === 'Escape' && !offcanvas.classList.contains('hidden')) closePanel();
     });
 
-    tabs.forEach(t => {
-        t.addEventListener('click', () => activateTab(t.dataset.commTab));
-    });
+    tabs.forEach(t => t.addEventListener('click', () => activateTab(t.dataset.commTab)));
 
-    // ── Tab keyboard navigation (arrow keys per ARIA pattern) ────────────────
+    // Arrow key navigation between tabs (ARIA roving tabindex pattern)
     const tabList = Array.from(tabs);
     tabList.forEach((tab, idx) => {
         tab.addEventListener('keydown', e => {

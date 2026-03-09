@@ -71,6 +71,9 @@ Route::patch('questions/{question}/mark-read', [QuestionController::class, 'mark
 
 // Email
 Route::prefix('applications/{application}')->group(function () {
+    Route::get('emails/poll', [EmailCommunicationController::class, 'poll'])->name('email.poll');
+    Route::get('sms/poll',    [SmsCommunicationController::class,   'poll'])->name('sms.poll');
+
     Route::get('email-templates',  [EmailCommunicationController::class, 'getTemplates'])->name('email.templates');
     Route::post('send-email',      [EmailCommunicationController::class, 'send'])->name('email.send');
     Route::get('emails',           [EmailCommunicationController::class, 'index'])->name('email.index');

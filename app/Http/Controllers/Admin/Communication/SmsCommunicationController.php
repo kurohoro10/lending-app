@@ -161,4 +161,70 @@ class SmsCommunicationController extends Controller
 
         return response()->json(['success' => true]);
     }
+
+    /**
+     * Return new inbound SMS/WhatsApp messages since a given timestamp (AJAX polling).
+     *
+     * GET /admin/applications/{application}/sms/poll?after={timestamp}
+     */
+    public function poll(Request $request, Application $application): JsonResponse
+    {
+        try {
+            $after = $request->query('after');
+
+            $query = $application->communications()
+                ->sms()
+                ->where('direction', 'inbound')
+                ->orderBy('created_at', 'asc');
+
+            if ($after) {
+                $query->where('created_at', '>', $after);
+            }
+
+            $messages = $query->get()->map(fn ($c) => [
+                'id'         => $c->id,
+                'direction'  => $c->direction,
+                'from'       => $c->from_address,
+                'body'       => $c->body,
+                'type'       => $c->type,
+                'status'     => $c->status,
+                'sent_by'    => $c->user?->name,
+                'created_at' => $c->created_at->toDateTimeString(),
+                'formatted'  => $c->created_at->format('d M, g:ia'),
+            ]);
+
+            $unreadEmail = $application->communications()
+                ->emails()
+                ->whereNull('read_at')
+                ->where('direction', 'inbound')
+                ->count();
+
+            $unreadSms = $application->communications()
+                ->sms()
+                ->whereNull('read_at')
+                ->where('direction', 'inbound')
+                ->count();
+
+            return response()->json([
+                'success'      => true,
+                'messages'     => $messages,
+                'unread_email' => $unreadEmail,
+                'unread_sms'   => $unreadSms,
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Failed to poll SMS communications', [
+                'application_id' => $application->id,
+                'error'          => $e->getMessage(),
+            ]);
+
+            return response()->json([
+                'success'      => false,
+                'messages'     => [],
+                'unread_email' => 0,
+                'unread_sms'   => 0,
+                'message'      => 'Failed to fetch new messages.',
+            ], 500);
+        }
+    }
 }
