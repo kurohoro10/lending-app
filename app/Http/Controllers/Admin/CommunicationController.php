@@ -111,4 +111,33 @@ class CommunicationController extends Controller
 
         return back()->with('success', 'Application returned to client successfully.');
     }
+
+    /**
+     * Mark all unread inbound messages for a given channel as read.
+     *
+     * POST /admin/applications/{application}/communications/mark-read
+     *
+     * Body:
+     *   channel — "email" | "sms"
+     */
+    public function markChannelRead(Request $request, Application $application): JsonResponse
+    {
+        $validated = $request->validate([
+            'channel' => 'required|in:email,sms',
+        ]);
+
+        $query = $application->communications()
+            ->whereNull('read_at')
+            ->where('direction', 'inbound');
+
+        if ($validated['channel'] === 'email') {
+            $query->whereIn('type', ['email_in']);
+        } else {
+            $query->whereIn('type', ['sms_in', 'whatsapp_in']);
+        }
+
+        $query->update(['read_at' => now()]);
+
+        return response()->json(['success' => true]);
+    }
 }

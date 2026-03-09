@@ -14,6 +14,7 @@ use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
 use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
+use App\Http\Controllers\Admin\CommunicationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -84,6 +85,10 @@ Route::prefix('applications/{application}')->group(function () {
     // Manual inbound email logging (admin use)
     Route::post('email-incoming',  [EmailCommunicationController::class, 'incoming'])->name('email.incoming');
 });
+
+Route::post('applications/{application}/communications/mark-read',
+    [CommunicationController::class, 'markChannelRead'])
+    ->name('applications.communications.markChannelRead');
 
 // Credit Checks
 Route::post('applications/{application}/credit-check', [CreditCheckController::class, 'request'])
