@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\Setting;
 use App\Models\ActivityLog;
+use App\Services\CreditSenseService;
 use Illuminate\Http\Request;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\JsonResponse;
@@ -14,7 +15,19 @@ use Illuminate\Support\Facades\Http;
 
 class SettingsController extends Controller
 {
+    /**
+     * All configurable settings, grouped for display in the UI.
+     *
+     * Each entry describes:
+     *   - group      : which settings panel this belongs to
+     *   - label      : human-readable field label
+     *   - type       : input type (text, password, email, number, url, select, textarea)
+     *   - is_secret  : if true, blank submissions will NOT overwrite the stored value
+     *   - hint       : helper text shown beneath the field
+     *   - options    : only for type=select; keyed array of value => label
+     */
     private const FIELDS = [
+
         // ── Twilio ───────────────────────────────────────────────────────────
         'twilio_sid' => [
             'group'     => 'twilio',
@@ -97,6 +110,20 @@ class SettingsController extends Controller
             'hint'      => 'The display name shown to email recipients.',
         ],
 
+        // ── Active bank connection provider ───────────────────────────────────
+        'active_bank_provider' => [
+            'group'     => 'bank_connect',
+            'label'     => 'Active Bank Connection Provider',
+            'type'      => 'select',
+            'is_secret' => false,
+            'options'   => [
+                'basiq'       => 'Basiq (CDR-accredited)',
+                'creditsense' => 'CreditSense (iframe SDK)',
+                'bank_api'    => 'Generic Bank / Credit Check API',
+            ],
+            'hint' => 'Only one provider is active at a time. Changing this takes effect immediately for all new applicants.',
+        ],
+
         // ── Basiq ─────────────────────────────────────────────────────────────
         'basiq_env' => [
             'group'     => 'basiq',
@@ -124,7 +151,71 @@ class SettingsController extends Controller
             'hint'      => 'Default: https://au-api.basiq.io — only change if Basiq instructs you to use a different endpoint.',
         ],
 
-        // ── Bank / Credit Check API ───────────────────────────────────────────
+        // ── CreditSense ───────────────────────────────────────────────────────
+        //
+        // CreditSense v2 uses TWO separate credentials:
+        //   API Key   → UUID included in the request URL path: /v2/{api-key}/endpoint
+        //   API Token → UUID included in every request body under Settings.API_Token
+        //
+        // These are distinct values. Do not confuse them with the old client_code field,
+        // which has been removed — the Store Code is a separate operational field used
+        // only in quicklink creation payloads.
+        //
+        'creditsense_env' => [
+            'group'     => 'creditsense',
+            'label'     => 'Environment',
+            'type'      => 'select',
+            'is_secret' => false,
+            'options'   => [
+                'sandbox'    => 'Sandbox',
+                'production' => 'Production',
+            ],
+            'hint' => 'Sandbox uses test credentials and does not submit real bank data. Switch to Production when go-live ready.',
+        ],
+        'creditsense_api_key' => [
+            'group'     => 'creditsense',
+            'label'     => 'API Key (URL)',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'UUID that identifies your account — forms part of every request URL: /v2/{api-key}/endpoint. Provided by CreditSense when your environment was provisioned.',
+        ],
+        'creditsense_api_token' => [
+            'group'     => 'creditsense',
+            'label'     => 'API Token (Body)',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'UUID sent inside every request body under Settings.API_Token. Separate from the API Key above. Provided alongside the API Key by CreditSense.',
+        ],
+        'creditsense_store_code' => [
+            'group'     => 'creditsense',
+            'label'     => 'Store Code',
+            'type'      => 'text',
+            'is_secret' => false,
+            'hint'      => 'Your CreditSense store identifier, e.g. PICK01. Required when creating quicklinks. Contact CreditSense support if you don\'t know your Store Code.',
+        ],
+        'creditsense_base_url' => [
+            'group'     => 'creditsense',
+            'label'     => 'API Base URL',
+            'type'      => 'url',
+            'is_secret' => false,
+            'hint'      => 'Default: https://api.creditsense.com.au — only change if CreditSense instructs otherwise.',
+        ],
+        'creditsense_webhook_secret' => [
+            'group'     => 'creditsense',
+            'label'     => 'Webhook Secret',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'Used to verify the HMAC signature on incoming webhook payloads. Obtain from your CreditSense account manager.',
+        ],
+        'creditsense_js_cdn' => [
+            'group'     => 'creditsense',
+            'label'     => 'JS SDK CDN URL',
+            'type'      => 'url',
+            'is_secret' => false,
+            'hint'      => 'CreditSense-provided CDN URL for the iframe SDK JS file. Your account manager will supply this.',
+        ],
+
+        // ── Generic Bank / Credit Check API ──────────────────────────────────
         'bank_api_provider_name' => [
             'group'     => 'bank_api',
             'label'     => 'Provider Name',
@@ -151,7 +242,7 @@ class SettingsController extends Controller
             'label'     => 'Base URL',
             'type'      => 'url',
             'is_secret' => false,
-            'hint'      => 'API base URL, e.g. https://api.creditsense.com.au',
+            'hint'      => 'API base URL, e.g. https://api.example.com',
         ],
         'bank_api_webhook_secret' => [
             'group'     => 'bank_api',
@@ -169,81 +260,23 @@ class SettingsController extends Controller
                          . 'Use dot notation for nested keys, e.g. "income_monthly": "income.monthlyAverage". '
                          . 'Must be valid JSON.',
         ],
-
-        // ── CreditSense ────────────────────────────────────────────────────────────
-        'creditsense_client_code' => [
-            'group'     => 'creditsense',
-            'label'     => 'Client Code',
-            'type'      => 'text',
-            'is_secret' => false,
-            'hint'      => 'Your organisation client code provided by CreditSense (e.g. DEMO). Used in the iframe JS initialisation.',
-        ],
-        'creditsense_api_key' => [
-            'group'     => 'creditsense',
-            'label'     => 'API Key',
-            'type'      => 'password',
-            'is_secret' => true,
-            'hint'      => 'API key for querying the CreditSense REST API to retrieve reports and create quicklinks.',
-        ],
-        'creditsense_base_url' => [
-            'group'     => 'creditsense',
-            'label'     => 'API Base URL',
-            'type'      => 'url',
-            'is_secret' => false,
-            'hint'      => 'Default: https://au-api.creditsense.com.au — only change if CreditSense instructs otherwise.',
-        ],
-        'creditsense_webhook_secret' => [
-            'group'     => 'creditsense',
-            'label'     => 'Webhook Secret',
-            'type'      => 'password',
-            'is_secret' => true,
-            'hint'      => 'Used to verify the HMAC signature on incoming webhook payloads. Obtain from your CreditSense account manager.',
-        ],
-        'creditsense_env' => [
-            'group'     => 'creditsense',
-            'label'     => 'Environment',
-            'type'      => 'select',
-            'is_secret' => false,
-            'options'   => [
-                'sandbox'    => 'Sandbox',
-                'production' => 'Production',
-            ],
-            'hint' => 'Sandbox uses test credentials and does not submit real bank data. Switch to Production when go-live ready.',
-        ],
-        'creditsense_js_cdn' => [
-            'group'     => 'creditsense',
-            'label'     => 'JS SDK CDN URL',
-            'type'      => 'url',
-            'is_secret' => false,
-            'hint'      => 'CreditSense-provided CDN URL for CS-Integrated-Iframe-v1.min.js. Your account manager will supply this.',
-        ],
-
-        // Add to FIELDS constant, before bank_api group:
-        'active_bank_provider' => [
-            'group'     => 'bank_connect',
-            'label'     => 'Active Bank Connection Provider',
-            'type'      => 'select',
-            'is_secret' => false,
-            'options'   => [
-                'basiq'       => 'Basiq (CDR-accredited)',
-                'creditsense' => 'CreditSense (iframe SDK)',
-                'bank_api'    => 'Generic Bank / Credit Check API',
-            ],
-            'hint' => 'Only one provider is active at a time. Changing this takes effect immediately for all new applicants.',
-        ],
     ];
+
+    public function __construct(private readonly CreditSenseService $creditSense) {}
+
+    // ── Display ───────────────────────────────────────────────────────────────
 
     public function index(): View
     {
         $settings = Setting::pluck('value', 'key');
 
         $groups = [
-            'twilio'       => ['label' => 'Twilio (SMS & WhatsApp)',    'icon' => 'phone'],
-            'mail'         => ['label' => 'Email / SMTP',               'icon' => 'mail'],
-            'basiq'        => ['label' => 'Basiq (Bank Statements)',     'icon' => 'basiq'],
-            'creditsense'  => ['label' => 'CreditSense (Bank Analysis)', 'icon' => 'creditsense'], // ← ADD
-            'bank_api'     => ['label' => 'Bank / Credit Check API',    'icon' => 'bank'],
-            'bank_connect' => ['label' => 'Bank Connection', 'icon' => 'bank'],
+            'bank_connect' => ['label' => 'Bank Connection Provider',        'icon' => 'bank'],
+            'twilio'       => ['label' => 'Twilio (SMS & WhatsApp)',          'icon' => 'phone'],
+            'mail'         => ['label' => 'Email / SMTP',                    'icon' => 'mail'],
+            'basiq'        => ['label' => 'Basiq (Bank Statements)',          'icon' => 'basiq'],
+            'creditsense'  => ['label' => 'CreditSense (Bank Analysis)',      'icon' => 'creditsense'],
+            'bank_api'     => ['label' => 'Generic Bank / Credit Check API', 'icon' => 'bank'],
         ];
 
         return view('admin.settings.index', [
@@ -252,6 +285,8 @@ class SettingsController extends Controller
             'fields'   => self::FIELDS,
         ]);
     }
+
+    // ── Save ──────────────────────────────────────────────────────────────────
 
     public function update(Request $request, string $group): RedirectResponse
     {
@@ -266,9 +301,10 @@ class SettingsController extends Controller
 
         $input = $request->only($groupFields);
 
+        // Validate any textarea fields that must contain valid JSON.
         foreach ($groupFields as $key) {
             $fieldMeta = self::FIELDS[$key];
-            if (($fieldMeta['type'] ?? '') === 'textarea' && !empty($input[$key])) {
+            if (($fieldMeta['type'] ?? '') === 'textarea' && ! empty($input[$key])) {
                 json_decode($input[$key]);
                 if (json_last_error() !== JSON_ERROR_NONE) {
                     return back()
@@ -281,6 +317,8 @@ class SettingsController extends Controller
         foreach ($input as $key => $value) {
             $isSecret = self::FIELDS[$key]['is_secret'] ?? false;
 
+            // Never overwrite a stored secret with a blank submission —
+            // the admin likely left the field empty to keep the existing value.
             if ($isSecret && blank($value)) {
                 continue;
             }
@@ -288,13 +326,14 @@ class SettingsController extends Controller
             Setting::set($key, $value, $isSecret);
         }
 
-        // If Basiq credentials changed, bust the cached token so the next
-        // real API call fetches a fresh one with the updated key.
+        // Bust cached tokens when credentials may have changed.
         if ($group === 'basiq') {
             Cache::forget('basiq_access_token');
         }
 
         if ($group === 'creditsense') {
+            // CreditSense uses per-request auth (no cached token needed),
+            // but clear any future cached values here if caching is added later.
             Cache::forget('creditsense_access_token');
         }
 
@@ -303,22 +342,17 @@ class SettingsController extends Controller
             "Updated {$group} settings",
             null,
             null,
-            ['group' => $group, 'keys' => $groupFields]
+            ['group' => $group, 'keys' => $groupFields],
         );
 
         return back()->with('success', ucfirst(str_replace('_', ' ', $group)) . ' settings saved successfully.');
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Basiq token management
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Basiq token management ────────────────────────────────────────────────
 
     /**
-     * Return a valid Basiq access token, fetching a fresh one if the cache
-     * has expired. Tokens live 60 minutes; we cache for 55 to give a buffer.
-     *
-     * This uses the credentials already SAVED in settings. It is the method
-     * all jobs/services should call at runtime.
+     * Return a valid Basiq access token, refreshing from the API if the
+     * cache has expired. Tokens live 60 minutes; we cache for 55 to give a buffer.
      */
     public function getBasiqToken(): string
     {
@@ -331,12 +365,9 @@ class SettingsController extends Controller
     }
 
     /**
-     * Fetch a fresh Basiq access token.
+     * Exchange the Basiq API key for a fresh bearer token.
      *
-     * @param string $apiKey
-     * @param string $baseUrl
-     * @return string
-     * @throws \Exception
+     * @throws \Exception if the token endpoint returns an error.
      */
     private function fetchBasiqToken(string $apiKey, string $baseUrl): string
     {
@@ -345,12 +376,10 @@ class SettingsController extends Controller
                 'basiq-version' => '3.0',
                 'Accept'        => 'application/json',
                 'Authorization' => 'Basic ' . trim($apiKey),
-                'content-type' => 'application/x-www-form-urlencoded',
+                'Content-Type'  => 'application/x-www-form-urlencoded',
             ])
             ->asForm()
-            ->post("{$baseUrl}/token", [
-                'scope' => 'SERVER_ACCESS',
-            ]);
+            ->post("{$baseUrl}/token", ['scope' => 'SERVER_ACCESS']);
 
         if (! $response->successful()) {
             $body   = $response->json();
@@ -361,22 +390,17 @@ class SettingsController extends Controller
         return $response->json('access_token');
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Test connection (Settings UI)
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── Basiq test connection ─────────────────────────────────────────────────
 
     /**
-     * Test Basiq credentials by running two steps:
-     *   1. POST /token   — exchange the API key for a bearer token
-     *   2. GET  /institutions — verify the token works against a real endpoint
-     *
-     * Accepts override values from the request body so the admin can test
-     * credentials they have TYPED but not yet saved. When the form fields are
-     * blank (admin didn't re-enter the secret), falls back to saved settings.
-     *
-     * Does NOT use the cache — we always want a live round-trip here.
-     *
      * POST /admin/settings/basiq/test-connection
+     *
+     * Validates Basiq credentials by:
+     *   1. Exchanging the API key for a bearer token (POST /token)
+     *   2. Hitting GET /institutions to confirm the token works
+     *
+     * Accepts unsaved overrides so the admin can test before saving.
+     * Always makes a live network call — never uses the cache.
      */
     public function testBasiqConnection(Request $request): JsonResponse
     {
@@ -394,27 +418,16 @@ class SettingsController extends Controller
         $env = $request->input('env') ?: Setting::get('basiq_env', 'sandbox');
 
         if (blank($apiKey)) {
-            return response()->json([
-                'success' => false,
-                'message' => 'API Key is required before testing.',
-            ], 422);
+            return response()->json(['success' => false, 'message' => 'API Key is required before testing.'], 422);
         }
 
         try {
-            // ── Step 1: obtain a fresh bearer token ───────────────────────────
-            // Deliberately bypass the cache — this is a live credential check.
             $accessToken = $this->fetchBasiqToken($apiKey, $baseUrl);
 
-            // ── Step 2: hit a lightweight read endpoint to confirm the token ──
             $institutionsResponse = Http::timeout(10)
                 ->withToken($accessToken)
-                ->withHeaders([
-                    'basiq-version' => '3.0',
-                    'Accept'        => 'application/json',
-                ])
-                ->get("{$baseUrl}/institutions", [
-                    'limit' => 1,
-                ]);
+                ->withHeaders(['basiq-version' => '3.0', 'Accept' => 'application/json'])
+                ->get("{$baseUrl}/institutions");
 
             if (! $institutionsResponse->successful()) {
                 return response()->json([
@@ -428,7 +441,7 @@ class SettingsController extends Controller
                 "Basiq test connection succeeded ({$env})",
                 null,
                 null,
-                ['env' => $env, 'base_url' => $baseUrl]
+                ['env' => $env, 'base_url' => $baseUrl],
             );
 
             return response()->json([
@@ -437,28 +450,66 @@ class SettingsController extends Controller
                 'env'     => $env,
             ]);
 
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
+        } catch (\Illuminate\Http\Client\ConnectionException) {
             return response()->json([
                 'success' => false,
-                'message' => 'Could not reach the Basiq API. Check your server\'s outbound internet access and the Base URL.',
+                'message' => "Could not reach the Basiq API. Check your server's outbound internet access and the Base URL.",
             ], 503);
         } catch (\Exception $e) {
-            // fetchBasiqToken throws a plain Exception with a readable message
-            return response()->json([
-                'success' => false,
-                'message' => $e->getMessage(),
-            ], 422);
+            return response()->json(['success' => false, 'message' => $e->getMessage()], 422);
         } catch (\Throwable $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Unexpected error: ' . $e->getMessage(),
-            ], 500);
+            return response()->json(['success' => false, 'message' => 'Unexpected error: ' . $e->getMessage()], 500);
         }
     }
 
-    // ─────────────────────────────────────────────────────────────────────────
-    // Helpers
-    // ─────────────────────────────────────────────────────────────────────────
+    // ── CreditSense test connection ───────────────────────────────────────────
+
+    /**
+     * POST /admin/settings/creditsense/test-connection
+     *
+     * Delegates entirely to CreditSenseService::testConnection().
+     * No credential resolution, URL building, or HTTP calls happen here.
+     *
+     * Accepts unsaved overrides from the request body so the admin can test
+     * before saving. Falls back to stored settings when fields are blank.
+     */
+    public function testCreditSenseConnection(Request $request): JsonResponse
+    {
+        $request->validate([
+            'api_key'   => 'nullable|string',
+            'api_token' => 'nullable|string',
+            'base_url'  => 'nullable|url',
+            'env'       => 'nullable|string|in:sandbox,production',
+        ]);
+
+        $result = $this->creditSense->testConnection(
+            apiKey:   $request->input('api_key'),
+            apiToken: $request->input('api_token'),
+            baseUrl:  $request->input('base_url'),
+        );
+
+        if (! $result['success']) {
+            return response()->json(['success' => false, 'message' => $result['error']], 422);
+        }
+
+        $env = $request->input('env') ?: Setting::get('creditsense_env', 'sandbox');
+
+        ActivityLog::logActivity(
+            'creditsense_test_connection',
+            "CreditSense test connection succeeded ({$env})",
+            null,
+            null,
+            ['env' => $env],
+        );
+
+        return response()->json([
+            'success' => true,
+            'message' => "Connected successfully ({$env}). API Key and Token are valid.",
+            'env'     => $env,
+        ]);
+    }
+
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     /**
      * Resolve the active bank API field map as an associative array.
@@ -476,81 +527,5 @@ class SettingsController extends Controller
         $map = json_decode($raw, true);
 
         return is_array($map) ? $map : [];
-    }
-
-    // ─────────────────────────────────────────────────────────────────────────
-    // CreditSense token management & test connection
-    // ─────────────────────────────────────────────────────────────────────────
-
-    /**
-     * POST /admin/settings/creditsense/test-connection
-     *
-     * Validates the client code + API key by hitting the CreditSense
-     * /applications endpoint with a minimal query. Returns success/failure
-     * so the admin can confirm credentials before saving.
-     */
-    public function testCreditSenseConnection(Request $request): JsonResponse
-    {
-        $request->validate([
-            'api_key'     => 'nullable|string',
-            'base_url'    => 'nullable|url',
-            'client_code' => 'nullable|string',
-            'env'         => 'nullable|string|in:sandbox,production',
-        ]);
-
-        $apiKey      = $request->input('api_key')     ?: Setting::get('creditsense_api_key');
-        $clientCode  = $request->input('client_code') ?: Setting::get('creditsense_client_code');
-        $baseUrl     = rtrim(
-            $request->input('base_url') ?: Setting::get('creditsense_base_url', 'https://au-api.creditsense.com.au'),
-            '/'
-        );
-        $env = $request->input('env') ?: Setting::get('creditsense_env', 'sandbox');
-
-        if (blank($apiKey)) {
-            return response()->json(['success' => false, 'message' => 'API Key is required before testing.'], 422);
-        }
-        if (blank($clientCode)) {
-            return response()->json(['success' => false, 'message' => 'Client Code is required before testing.'], 422);
-        }
-
-        try {
-            // CreditSense REST API uses HTTP Basic auth: client_code:api_key
-            $response = Http::timeout(10)
-                ->withBasicAuth($clientCode, $apiKey)
-                ->withHeaders(['Accept' => 'application/json'])
-                ->get("{$baseUrl}/v2/applications", ['limit' => 1]);
-
-            if ($response->unauthorized()) {
-                return response()->json(['success' => false, 'message' => 'Authentication failed — check your Client Code and API Key.'], 422);
-            }
-
-            if ($response->failed()) {
-                return response()->json([
-                    'success' => false,
-                    'message' => "API responded with HTTP {$response->status()}. Check the Base URL and credentials.",
-                ], 422);
-            }
-
-            ActivityLog::logActivity(
-                'creditsense_test_connection',
-                "CreditSense test connection succeeded ({$env})",
-                null, null,
-                ['env' => $env, 'base_url' => $baseUrl]
-            );
-
-            return response()->json([
-                'success' => true,
-                'message' => "Connected successfully ({$env}). Client Code and API Key are valid.",
-                'env'     => $env,
-            ]);
-
-        } catch (\Illuminate\Http\Client\ConnectionException $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Could not reach the CreditSense API. Check the Base URL and your server\'s outbound access.',
-            ], 503);
-        } catch (\Throwable $e) {
-            return response()->json(['success' => false, 'message' => 'Unexpected error: ' . $e->getMessage()], 500);
-        }
     }
 }

@@ -8,7 +8,7 @@ use App\Http\Controllers\Admin\TaskController;
 use App\Http\Controllers\Admin\CreditControllers\CreditCheckController;
 use App\Http\Controllers\Admin\LivingExpenseVerificationController;
 use App\Http\Controllers\LivingExpenseController;
-use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\Admin\DocumentController;
 use App\Http\Controllers\Admin\Question\QuestionController;
 use App\Http\Controllers\Admin\SettingsController;
 use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
@@ -111,24 +111,24 @@ Route::post('applications/{application}/expenses/verify', [LivingExpenseVerifica
 
 // Document Review
 Route::patch('documents/{document}/status', [DocumentController::class, 'updateStatus'])
-    ->name('documents.updateStatus');
+    ->name('documents.update-status');
 
-    // Settings
+// Settings test connections
+Route::post('settings/basiq/test-connection',[SettingsController::class, 'testBasiqConnection'])
+    ->name('settings.basiq.test-connection');
+
+Route::post('settings/creditsense/test-connection', [SettingsController::class, 'testCreditSenseConnection'])
+    ->name('settings.creditsense.test-connection');
+
+// Settings
 Route::get('/settings',           [SettingsController::class, 'index'])
     ->name('settings.index');
 Route::patch('/settings/{group}', [SettingsController::class, 'update'])
     ->name('settings.update');
 
-Route::post('settings/basiq/test-connection',
-    [SettingsController::class, 'testBasiqConnection']
-)->name('settings.basiq.test-connection');
 
 // CreditSense
 Route::post('applications/{application}/creditsense/fetch-report', [CreditSenseController::class, 'fetchReport'])
     ->name('creditsense.fetchReport');
 Route::post('applications/{application}/creditsense/quicklink',    [CreditSenseController::class, 'createQuicklink'])
     ->name('creditsense.quicklink');
-
-// Settings test connections
-Route::post('settings/creditsense/test-connection', [SettingsController::class, 'testCreditSenseConnection'])
-    ->name('settings.creditsense.test-connection');

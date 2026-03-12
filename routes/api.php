@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
 use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\CreditControllers\CreditSenseController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -20,4 +21,7 @@ Route::prefix('webhooks')->group(function () {
         ->name('webhooks.sms.incoming');
     Route::post('twilio/status', [SmsCommunicationController::class, 'deliveryStatus'])
         ->name('webhooks.sms.status');
+
+    Route::post('creditsense', [CreditSenseController::class, 'webhook'])
+        ->name('webhooks.creditsense');
 });

@@ -199,11 +199,11 @@
                     <ol id="cs-test-steps" class="hidden mt-3 space-y-1 text-xs text-gray-400" aria-label="CreditSense test steps">
                         <li id="cs-step-auth" class="flex items-center gap-1.5">
                             <span class="step-dot w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
-                            Authenticate with client code + API key
+                            Validate API Key in URL path
                         </li>
                         <li id="cs-step-api" class="flex items-center gap-1.5">
                             <span class="step-dot w-1.5 h-1.5 rounded-full bg-gray-300 flex-shrink-0"></span>
-                            Verify /v2/applications endpoint
+                            Authenticate with API Token
                         </li>
                     </ol>
                 </div>
@@ -366,10 +366,10 @@ initTestConnection({
     getPayload: () => {
         const form = document.getElementById('form-creditsense');
         return {
-            api_key:      form?.querySelector('[name="creditsense_api_key"]')?.value      ?? '',
-            client_code:  form?.querySelector('[name="creditsense_client_code"]')?.value  ?? '',
-            base_url:     form?.querySelector('[name="creditsense_base_url"]')?.value     ?? '',
-            env:          form?.querySelector('[name="creditsense_env"]')?.value           ?? 'sandbox',
+            api_key:   form?.querySelector('[name="creditsense_api_key"]')?.value   ?? '',
+            api_token: form?.querySelector('[name="creditsense_api_token"]')?.value ?? '',
+            base_url:  form?.querySelector('[name="creditsense_base_url"]')?.value  ?? '',
+            env:       form?.querySelector('[name="creditsense_env"]')?.value        ?? 'sandbox',
         };
     },
 });

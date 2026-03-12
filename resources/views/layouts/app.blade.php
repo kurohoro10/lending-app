@@ -11,6 +11,8 @@
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
 
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
     <script>
         window.APP_STATE = window.APP_STATE || {};
         window.RESIDENTIAL_CONFIG = window.RESIDENTIAL_CONFIG || {};

@@ -19,7 +19,7 @@ class CreditSenseController extends Controller
         return Setting::where('key', "creditsense_{$key}")->value('value') ?: null;
     }
 
-    private function clientCode(): ?string { return $this->config('client_code'); }
+    private function storeCode(): ?string { return $this->config('store_code'); }
     private function jsCdnUrl(): ?string   { return $this->config('js_cdn'); }
 
     // ── Step 1 — iframe config ────────────────────────────────────────────
@@ -32,14 +32,14 @@ class CreditSenseController extends Controller
     {
         $this->authorize('update', $application);
 
-        if (blank($this->clientCode())) {
+        if (blank($this->storeCode())) {
             return response()->json([
                 'error' => 'CreditSense is not configured. Please contact support.',
             ], 500);
         }
 
         return response()->json([
-            'client_code'        => $this->clientCode(),
+            'client_code'        => $this->storeCode(),
             'cdn_url'            => $this->jsCdnUrl(),
             'app_ref'            => $application->application_number,
             'provider'           => self::PROVIDER_NAME,
