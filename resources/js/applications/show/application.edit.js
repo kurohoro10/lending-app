@@ -265,7 +265,7 @@
                     <div class="flex items-start">
                         <div class="flex-shrink-0">
                             <div class="flex items-center justify-center h-16 w-16 rounded-full bg-green-100" aria-hidden="true">
-                                <svg class="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                <svg class="h-8 w-8 text-green-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
                             </div>
@@ -298,14 +298,27 @@
                                     </li>
                                 </ul>
                             </div>
-                            <button type="submit" id="submit-application-btn"
-                                class="inline-flex items-center justify-center px-10 py-5 text-white rounded-xl font-bold text-lg uppercase tracking-wide transition-all duration-300 transform focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed w-full"
-                                disabled
-                                aria-label="Submit application for review">
-                                <svg class="w-6 h-6 mr-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <button type="submit"
+                                    id="submit-application-btn"
+                                    class="inline-flex items-center justify-center px-10 py-5 text-white rounded-xl font-bold text-lg uppercase tracking-wide transition-all duration-300 transform focus:outline-none focus:ring-4 focus:ring-green-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed w-full"
+                                    disabled
+                                    aria-label="Submit application for review">
+                                <!-- Spinner: shown while submitting -->
+                                <svg id="submit-application-spinner"
+                                    class="hidden animate-spin w-6 h-6 mr-3 flex-shrink-0"
+                                    fill="none" viewBox="0 0 24 24"
+                                    aria-hidden="true">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                                <!-- Arrow icon: hidden while submitting -->
+                                <svg id="submit-application-arrow"
+                                    class="w-6 h-6 mr-3 flex-shrink-0"
+                                    fill="currentColor" viewBox="0 0 20 20"
+                                    aria-hidden="true">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-8.707l-3-3a1 1 0 00-1.414 1.414L10.586 9H7a1 1 0 100 2h3.586l-1.293 1.293a1 1 0 101.414 1.414l3-3a1 1 0 000-1.414z" clip-rule="evenodd"/>
                                 </svg>
-                                <span>Submit Application for Review</span>
+                                <span id="submit-application-label">Submit Application for Review</span>
                             </button>
                             <p class="mt-4 text-sm text-center" id="submit-status-text">
                                 <span class="font-semibold text-yellow-700">⚠️ Complete signature below to enable submit button</span>
@@ -398,7 +411,7 @@
     }
 
     function attachSubmitButtonListener() {
-        const signatureInput = document.getElementById('signature-data');
+        const signatureInput    = document.getElementById('signature-data');
         const agreementCheckbox = document.getElementById('signature-agreement');
 
         if (signatureInput) {
@@ -411,7 +424,29 @@
             agreementCheckbox.addEventListener('change', updateSubmitState);
         }
 
+        // ── Loading state on final submit ─────────────────────────────────
+        const form = document.querySelector('form[action*="submit"]');
+        if (form) {
+            form.removeEventListener('submit', handleFinalSubmit);
+            form.addEventListener('submit', handleFinalSubmit);
+        }
+
         updateSubmitState();
+    }
+
+    function handleFinalSubmit() {
+        const btn     = document.getElementById('submit-application-btn');
+        const spinner = document.getElementById('submit-application-spinner');
+        const arrow   = document.getElementById('submit-application-arrow');
+        const label   = document.getElementById('submit-application-label');
+
+        if (!btn) return;
+
+        btn.disabled = true;
+        btn.setAttribute('aria-disabled', 'true');
+        spinner?.classList.remove('hidden');
+        arrow?.classList.add('hidden');
+        if (label) label.textContent = 'Submitting…';
     }
 
     function legalAgeDate(dob, years = 18) {

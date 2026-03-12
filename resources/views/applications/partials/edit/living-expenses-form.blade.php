@@ -110,18 +110,24 @@
                                     <td class="px-4 py-3">
                                         <div class="relative w-36">
                                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">$</span>
-                                            <input type="number"
-                                                   id="amount-{{ $categoryKey }}"
-                                                   name="expenses[{{ $categoryKey }}][client_declared_amount]"
-                                                   value="{{ $existing?->client_declared_amount ?? '0' }}"
-                                                   min="0"
-                                                   step="0.01"
-                                                   placeholder="0.00"
-                                                   class="expense-amount-input w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
-                                                          focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
-                                                          focus:outline-none tabular-nums"
-                                                   aria-label="{{ $category['label'] }} amount">
+                                            <input type="text"
+                                                id="amount-display-{{ $categoryKey }}"
+                                                inputmode="decimal"
+                                                placeholder="0.00"
+                                                autocomplete="off"
+                                                value="{{ $existing && $existing->client_declared_amount ? number_format((float)$existing->client_declared_amount, 2) : '' }}"
+                                                class="expense-amount-display w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
+                                                        focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500
+                                                        focus:outline-none tabular-nums"
+                                                aria-label="{{ $category['label'] }} amount"
+                                                aria-describedby="amount-error-{{ $categoryKey }}">
+                                            <input type="hidden"
+                                                id="amount-{{ $categoryKey }}"
+                                                name="expenses[{{ $categoryKey }}][client_declared_amount]"
+                                                value="{{ $existing?->client_declared_amount ?? '0' }}"
+                                                class="expense-amount-input">
                                         </div>
+                                        <p id="amount-error-{{ $categoryKey }}" class="mt-1 text-xs text-red-600 hidden" role="alert"></p>
                                     </td>
                                     <td class="px-4 py-3">
                                         <select name="expenses[{{ $categoryKey }}][frequency]"
@@ -196,11 +202,21 @@
                     <button type="submit"
                             id="submit-expense-button"
                             class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600
-                                   text-white rounded-xl font-semibold text-sm uppercase tracking-wide
-                                   hover:shadow-lg transition transform hover:scale-105
-                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
-                                   disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                text-white rounded-xl font-semibold text-sm uppercase tracking-wide
+                                hover:shadow-lg transition transform hover:scale-105
+                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                        <svg id="submit-expense-spinner"
+                            class="hidden animate-spin w-4 h-4 mr-2"
+                            fill="none" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <svg id="submit-expense-check-icon"
+                            class="w-4 h-4 mr-2"
+                            fill="currentColor" viewBox="0 0 20 20"
+                            aria-hidden="true">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         <span id="submit-expense-text">Save Expenses</span>

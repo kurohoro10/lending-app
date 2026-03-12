@@ -1,16 +1,14 @@
 // resources/js/applications/edit/directorAssetsLiabilities.js
-// Handles the Director Assets & Liabilities accordion section:
-// accordion toggle, conditional fields, add/delete assets and liabilities,
-// running totals, and net position summary.
-
-(() => {
+document.addEventListener('DOMContentLoaded', () => {
     const { routes } = window.DAL_CONFIG || {};
 
-    const CSRF       = document.querySelector('meta[name="csrf-token"]')?.content;
+    const CSRF           = document.querySelector('meta[name="csrf-token"]')?.content;
     const ASSET_STORE    = routes?.assetStore;
     const ASSET_DEL      = routes?.assetDestroy;
     const LIAB_STORE     = routes?.liabilityStore;
     const LIAB_DEL       = routes?.liabilityDestroy;
+
+    const CURRENCY_MAX = 9_000_000_000;
 
     // ── Accordion ─────────────────────────────────────────────────────────────
     const dalBtn     = document.getElementById('dal-btn');
@@ -23,6 +21,11 @@
         dalChevron.classList.toggle('rotate-180', !isOpen);
         dalBtn.setAttribute('aria-expanded', String(!isOpen));
     });
+
+    // ── Currency inputs ───────────────────────────────────────────────────────
+    window.initCurrencyInput('asset-value-display',       'asset-value',       { min: 0, max: CURRENCY_MAX, errorId: 'asset-value-error' });
+    window.initCurrencyInput('liability-balance-display', 'liability-balance', { min: 0, max: CURRENCY_MAX, errorId: 'liability-balance-error' });
+    window.initCurrencyInput('liability-limit-display',   'liability-limit',   { min: 0, max: CURRENCY_MAX, errorId: 'liability-limit-error' });
 
     // ── Asset type → show/hide property use ──────────────────────────────────
     const assetTypeEl      = document.getElementById('asset-type');
@@ -41,7 +44,10 @@
     liabTypeEl?.addEventListener('change', () => {
         const show = liabTypeEl.value === 'credit_card';
         creditLimitField.classList.toggle('hidden', !show);
-        if (!show) document.getElementById('liability-limit').value = '';
+        if (!show) {
+            document.getElementById('liability-limit').value         = '';
+            document.getElementById('liability-limit-display').value = '';
+        }
     });
 
     // ── Asset form panel toggle ───────────────────────────────────────────────
@@ -375,18 +381,21 @@
     // ── Form resets ───────────────────────────────────────────────────────────
     function resetAssetForm() {
         assetTypeEl.value = '';
-        document.getElementById('asset-property-use').value = '';
-        document.getElementById('asset-description').value  = '';
-        document.getElementById('asset-value').value        = '';
+        document.getElementById('asset-property-use').value   = '';
+        document.getElementById('asset-description').value    = '';
+        document.getElementById('asset-value-display').value  = '';
+        document.getElementById('asset-value').value          = '';
         propertyUseField.classList.add('hidden');
         clearFormErrors('asset');
     }
 
     function resetLiabForm() {
         liabTypeEl.value = '';
-        document.getElementById('liability-lender').value  = '';
-        document.getElementById('liability-limit').value   = '';
-        document.getElementById('liability-balance').value = '';
+        document.getElementById('liability-lender').value          = '';
+        document.getElementById('liability-limit-display').value   = '';
+        document.getElementById('liability-limit').value           = '';
+        document.getElementById('liability-balance-display').value = '';
+        document.getElementById('liability-balance').value         = '';
         creditLimitField.classList.add('hidden');
         clearFormErrors('liability');
     }
@@ -446,8 +455,8 @@
             : { spinner: 'liability-spinner', label: 'liability-save-label', btn: 'save-liability-btn', text: 'Liability' };
 
         document.getElementById(ids.spinner).classList.toggle('hidden', !on);
-        document.getElementById(ids.btn).disabled       = on;
-        document.getElementById(ids.label).textContent  = on ? 'Saving…' : `Add ${ids.text}`;
+        document.getElementById(ids.btn).disabled      = on;
+        document.getElementById(ids.label).textContent = on ? 'Saving…' : `Add ${ids.text}`;
     }
 
     const toastTimers = {};
@@ -479,4 +488,4 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
     }
-})();
+});

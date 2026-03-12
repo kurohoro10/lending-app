@@ -10,7 +10,7 @@
             <div>
 
                 <h3 class="text-lg font-bold text-white flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path fill-rule="evenodd" d="M5.05 4.05a7 7 0 119.9 9.9L10 18.9l-4.95-4.95a7 7 0 010-9.9zM10 11a2 2 0 100-4 2 2 0 000 4z" clip-rule="evenodd"/>
                     </svg>
                     Residential Address History
@@ -56,7 +56,7 @@
 
                 <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 border-2 border-indigo-100 mb-6">
                     <h4 class="text-lg font-bold text-gray-900 mb-1 flex items-center">
-                        <svg class="w-5 h-5 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                        <svg class="w-5 h-5 mr-2 text-indigo-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
                         </svg>
                         Add New Address
@@ -200,9 +200,24 @@
 
                 <!-- Submit Button -->
                 <div class="flex justify-end">
-                    <button type="submit" id="submit-address-button"
-                            class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-bold text-sm uppercase tracking-wide hover:shadow-xl transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <button type="submit"
+                            id="submit-address-button"
+                            class="inline-flex items-center px-8 py-4 bg-gradient-to-r from-indigo-600 to-purple-600
+                                text-white rounded-xl font-bold text-sm uppercase tracking-wide
+                                hover:shadow-xl transition transform hover:scale-105
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
+                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <svg id="submit-address-spinner"
+                            class="hidden animate-spin w-5 h-5 mr-2"
+                            fill="none" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <svg id="submit-address-plus-icon"
+                            class="w-5 h-5 mr-2"
+                            fill="currentColor" viewBox="0 0 20 20"
+                            aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
                         </svg>
                         <span id="submit-address-text">Add Address</span>

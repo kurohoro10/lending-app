@@ -1,6 +1,5 @@
-// resources/js/living-expenses.js
-
-(() => {
+// resources/js/applications/show/livingExpenses.js
+document.addEventListener('DOMContentLoaded', () => {
     const FREQ_MULTIPLIERS = {
         weekly:      52 / 12,
         fortnightly: 26 / 12,
@@ -9,18 +8,35 @@
         annual:      1 / 12,
     };
 
-    const form            = document.getElementById('expense-form');
-    const messages        = document.getElementById('expense-messages');
-    const submitBtn       = document.getElementById('submit-expense-button');
-    const submitText      = document.getElementById('submit-expense-text');
-    const grandTotal      = document.getElementById('grand-total-monthly');
-    const addOtherBtn     = document.getElementById('add-other-expense-btn');
-    const otherRows       = document.getElementById('other-expense-rows');
-    const accordionBtn    = document.getElementById('living-expenses-btn');
+    const form         = document.getElementById('expense-form');
+    const messages     = document.getElementById('expense-messages');
+    const submitBtn    = document.getElementById('submit-expense-button');
+    const submitText   = document.getElementById('submit-expense-text');
+    const grandTotal   = document.getElementById('grand-total-monthly');
+    const addOtherBtn  = document.getElementById('add-other-expense-btn');
+    const otherRows    = document.getElementById('other-expense-rows');
+    const accordionBtn = document.getElementById('living-expenses-btn');
+    const submitSpinner   = document.getElementById('submit-expense-spinner');
+    const submitCheckIcon = document.getElementById('submit-expense-check-icon');
 
     if (!form) return;
 
-    accordionBtn?.addEventListener('click', () => toggleAccordion('living-expenses'));
+    accordionBtn?.addEventListener('click', () => window.toggleAccordion('living-expenses'));
+
+    // ── Currency input init ───────────────────────────────────────────────────
+
+    function initOtherRowCurrency(row) {
+        const display = row.querySelector('.expense-amount-display');
+        const hidden  = row.querySelector('.expense-amount-input');
+        if (display && hidden) {
+            if (!display.id) display.id = 'disp-' + Math.random().toString(36).slice(2);
+            if (!hidden.id)  hidden.id  = 'hid-'  + Math.random().toString(36).slice(2);
+            window.initCurrencyInput(display.id, hidden.id, { min: 0, max: 9_000_000_000 });
+        }
+    }
+
+    form.querySelectorAll('.expense-input-row').forEach(row => initOtherRowCurrency(row));
+    document.querySelectorAll('#other-expense-rows [data-other-row]').forEach(initOtherRowCurrency);
 
     // ── Live total calculation ────────────────────────────────────────────────
 
@@ -33,13 +49,14 @@
     }
 
     function recalcRow(row) {
-        const amountInput = row.querySelector('.expense-amount-input');
-        const freqSelect  = row.querySelector('.expense-frequency-select');
-        const monthlyEl   = row.querySelector('.row-monthly');
-        if (!amountInput || !freqSelect || !monthlyEl) return;
+        // Read from the hidden input (raw numeric value kept in sync by initCurrencyInput)
+        const hidden     = row.querySelector('.expense-amount-input');
+        const freqSelect = row.querySelector('.expense-frequency-select');
+        const monthlyEl  = row.querySelector('.row-monthly');
+        if (!hidden || !freqSelect || !monthlyEl) return;
 
-        const monthly = toMonthly(amountInput.value, freqSelect.value);
-        monthlyEl.textContent = amountInput.value ? fmt(monthly) : '—';
+        const monthly = toMonthly(hidden.value, freqSelect.value);
+        monthlyEl.textContent = hidden.value ? fmt(monthly) : '—';
     }
 
     function recalcAll() {
@@ -47,28 +64,27 @@
 
         form.querySelectorAll('.expense-input-row, [data-other-row]').forEach(row => {
             recalcRow(row);
-            const amountInput = row.querySelector('.expense-amount-input');
-            const freqSelect  = row.querySelector('.expense-frequency-select');
-            if (amountInput?.value) {
-                total += toMonthly(amountInput.value, freqSelect?.value ?? 'monthly');
+            const hidden     = row.querySelector('.expense-amount-input');
+            const freqSelect = row.querySelector('.expense-frequency-select');
+            if (hidden?.value) {
+                total += toMonthly(hidden.value, freqSelect?.value ?? 'monthly');
             }
         });
 
         if (grandTotal) {
             grandTotal.textContent = fmt(total);
             grandTotal.setAttribute('aria-label', `Total monthly expenses: ${fmt(total)}`);
-            announceChange(`Total monthly expenses updated: ${fmt(total)}`); // ADD THIS
+            announceChange(`Total monthly expenses updated: ${fmt(total)}`);
         }
     }
 
-    // ── Submit button state ──────────────────────────────────────────────────────
+    // ── Submit button state ───────────────────────────────────────────────────
 
     function hasAnyData() {
-        // Any standard row with amount > 0
         const hasAmount = [...form.querySelectorAll('.expense-amount-input')]
             .some(input => parseFloat(input.value || 0) > 0);
 
-        // Any Other row with a name filled in
+        // Watch the visible text input for other-row names (type="text", not the display input)
         const hasNamedOther = [...form.querySelectorAll('[data-other-row] input[type="text"]')]
             .some(input => input.value.trim().length > 0);
 
@@ -83,9 +99,7 @@
         submitBtn.title = enabled ? '' : 'Please enter at least one expense before saving.';
     }
 
-    // Run on page load to show saved values
-    recalcAll();
-    updateSubmitState();
+    // ── Screen-reader announcer ───────────────────────────────────────────────
 
     function announceChange(message) {
         const announcer = document.getElementById('expense-announcer') || createAnnouncer();
@@ -93,23 +107,29 @@
     }
 
     function createAnnouncer() {
-        const announcer = document.createElement('div');
-        announcer.id = 'expense-announcer';
-        announcer.className = 'sr-only';
-        announcer.setAttribute('role', 'status');
-        announcer.setAttribute('aria-live', 'polite');
-        announcer.setAttribute('aria-atomic', 'true');
-        document.body.appendChild(announcer);
-        return announcer;
+        const el = document.createElement('div');
+        el.id = 'expense-announcer';
+        el.className = 'sr-only';
+        el.setAttribute('role', 'status');
+        el.setAttribute('aria-live', 'polite');
+        el.setAttribute('aria-atomic', 'true');
+        document.body.appendChild(el);
+        return el;
     }
 
-    // Delegated input listener for all amount/frequency fields
+    // Run on page load
+    recalcAll();
+    updateSubmitState();
+
+    // ── Event delegation ──────────────────────────────────────────────────────
+    // Watch the display input (fires input events) and frequency select.
+    // Hidden inputs do NOT fire input events so we cannot listen on them directly.
+
     form.addEventListener('input', e => {
-        if (e.target.matches('.expense-amount-input, .expense-frequency-select')) {
+        if (e.target.matches('.expense-amount-display, .expense-frequency-select')) {
             recalcAll();
             updateSubmitState();
         }
-        // Also watch Other row name fields
         if (e.target.closest('[data-other-row]') && e.target.type === 'text') {
             updateSubmitState();
         }
@@ -123,13 +143,14 @@
 
     // ── Add / remove "Other" rows ─────────────────────────────────────────────
 
-    let otherIndex = Date.now(); // unique index for new rows
+    let otherIndex = Date.now();
 
     addOtherBtn?.addEventListener('click', () => {
         otherIndex++;
-        const row = buildOtherRow(`other_new_${otherIndex}`);
-        otherRows.insertAdjacentHTML('beforeend', row);
-        otherRows.lastElementChild?.querySelector('input[type="text"]')?.focus();
+        otherRows.insertAdjacentHTML('beforeend', buildOtherRow(`other_new_${otherIndex}`));
+        const newRow = otherRows.lastElementChild;
+        initOtherRowCurrency(newRow);
+        newRow?.querySelector('input[type="text"]')?.focus();
     });
 
     otherRows?.addEventListener('click', e => {
@@ -139,11 +160,13 @@
         const row = removeBtn.closest('[data-other-row]');
         if (!row) return;
 
-        // Keep at least one blank row
         const allRows = otherRows.querySelectorAll('[data-other-row]');
         if (allRows.length <= 1) {
-            // Just clear the inputs instead of removing
-            row.querySelectorAll('input[type="text"], input[type="number"]').forEach(i => i.value = '');
+            // Clear instead of remove — reset both display and hidden inputs
+            const display = row.querySelector('.expense-amount-display');
+            const hidden  = row.querySelector('.expense-amount-input');
+            if (display) display.value = '';
+            if (hidden)  hidden.value  = '';
             row.querySelector('select').value = 'monthly';
             row.querySelector('.row-monthly').textContent = '—';
             recalcAll();
@@ -159,32 +182,36 @@
     function buildOtherRow(index) {
         return `
         <div class="other-expense-row flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-200"
-            data-other-row>
+             data-other-row>
             <div class="flex-1 min-w-0">
                 <label class="sr-only">Expense name</label>
                 <input type="text"
-                    name="expenses[${index}][expense_name]"
-                    placeholder="Expense name (e.g. Gym membership)"
-                    class="w-full py-2 px-3 border border-gray-300 rounded-lg text-sm
-                            focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
-                    aria-label="Custom expense name">
+                       name="expenses[${index}][expense_name]"
+                       placeholder="Expense name (e.g. Gym membership)"
+                       class="w-full py-2 px-3 border border-gray-300 rounded-lg text-sm
+                              focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                       aria-label="Custom expense name">
                 <input type="hidden" name="expenses[${index}][expense_category]" value="other">
             </div>
             <div class="relative w-32 flex-shrink-0">
                 <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">$</span>
                 <label class="sr-only">Amount</label>
-                <input type="number"
-                    name="expenses[${index}][client_declared_amount]"
-                    min="0" step="0.01" placeholder="0.00"
-                    class="expense-amount-input w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
-                            focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none tabular-nums"
-                    aria-label="Custom expense amount">
+                <input type="text"
+                       inputmode="decimal"
+                       placeholder="0.00"
+                       autocomplete="off"
+                       class="expense-amount-display w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
+                              focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none tabular-nums"
+                       aria-label="Custom expense amount">
+                <input type="hidden"
+                       name="expenses[${index}][client_declared_amount]"
+                       class="expense-amount-input">
             </div>
             <div class="w-36 flex-shrink-0">
                 <label class="sr-only">Frequency</label>
                 <select name="expenses[${index}][frequency]"
                         class="expense-frequency-select w-full py-2 px-3 border border-gray-300 bg-white rounded-lg text-sm
-                            focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
+                               focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none"
                         aria-label="Custom expense frequency">
                     <option value="weekly">Weekly</option>
                     <option value="fortnightly">Fortnightly</option>
@@ -198,7 +225,7 @@
             </div>
             <button type="button"
                     class="remove-other-row flex-shrink-0 text-gray-400 hover:text-red-500
-                        focus:outline-none focus:ring-2 focus:ring-red-400 rounded transition"
+                           focus:outline-none focus:ring-2 focus:ring-red-400 rounded transition"
                     aria-label="Remove this expense row">
                 <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
@@ -213,11 +240,15 @@
         e.preventDefault();
         clearMessages();
 
-        submitBtn.disabled        = true;
-        submitText.textContent    = 'Saving…';
+        // ── Loading state ─────────────────────────────────────────────────
+        submitBtn.disabled = true;
+        submitBtn.setAttribute('aria-disabled', 'true');
+        submitSpinner.classList.remove('hidden');
+        submitCheckIcon.classList.add('hidden');
+        submitText.textContent = 'Saving…';
 
         try {
-            const res  = await fetch(form.action, {
+            const res = await fetch(form.action, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
@@ -230,18 +261,9 @@
 
             if (res.ok && data.success) {
                 showMessage(data.message, 'success');
-
-                // ✅ FIX: Update progress after successful save
-                if (window.updateApplicationProgress) {
-                    window.updateApplicationProgress();
-                }
-
-                // ✅ FIX: Dispatch custom event for other listeners
+                if (window.updateApplicationProgress) window.updateApplicationProgress();
                 document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                    detail: {
-                        type: 'expense',
-                        trigger_progress_update: true // Add this flag
-                    }
+                    detail: { type: 'expense', trigger_progress_update: true },
                 }));
             } else if (data.errors) {
                 const first = Object.values(data.errors).flat()[0] ?? 'Please check your entries.';
@@ -252,7 +274,11 @@
         } catch {
             showMessage('A network error occurred. Please check your connection.', 'error');
         } finally {
-            submitBtn.disabled     = false;
+            // ── Reset state ───────────────────────────────────────────────
+            submitBtn.disabled = false;
+            submitBtn.removeAttribute('aria-disabled');
+            submitSpinner.classList.add('hidden');
+            submitCheckIcon.classList.remove('hidden');
             submitText.textContent = 'Save Expenses';
         }
     });
@@ -280,4 +306,4 @@
         messages.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-})();
+});

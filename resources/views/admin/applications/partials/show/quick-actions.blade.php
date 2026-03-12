@@ -23,20 +23,23 @@
             {{-- data-expense-modal-open is the hook expense-calculator.js     --}}
             {{-- binds to — no JS ID dependency, works alongside the           --}}
             {{-- living-expenses card button on the same page.                 --}}
-            <button type="button"
-                    id="open-expense-calculator"
-                    data-expense-modal-open
-                    class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-300 text-indigo-700 text-sm
-                           font-medium rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500
-                           focus:ring-offset-2 transition"
-                    aria-haspopup="dialog"
-                    aria-controls="expense-calculator-modal">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                          d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 002 2v10a2 2 0 002 2z"/>
-                </svg>
-                Expense Calculator
-            </button>
+            @if (!in_array($application->status, ['approved', 'declined']))
+                <button type="button"
+                        id="open-expense-calculator"
+                        data-expense-modal-open
+                        class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-300 text-indigo-700 text-sm
+                            font-medium rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500
+                            focus:ring-offset-2 transition"
+                        aria-haspopup="dialog"
+                        aria-controls="expense-calculator-modal">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 11h.01M12 11h.01M15 11h.01M4 19h16a2 2 0 002-2V7a2 2 0 00-2-2H4a2 2 0 002 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    Expense Calculator
+                </button>            
+            @endif
+
 
             {{-- ── Export PDF ─────────────────────────────────────────────── --}}
             <a href="{{ route('admin.applications.exportPdf', $application) }}"

@@ -88,11 +88,27 @@
                 </div>
 
                 <div class="mt-6 flex justify-end">
-                    <button type="submit" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <button type="submit"
+                            id="loan-details-submit-btn"
+                            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600
+                                text-white rounded-xl font-semibold text-sm uppercase tracking-wide
+                                hover:shadow-lg transition transform hover:scale-105
+                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none">
+                        <svg id="loan-details-spinner"
+                            class="hidden animate-spin w-4 h-4 mr-2"
+                            fill="none" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <svg id="loan-details-check-icon"
+                            class="w-4 h-4 mr-2"
+                            fill="currentColor" viewBox="0 0 20 20"
+                            aria-hidden="true">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
-                        Update Loan Details
+                        <span id="loan-details-submit-label">Update Loan Details</span>
                     </button>
                 </div>
             </form>

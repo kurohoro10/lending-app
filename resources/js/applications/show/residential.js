@@ -1,6 +1,5 @@
-// resources/js/residential-addresses.js
-
-(() => {
+// resources/js/applications/show/residential.js
+document.addEventListener('DOMContentLoaded', () => {
     const REQUIRED_MONTHS = 36;
 
     const residentialAccordionBtn = document.getElementById('residential-addresses-btn');
@@ -14,6 +13,8 @@
     const suburbSelect            = document.getElementById('suburb-selector');
     const manualInput             = document.getElementById('suburb-manual');
     const stateSelect             = document.getElementById('state-selector');
+    const submitSpinner           = document.getElementById('submit-address-spinner');
+    const submitPlusIcon          = document.getElementById('submit-address-plus-icon');
 
     if (!form) return;
 
@@ -269,17 +270,20 @@
         clearErrors();
 
         // Warn if coverage not yet met — but don't block submission
-        const coverageEl = document.getElementById('address-coverage-indicator');
+        const coverageEl  = document.getElementById('address-coverage-indicator');
         const progressBar = coverageEl?.querySelector('[role="progressbar"]');
-        const currentPct = progressBar ? parseInt(progressBar.getAttribute('aria-valuenow') ?? '100') : 100;
+        const currentPct  = progressBar ? parseInt(progressBar.getAttribute('aria-valuenow') ?? '100') : 100;
         if (currentPct < 100) {
             const remaining = Math.ceil((REQUIRED_MONTHS * (100 - currentPct)) / 100);
             displayWarning(`You still need approximately ${remaining} more month(s) of address history.`);
-            // Small delay so user sees the warning before the loading state kicks in
             await new Promise(resolve => setTimeout(resolve, 800));
         }
 
-        submitButton.disabled     = true;
+        // ── Loading state ─────────────────────────────────────────────────
+        submitButton.disabled = true;
+        submitButton.setAttribute('aria-disabled', 'true');
+        submitSpinner.classList.remove('hidden');
+        submitPlusIcon.classList.add('hidden');
         submitButtonText.textContent = 'Adding…';
 
         try {
@@ -306,10 +310,7 @@
                     document.dispatchEvent(new CustomEvent('ajaxSuccess', { detail: { type: 'address' } }));
                 }
 
-                // Update coverage indicator from server response
-                if (data.coverage) {
-                    updateCoverageIndicator(data.coverage);
-                }
+                if (data.coverage) updateCoverageIndicator(data.coverage);
 
             } else {
                 if (data.errors) {
@@ -324,7 +325,11 @@
         } catch {
             displayError('A network error occurred. Please check your connection and try again.');
         } finally {
-            submitButton.disabled     = false;
+            // ── Reset state ───────────────────────────────────────────────
+            submitButton.disabled = false;
+            submitButton.removeAttribute('aria-disabled');
+            submitSpinner.classList.add('hidden');
+            submitPlusIcon.classList.remove('hidden');
             submitButtonText.textContent = 'Add Address';
         }
     });
@@ -448,4 +453,4 @@
         if (badge) badge.textContent = `${count} Address(es)`;
     }
 
-})();
+});

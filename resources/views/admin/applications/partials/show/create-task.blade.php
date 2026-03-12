@@ -26,7 +26,8 @@
 @endphp
 
 {{-- ── Trigger Button ──────────────────────────────────────────────────────── --}}
-<button type="button"
+@if (!in_array($application->status, ['approved', 'declined']))
+    <button type="button"
         id="open-create-task-modal"
         aria-haspopup="dialog"
         aria-controls="create-task-modal"
@@ -34,15 +35,17 @@
         class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-indigo-300 text-indigo-700 text-sm
                font-medium rounded-md hover:bg-indigo-50 focus:outline-none focus:ring-2 focus:ring-indigo-500
                focus:ring-offset-2 transition">
-    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-              d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
-                 M9 5a2 2 0 002 2h2a2 2 0 002-2
-                 M9 5a2 2 0 012-2h2a2 2 0 012 2
-                 m-6 9l2 2 4-4"/>
-    </svg>
-    Create Task
-</button>
+        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2
+                    M9 5a2 2 0 002 2h2a2 2 0 002-2
+                    M9 5a2 2 0 012-2h2a2 2 0 012 2
+                    m-6 9l2 2 4-4"/>
+        </svg>
+        Create Task
+    </button>
+@endif
+
 
 {{-- ── Modal ───────────────────────────────────────────────────────────────── --}}
 <div id="create-task-modal"

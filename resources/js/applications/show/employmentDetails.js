@@ -1,17 +1,25 @@
-(() => {
-    const form = document.getElementById('employment-form');
-    const messagesContainer = document.getElementById('employment-messages');
-    const submitButton = document.getElementById('submit-employment-button');
-    const submitButtonText = document.getElementById('submit-employment-text');
+// resources/js/applications/show/employmentDetails.js
+document.addEventListener('DOMContentLoaded', () => {
+    const form                          = document.getElementById('employment-form');
+    const messagesContainer             = document.getElementById('employment-messages');
+    const submitButton                  = document.getElementById('submit-employment-button');
+    const submitButtonText              = document.getElementById('submit-employment-text');
     const employmentDetailsAccordionBtn = document.getElementById('employment-details-btn');
+    const submitSpinner                 = document.getElementById('submit-employment-spinner');
+    const submitPlusIcon                = document.getElementById('submit-employment-plus-icon');
 
     if (employmentDetailsAccordionBtn) {
         employmentDetailsAccordionBtn.addEventListener('click', () => {
-            toggleAccordion('employment-details');
+            window.toggleAccordion('employment-details');
         });
     }
 
-    // Helper functions
+    // Initialise currency fields — formatting handled by global initCurrencyInput in script.js
+    window.initCurrencyInput('base-income-display', 'base-income', { min: 1, max: 9_000_000_000, errorId: 'base_income-error' });
+    window.initCurrencyInput('additional-income-display', 'additional-income', { min: 0, max: 9_000_000_000, errorId: 'additional_income-error' });
+
+    // ── Helpers ───────────────────────────────────────────────────────────
+
     function clearErrors() {
         const errorElements = form.querySelectorAll('[id$="-error"]');
         errorElements.forEach(element => {
@@ -80,53 +88,58 @@
         messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    // Handle form submission with Fetch API
+    // ── Form submission ───────────────────────────────────────────────────
+
     if (form) {
         form.addEventListener('submit', async function (event) {
             event.preventDefault();
-
-            // Clear previous errors
             clearErrors();
 
-            // Disable submit button and show loading state
+            const baseIncomeHidden = document.getElementById('base-income');
+            if (!baseIncomeHidden.value || parseFloat(baseIncomeHidden.value) <= 0) {
+                displayFieldError('base_income', 'Please enter a base income amount.');
+                document.getElementById('base-income-display').focus();
+                return;
+            }
+
+            // ── Loading state ─────────────────────────────────────────────────
             submitButton.disabled = true;
-            const originalText = submitButtonText.textContent;
-            submitButtonText.textContent = 'Adding...';
+            submitButton.setAttribute('aria-disabled', 'true');
+            submitSpinner.classList.remove('hidden');
+            submitPlusIcon.classList.add('hidden');
+            submitButtonText.textContent = 'Adding…';
 
             try {
-                // Get form data
                 const formData = new FormData(form);
 
-                // Send fetch request
                 const response = await fetch(form.action, {
                     method: 'POST',
                     headers: {
                         'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content || formData.get('_token'),
                         'Accept': 'application/json',
                     },
-                    body: formData
+                    body: formData,
                 });
 
                 const data = await response.json();
 
                 if (response.ok) {
-                    // Success
                     displaySuccess(data.message || 'Employment details added successfully.');
 
-                    // Reset form
                     form.reset();
+                    document.getElementById('base-income-display').value    = '';
+                    document.getElementById('additional-income-display').value = '';
+                    document.getElementById('base-income').value            = '';
+                    document.getElementById('additional-income').value      = '0';
 
-                    // Add new employment to the list
                     if (data.employment) {
                         addEmploymentToList(data.employment);
                         updateEmploymentCount();
-
                         document.dispatchEvent(new CustomEvent('ajaxSuccess', {
-                            detail: { type: 'employment' }
+                            detail: { type: 'employment' },
                         }));
                     }
                 } else {
-                    // Validation errors
                     if (data.errors) {
                         Object.keys(data.errors).forEach(fieldName => {
                             const messages = data.errors[fieldName];
@@ -143,19 +156,22 @@
                 console.error('Error:', error);
                 displayError('A network error occurred. Please check your connection and try again.');
             } finally {
-                // Re-enable submit button
+                // ── Reset state ───────────────────────────────────────────────
                 submitButton.disabled = false;
-                submitButtonText.textContent = originalText;
+                submitButton.removeAttribute('aria-disabled');
+                submitSpinner.classList.add('hidden');
+                submitPlusIcon.classList.remove('hidden');
+                submitButtonText.textContent = 'Add Employment';
             }
         });
     }
 
-    // Function to add employment to the list dynamically
+    // ── Employment list helpers ───────────────────────────────────────────
+
     function addEmploymentToList(employment) {
         const employmentList = document.getElementById('employment-list');
         const listContainer = document.getElementById('employment-list-container');
 
-        // Create container if it doesn't exist
         if (!employmentList) {
             listContainer.innerHTML = `
                 <div class="mb-6 space-y-3">
@@ -174,9 +190,12 @@
         document.getElementById('employment-list').insertAdjacentHTML('beforeend', employmentItem);
     }
 
-    // Function to create employment HTML element
     function createEmploymentElement(employment) {
-        const annualIncome = calculateAnnualIncome(employment.base_income, employment.additional_income || 0, employment.income_frequency);
+        const annualIncome = calculateAnnualIncome(
+            employment.base_income,
+            employment.additional_income || 0,
+            employment.income_frequency
+        );
 
         return `
             <div data-employment-card class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="${employment.id}">
@@ -216,25 +235,18 @@
         `;
     }
 
-    // Calculate annual income based on frequency
     function calculateAnnualIncome(baseIncome, additionalIncome, frequency) {
         const totalIncome = parseFloat(baseIncome) + parseFloat(additionalIncome);
 
-        switch(frequency) {
-            case 'weekly':
-                return totalIncome * 52;
-            case 'fortnightly':
-                return totalIncome * 26;
-            case 'monthly':
-                return totalIncome * 12;
-            case 'annual':
-                return totalIncome;
-            default:
-                return totalIncome;
+        switch (frequency) {
+            case 'weekly':      return totalIncome * 52;
+            case 'fortnightly': return totalIncome * 26;
+            case 'monthly':     return totalIncome * 12;
+            case 'annual':      return totalIncome;
+            default:            return totalIncome;
         }
     }
 
-    // Update employment count badge
     function updateEmploymentCount() {
         const badge = document.getElementById('employment-count-badge');
         const count = document.querySelectorAll('.employment-item').length;
@@ -243,13 +255,13 @@
         }
     }
 
-    // Global delete function
+    // ── Delete ────────────────────────────────────────────────────────────
+
     async function deleteEmployment(applicationId, employmentId) {
         if (!confirm('Are you sure you want to delete this employment record?')) {
             return;
         }
 
-        const messagesContainer = document.getElementById('employment-messages');
         const deleteUrl = EMPLOYMENT_CONFIG.deleteRoute.replace(':id', employmentId);
 
         try {
@@ -265,11 +277,7 @@
             const data = await response.json();
 
             if (response.ok) {
-                // Remove the employment from DOM
-                const employmentElement = document.querySelector(`[data-employment-id="${employmentId}"]`);
-                if (employmentElement) {
-                    employmentElement.remove();
-                }
+                document.querySelector(`[data-employment-id="${employmentId}"]`)?.remove();
 
                 updateEmploymentCount();
 
@@ -277,58 +285,19 @@
                     detail: { type: 'employment' }
                 }));
 
-                // Update count
-                const badge = document.getElementById('employment-count-badge');
-                const count = document.querySelectorAll('.employment-item').length;
-                if (badge) {
-                    badge.textContent = `${count} Employment(s)`;
-                }
-
-                // Show success message
-                messagesContainer.innerHTML = `
-                    <div class="p-4 bg-gradient-to-r from-green-50 to-emerald-50 border-l-4 border-green-400 rounded-lg">
-                        <div class="flex">
-                            <div class="flex-shrink-0">
-                                <svg class="h-6 w-6 text-green-600" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div class="ml-3">
-                                <p class="text-sm font-semibold text-green-800">${data.message || 'Employment details deleted successfully.'}</p>
-                            </div>
-                        </div>
-                    </div>
-                `;
-                messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                displaySuccess(data.message || 'Employment details deleted successfully.');
             } else {
                 throw new Error(data.message || 'Failed to delete employment record');
             }
         } catch (error) {
             console.error('Error:', error);
-            messagesContainer.innerHTML = `
-                <div class="p-4 bg-red-50 border-l-4 border-red-400 rounded-lg">
-                    <div class="flex">
-                        <div class="flex-shrink-0">
-                            <svg class="h-6 w-6 text-red-600" viewBox="0 0 20 20" fill="currentColor">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd"/>
-                            </svg>
-                        </div>
-                        <div class="ml-3">
-                            <p class="text-sm font-semibold text-red-800">${error.message}</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-            messagesContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            displayError(error.message);
         }
     }
 
     document.addEventListener('click', e => {
         const btn = e.target.closest('.delete-employment-btn');
         if (!btn) return;
-
-        const employment_id = btn.dataset.employmentId;
-
-        deleteEmployment(EMPLOYMENT_CONFIG.applicationId, employment_id);
+        deleteEmployment(EMPLOYMENT_CONFIG.applicationId, btn.dataset.employmentId);
     });
-})();
+});

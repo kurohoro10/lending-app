@@ -1,5 +1,5 @@
 // resources/js/applications/show/personalDetails.js
-(() => {
+document.addEventListener('DOMContentLoaded', () => {
     const accordionBtn   = document.getElementById('personal-details-btn');
     const chevron        = document.getElementById('personal-details-chevron');
     const content        = document.getElementById('personal-details-content');
@@ -10,6 +10,8 @@
     const msgContainer   = document.getElementById('form-messages');
     const maritalSelect  = document.getElementById('marital_status');
     const spouseFields   = document.getElementById('spouse-fields');
+    const spinner        = document.getElementById('submit-spinner');
+    const checkIcon      = document.getElementById('submit-check-icon');
 
     if (!form) return;
 
@@ -21,12 +23,21 @@
         accordionBtn.setAttribute('aria-expanded', String(!isOpen));
     });
 
+    // ── Spouse income currency formatting ─────────────────────────────────────
+    window.initCurrencyInput('spouse_income_display', 'spouse_income', { min: 0, max: 9_000_000_000, errorId: 'spouse_income-error' });
+
+    // Pre-fill display input from the hidden value on page load (edit mode)
+    const spouseIncomeHidden  = document.getElementById('spouse_income');
+    const spouseIncomeDisplay = document.getElementById('spouse_income_display');
+    if (spouseIncomeHidden?.value && spouseIncomeDisplay) {
+        spouseIncomeDisplay.value = window.formatWithCommas(spouseIncomeHidden.value);
+    }
+
     // ── Spouse fields — show when married or defacto ──────────────────────────
     function applySpouseVisibility(status) {
         const show = ['married', 'defacto'].includes(status);
         spouseFields.classList.toggle('hidden', !show);
 
-        // Update required attrs so browser + server validation align
         ['spouse_name', 'spouse_income'].forEach(name => {
             const el = document.getElementById(name) ||
                        form.querySelector(`[name="${name}"]`);
@@ -36,6 +47,10 @@
                 } else {
                     el.removeAttribute('aria-required');
                     el.value = '';
+                    // Also clear the display input when hiding
+                    if (name === 'spouse_income' && spouseIncomeDisplay) {
+                        spouseIncomeDisplay.value = '';
+                    }
                 }
             }
         });
@@ -69,12 +84,16 @@
 
         if (!validateAge()) return;
 
+        // ── Loading state ─────────────────────────────────────────────────
         submitBtn.disabled = true;
-        const originalText = submitBtnText.textContent;
+        submitBtn.setAttribute('aria-disabled', 'true');
+        spinner.classList.remove('hidden');
+        checkIcon.classList.add('hidden');
+        const originalText = submitBtnText.textContent.trim();
         submitBtnText.textContent = 'Saving…';
 
         try {
-            const res  = await fetch(form.action, {
+            const res = await fetch(form.action, {
                 method: 'POST',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
@@ -87,25 +106,26 @@
 
             if (res.ok) {
                 displaySuccess(data.message ?? 'Personal details saved successfully.');
-                if (originalText.includes('Save')) {
-                    submitBtnText.textContent = 'Update Personal Details';
-                }
+                submitBtnText.textContent = 'Update Personal Details';
                 document.dispatchEvent(new CustomEvent('progress:update'));
             } else if (res.status === 422 && data.errors) {
                 Object.entries(data.errors).forEach(([field, msgs]) => {
                     displayFieldError(field, msgs[0]);
                 });
                 displayError('Please correct the errors below.');
+                submitBtnText.textContent = originalText;
             } else {
                 displayError(data.message ?? 'An error occurred. Please try again.');
+                submitBtnText.textContent = originalText;
             }
         } catch {
             displayError('A network error occurred. Please check your connection and try again.');
+            submitBtnText.textContent = originalText;
         } finally {
             submitBtn.disabled = false;
-            if (submitBtnText.textContent === 'Saving…') {
-                submitBtnText.textContent = originalText;
-            }
+            submitBtn.removeAttribute('aria-disabled');
+            spinner.classList.add('hidden');
+            checkIcon.classList.remove('hidden');
         }
     });
 
@@ -162,4 +182,4 @@
             </div>`;
         msgContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
-})();
+});

@@ -9,7 +9,7 @@
         <div class="flex items-center justify-between">
             <div>
                 <h3 class="text-lg font-bold text-white flex items-center">
-                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
                         <path d="M2 13.692V16a2 2 0 002 2h12a2 2 0 002-2v-2.308A24.974 24.974 0 0110 15c-2.796 0-5.487-.46-8-1.308z"/>
                     </svg>
@@ -48,7 +48,7 @@
                                 <div class="flex items-start space-x-4">
                                     <div class="flex-shrink-0">
                                         <div class="h-12 w-12 rounded-lg bg-indigo-100 flex items-center justify-center">
-                                            <svg class="h-6 w-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20">
+                                            <svg class="h-6 w-6 text-indigo-600" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                                 <path fill-rule="evenodd" d="M6 6V5a3 3 0 013-3h2a3 3 0 013 3v1h2a2 2 0 012 2v3.57A22.952 22.952 0 0110 13a22.95 22.95 0 01-8-1.43V8a2 2 0 012-2h2zm2-1a1 1 0 011-1h2a1 1 0 011 1v1H8V5zm1 5a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd"/>
                                             </svg>
                                         </div>
@@ -135,24 +135,38 @@
                             <p id="employer_phone-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
 
+                        {{-- Base Income — display input (text + commas) + hidden raw value for submission --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Base Income *</label>
                             <div class="mt-1 relative rounded-xl shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 text-lg font-semibold">$</span>
                                 </div>
-                                <input type="number" name="base_income" id="base-income" step="0.01" min="0" required class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                                <input type="text"
+                                       id="base-income-display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
+                                       class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                                <input type="hidden" name="base_income" id="base-income">
                             </div>
                             <p id="base_income-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
 
+                        {{-- Additional Income — same pattern --}}
                         <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">Additional Income (optional)</label>
                             <div class="mt-1 relative rounded-xl shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 text-lg font-semibold">$</span>
                                 </div>
-                                <input type="number" name="additional_income" id="additional-income" step="0.01" min="0" value="0" class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                                <input type="text"
+                                       id="additional-income-display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
+                                       class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                                <input type="hidden" name="additional_income" id="additional-income" value="0">
                             </div>
                             <p id="additional_income-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
@@ -172,8 +186,24 @@
                 </div>
 
                 <div class="flex justify-end">
-                    <button type="submit" id="submit-employment-button" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white rounded-xl font-semibold text-sm uppercase tracking-wide hover:shadow-lg transition transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                    <button type="submit"
+                            id="submit-employment-button"
+                            class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600
+                                text-white rounded-xl font-semibold text-sm uppercase tracking-wide
+                                hover:shadow-lg transition transform hover:scale-105
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
+                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <svg id="submit-employment-spinner"
+                            class="hidden animate-spin w-4 h-4 mr-2"
+                            fill="none" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <svg id="submit-employment-plus-icon"
+                            class="w-4 h-4 mr-2"
+                            fill="currentColor" viewBox="0 0 20 20"
+                            aria-hidden="true">
                             <path fill-rule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clip-rule="evenodd"/>
                         </svg>
                         <span id="submit-employment-text">Add Employment</span>

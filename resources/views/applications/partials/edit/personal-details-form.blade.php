@@ -246,7 +246,7 @@
                         <p id="number_of_dependants-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
-                    {{-- ── Spouse fields (conditional: married) ─────────── --}}
+                    {{-- ── Spouse fields (conditional: married / defacto) ── --}}
                     <fieldset id="spouse-fields"
                               class="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-6
                                      {{ in_array($maritalStatus, ['married', 'defacto']) ? '' : 'hidden' }}"
@@ -269,26 +269,27 @@
                             <p id="spouse_name-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
 
-                        {{-- Spouse Income --}}
+                        {{-- Spouse Income — display input (text + commas) + hidden raw value for submission --}}
                         <div>
-                            <label for="spouse_income" class="block text-sm font-semibold text-gray-700 mb-2">
+                            <label for="spouse_income_display" class="block text-sm font-semibold text-gray-700 mb-2">
                                 Spouse / Partner Annual Income
                                 <span class="text-red-500" aria-hidden="true">*</span>
                             </label>
                             <div class="relative mt-1">
                                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none"
                                       aria-hidden="true">$</span>
-                                <input type="number"
-                                       id="spouse_income"
-                                       name="spouse_income"
-                                       value="{{ old('spouse_income', $pd?->spouse_income) }}"
-                                       min="0"
-                                       step="1"
-                                       inputmode="numeric"
+                                <input type="text"
+                                       id="spouse_income_display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
                                        aria-describedby="spouse_income-hint spouse_income-error"
-                                       placeholder="0"
                                        class="block w-full py-3 pl-8 pr-4 border border-gray-300 rounded-xl shadow-sm
                                               focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <input type="hidden"
+                                       id="spouse_income"
+                                       name="spouse_income"
+                                       value="{{ old('spouse_income', $pd?->spouse_income) }}">
                             </div>
                             <p id="spouse_income-hint" class="mt-1 text-xs text-gray-400">Before tax, per year.</p>
                             <p id="spouse_income-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
@@ -303,11 +304,21 @@
                     <button type="submit"
                             id="submit-button"
                             class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600
-                                   text-white rounded-xl font-semibold text-sm uppercase tracking-wide
-                                   hover:shadow-lg transition transform hover:scale-105
-                                   disabled:opacity-50 disabled:cursor-not-allowed
-                                   focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
-                        <svg class="w-4 h-4 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                text-white rounded-xl font-semibold text-sm uppercase tracking-wide
+                                hover:shadow-lg transition transform hover:scale-105
+                                disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none
+                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                        <svg id="submit-spinner"
+                            class="hidden animate-spin w-4 h-4 mr-2"
+                            fill="none" viewBox="0 0 24 24"
+                            aria-hidden="true">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                        </svg>
+                        <svg id="submit-check-icon"
+                            class="w-4 h-4 mr-2"
+                            fill="currentColor" viewBox="0 0 20 20"
+                            aria-hidden="true">
                             <path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd"/>
                         </svg>
                         <span id="submit-button-text">

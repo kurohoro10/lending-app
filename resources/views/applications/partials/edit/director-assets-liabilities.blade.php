@@ -195,23 +195,23 @@
                                           focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
                         </div>
 
-                        {{-- Estimated Value --}}
+                        {{-- Estimated Value — display + hidden --}}
                         <div>
-                            <label for="asset-value" class="block text-sm font-semibold text-gray-700 mb-1">
+                            <label for="asset-value-display" class="block text-sm font-semibold text-gray-700 mb-1">
                                 Estimated Value <span class="text-red-500" aria-hidden="true">*</span>
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none" aria-hidden="true">$</span>
-                                <input type="number"
-                                       id="asset-value"
-                                       min="0"
-                                       step="1"
-                                       inputmode="numeric"
+                                <input type="text"
+                                       id="asset-value-display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
                                        aria-required="true"
                                        aria-describedby="asset-value-error"
-                                       placeholder="0"
                                        class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
                                               focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                                <input type="hidden" id="asset-value">
                             </div>
                             <p id="asset-value-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
@@ -383,43 +383,43 @@
                                           focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400">
                         </div>
 
-                        {{-- Credit Limit (conditional: credit card only) --}}
+                        {{-- Credit Limit — display + hidden (conditional: credit card only) --}}
                         <div id="credit-limit-field" class="hidden">
-                            <label for="liability-limit" class="block text-sm font-semibold text-gray-700 mb-1">
+                            <label for="liability-limit-display" class="block text-sm font-semibold text-gray-700 mb-1">
                                 Credit Limit <span class="text-red-500" aria-hidden="true">*</span>
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none" aria-hidden="true">$</span>
-                                <input type="number"
-                                       id="liability-limit"
-                                       min="0"
-                                       step="1"
-                                       inputmode="numeric"
+                                <input type="text"
+                                       id="liability-limit-display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
                                        aria-describedby="liability-limit-error"
-                                       placeholder="0"
                                        class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
                                               focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400">
+                                <input type="hidden" id="liability-limit">
                             </div>
                             <p id="liability-limit-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
 
-                        {{-- Outstanding Balance --}}
+                        {{-- Outstanding Balance — display + hidden --}}
                         <div>
-                            <label for="liability-balance" class="block text-sm font-semibold text-gray-700 mb-1">
+                            <label for="liability-balance-display" class="block text-sm font-semibold text-gray-700 mb-1">
                                 Outstanding Balance <span class="text-red-500" aria-hidden="true">*</span>
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none" aria-hidden="true">$</span>
-                                <input type="number"
-                                       id="liability-balance"
-                                       min="0"
-                                       step="1"
-                                       inputmode="numeric"
+                                <input type="text"
+                                       id="liability-balance-display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
                                        aria-required="true"
                                        aria-describedby="liability-balance-error"
-                                       placeholder="0"
                                        class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
                                               focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400">
+                                <input type="hidden" id="liability-balance">
                             </div>
                             <p id="liability-balance-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                         </div>

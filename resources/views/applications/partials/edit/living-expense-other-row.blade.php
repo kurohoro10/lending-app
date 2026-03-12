@@ -22,15 +22,18 @@
     <div class="relative w-32 flex-shrink-0">
         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm pointer-events-none" aria-hidden="true">$</span>
         <label class="sr-only">Amount</label>
-        <input type="number"
-               name="expenses[{{ $index }}][client_declared_amount]"
-               value="{{ $exp?->client_declared_amount ?? '' }}"
-               min="0"
-               step="0.01"
-               placeholder="0.00"
-               class="expense-amount-input w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
-                      focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none tabular-nums"
-               aria-label="Custom expense amount">
+        <input type="text"
+            inputmode="decimal"
+            placeholder="0.00"
+            autocomplete="off"
+            value="{{ $exp && $exp->client_declared_amount ? number_format((float)$exp->client_declared_amount, 2) : '' }}"
+            class="expense-amount-display w-full pl-7 pr-3 py-2 border border-gray-300 rounded-lg text-sm
+                    focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 focus:outline-none tabular-nums"
+            aria-label="Custom expense amount">
+        <input type="hidden"
+            name="expenses[{{ $index }}][client_declared_amount]"
+            value="{{ $exp?->client_declared_amount ?? '' }}"
+            class="expense-amount-input">
     </div>
 
     {{-- Frequency --}}
