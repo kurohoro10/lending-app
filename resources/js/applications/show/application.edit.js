@@ -188,11 +188,19 @@
         return hasSavedExpenses;
     }
 
+    // Add a flag so we only re-check expenses after a save, not on DOM init
+    let expensesInitialized = false;
+
     function updateProgressState() {
         state.progress.personalDetails = checkPersonalDetailsComplete();
-        state.progress.addresses = checkAddressesComplete();
-        state.progress.employment = checkEmploymentComplete();
-        state.progress.expenses = checkExpensesComplete();
+        state.progress.addresses       = checkAddressesComplete();
+        state.progress.employment      = checkEmploymentComplete();
+
+        // Only re-evaluate expenses after an AJAX save — on initial load,
+        // trust the server-provided value in APP_STATE
+        if (expensesInitialized) {
+            state.progress.expenses = checkExpensesComplete();
+        }
 
         renderProgress();
         renderSubmitSection();
@@ -220,6 +228,12 @@
         if (!state.progress.employment) {
             missing.push({
                 text: 'Employment Details',
+                icon: 'cross'
+            });
+        }
+        if (!state.progress.expenses) {
+            missing.push({
+                text: 'Living Expenses (Enter at least one expense)',
                 icon: 'cross'
             });
         }
@@ -530,19 +544,30 @@
     }
 
     document.addEventListener('DOMContentLoaded', () => {
-        updateProgressState();
+        renderProgress();           // First render uses server APP_STATE as-is
+        renderSubmitSection();
+
+        // Now safe to start watching personal details fields
         attachEmploymentValidation();
         attachPersonalDetailsListeners();
         attachSubmitButtonListener();
         observeFormChanges();
 
+        // Mark expenses as "live" only after a successful expense save
         document.addEventListener('ajaxSuccess', (e) => {
-            if (e.detail?.type === 'address' ||
+            if (e.detail?.type === 'expense') {
+                expensesInitialized = true;
+            }
+            if (e.detail?.type === 'address'    ||
                 e.detail?.type === 'employment' ||
                 e.detail?.type === 'expense') {
                 debouncedUpdate();
             }
         });
+
+        // Delayed flag: after a short tick let the currency inputs hydrate,
+        // then allow client-side expense checks on subsequent updates
+        setTimeout(() => { expensesInitialized = true; }, 200);
     });
 
     window.updateApplicationProgress = updateProgressState;

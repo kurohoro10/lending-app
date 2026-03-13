@@ -33,12 +33,19 @@
         clearErrors();
 
         const nameEl  = document.getElementById('acct-name');
+        const emailEl = document.getElementById('acct-email');
         const phoneEl = document.getElementById('acct-phone');
         const yearsEl = document.getElementById('acct-years');
 
         if (!nameEl.value.trim()) {
             showError('acct-name-error', 'Accountant name is required.');
             nameEl.focus();
+            return;
+        }
+
+        if (emailEl.value.trim() && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(emailEl.value.trim())) {
+            showError('acct-email-error', 'Please enter a valid email address.');
+            emailEl.focus();
             return;
         }
 
@@ -54,6 +61,7 @@
                 },
                 body: JSON.stringify({
                     accountant_name:       nameEl.value.trim(),
+                    accountant_email:      emailEl.value.trim() || null,
                     accountant_phone:      phoneEl.value.trim() || null,
                     years_with_accountant: yearsEl.value || null,
                 }),
@@ -67,6 +75,7 @@
                 document.dispatchEvent(new CustomEvent('progress:update'));
             } else if (res.status === 422 && data.errors) {
                 if (data.errors.accountant_name)       showError('acct-name-error',  data.errors.accountant_name[0]);
+                if (data.errors.accountant_email)      showError('acct-email-error', data.errors.accountant_email[0]);
                 if (data.errors.accountant_phone)      showError('acct-phone-error', data.errors.accountant_phone[0]);
                 if (data.errors.years_with_accountant) showError('acct-years-error', data.errors.years_with_accountant[0]);
             } else {
@@ -88,7 +97,7 @@
     }
 
     function clearErrors() {
-        ['acct-name-error', 'acct-phone-error', 'acct-years-error'].forEach(id => {
+        ['acct-name-error', 'acct-email-error', 'acct-phone-error', 'acct-years-error'].forEach(id => {
             const el = document.getElementById(id);
             if (el) { el.textContent = ''; el.classList.add('hidden'); }
         });

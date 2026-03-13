@@ -63,6 +63,23 @@
                         <p id="acct-name-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
+                    {{-- Accountant Name --}}
+                    <div>
+                        <label for="acct-email"
+                               class="block text-sm font-semibold text-gray-700 mb-2">
+                            Accountant Email Address
+                        </label>
+                        <input type="email"
+                               id="acct-email"
+                               aria-required="true"
+                               aria-describedby="acct-email-error"
+                               value="{{ old('accountant_email', $acct?->accountant_email) }}"
+                               placeholder="e.g. email@example.com"
+                               class="block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <p id="acct-email-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
+                    </div>
+
                     {{-- Accountant Phone --}}
                     <div>
                         <label for="acct-phone"

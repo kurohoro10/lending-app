@@ -13,6 +13,7 @@ class AccountantDetailController extends Controller
     {
         $validated = $request->validate([
             'accountant_name'       => 'required|string|max:255',
+            'accountant_email'      => 'nullable|email|max:255',
             'accountant_phone'      => 'nullable|string|max:20',
             'years_with_accountant' => 'nullable|integer|min:0|max:100',
         ]);
@@ -28,6 +29,7 @@ class AccountantDetailController extends Controller
             'message'    => 'Accountant details saved.',
             'accountant' => [
                 'accountant_name'       => $accountant->accountant_name,
+                'accountant_email'      => $accountant->accountant_email,
                 'accountant_phone'      => $accountant->accountant_phone,
                 'years_with_accountant' => $accountant->years_with_accountant,
             ],

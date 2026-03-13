@@ -5,6 +5,7 @@ use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CreditControllers\CreditSenseController;
+use App\Http\Controllers\SuburbSearchController;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -25,3 +26,7 @@ Route::prefix('webhooks')->group(function () {
     Route::post('creditsense', [CreditSenseController::class, 'webhook'])
         ->name('webhooks.creditsense');
 });
+
+// Suburb helper
+Route::get('/api/suburbs/search', [SuburbSearchController::class, 'search'])
+    ->name('api.suburbs.search');

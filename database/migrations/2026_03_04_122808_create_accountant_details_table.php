@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('application_id')->unique()->constrained()->onDelete('cascade');
             $table->string('accountant_name');
+            $table->string('accountant_email')->nullable();
             $table->string('accountant_phone')->nullable();
             $table->integer('years_with_accountant')->nullable();
             $table->timestamps();

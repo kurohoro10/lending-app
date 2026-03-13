@@ -49,13 +49,36 @@ const DIRECTOR_DEL   = routes?.directorDelete;
         });
     }
 
-    // ── ABN formatter ─────────────────────────────────────────────────────────
+    // ── ABN formatter + real-time validation ──────────────────────────────────
     if (abnInput) {
         abnInput.addEventListener('input', () => {
             const digits = abnInput.value.replace(/\D/g, '').slice(0, 11);
             const parts  = [digits.slice(0,2), digits.slice(2,5), digits.slice(5,8), digits.slice(8,11)];
             abnInput.value = parts.filter(Boolean).join(' ');
+            validateAbn();
         });
+
+        abnInput.addEventListener('blur', validateAbn);
+    }
+
+    function validateAbn() {
+        const digits = abnInput.value.replace(/\s/g, '');
+        const errEl  = document.getElementById('borrower-abn-error');
+
+        if (digits.length > 0 && digits.length !== 11) {
+            if (errEl) {
+                errEl.textContent = `ABN must be exactly 11 digits (${digits.length}/11 entered).`;
+                errEl.classList.remove('hidden');
+            }
+            abnInput.classList.add('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+            abnInput.classList.remove('border-gray-300');
+            borrowerBtn.disabled = true;
+        } else {
+            if (errEl) { errEl.textContent = ''; errEl.classList.add('hidden'); }
+            abnInput.classList.remove('border-red-500', 'focus:ring-red-500', 'focus:border-red-500');
+            abnInput.classList.add('border-gray-300');
+            borrowerBtn.disabled = false;
+        }
     }
 
     // ── Borrower type → show/hide director section ────────────────────────────

@@ -40,9 +40,16 @@
                             <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                 <span class="text-gray-500 text-lg font-semibold">$</span>
                             </div>
-                            <input type="number" name="loan_amount" id="loan_amount" step="0.01" min="1000"
-                                    value="{{ old('loan_amount', $application->loan_amount) }}"
-                                    class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 py-3 text-lg border-gray-300 rounded-xl" required>
+                            {{-- Display input: comma-formatted, never submitted --}}
+                            <input type="text" id="loan_amount_display" inputmode="decimal"
+                                    value="{{ old('loan_amount', $application->loan_amount)
+                                        ? number_format((float) old('loan_amount', $application->loan_amount), 2, '.', ',')
+                                        : '' }}"
+                                    placeholder="0.00"
+                                    class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 pr-12 py-3 text-lg border-gray-300 rounded-xl">
+                            {{-- Hidden input: raw numeric value sent to server --}}
+                            <input type="hidden" name="loan_amount" id="loan_amount"
+                                    value="{{ old('loan_amount', $application->loan_amount) }}">
                         </div>
                         <p class="mt-2 text-xs text-gray-500">Minimum: $1,000</p>
                     </div>
@@ -51,11 +58,12 @@
                         <label for="loan_purpose" class="block text-sm font-semibold text-gray-700 mb-2">Loan Purpose *</label>
                         <select name="loan_purpose" id="loan_purpose" required
                                 class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="car_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'car_purchase' ? 'selected' : '' }}>Car Purchase</option>
+                            <option value="truck_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'truck_purchase' ? 'selected' : '' }}>Truck Purchase</option>
+                            <option value="caveat_loan" {{ old('loan_purpose', $application->loan_purpose) == 'caveat_loan' ? 'selected' : '' }}>Caveat Loan</option>
+                            <option value="business_expense" {{ old('loan_purpose', $application->loan_purpose) == 'business_expense' ? 'selected' : '' }}>Business Expense</option>
+                            <option value="invoice_finance" {{ old('loan_purpose', $application->loan_purpose) == 'invoice_finance' ? 'selected' : '' }}>Invoice Finance</option>
                             <option value="business_expansion" {{ old('loan_purpose', $application->loan_purpose) == 'business_expansion' ? 'selected' : '' }}>Business Expansion</option>
-                            <option value="equipment_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'equipment_purchase' ? 'selected' : '' }}>Equipment Purchase</option>
-                            <option value="working_capital" {{ old('loan_purpose', $application->loan_purpose) == 'working_capital' ? 'selected' : '' }}>Working Capital</option>
-                            <option value="property_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'property_purchase' ? 'selected' : '' }}>Property Purchase</option>
-                            <option value="debt_consolidation" {{ old('loan_purpose', $application->loan_purpose) == 'debt_consolidation' ? 'selected' : '' }}>Debt Consolidation</option>
                             <option value="other" {{ old('loan_purpose', $application->loan_purpose) == 'other' ? 'selected' : '' }}>Other</option>
                         </select>
                     </div>
@@ -79,10 +87,11 @@
                         <select name="security_type" id="security_type"
                                 class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select security type...</option>
-                            <option value="property" {{ old('security_type', $application->security_type) == 'property' ? 'selected' : '' }}>Property</option>
-                            <option value="equipment" {{ old('security_type', $application->security_type) == 'equipment' ? 'selected' : '' }}>Equipment</option>
-                            <option value="vehicle" {{ old('security_type', $application->security_type) == 'vehicle' ? 'selected' : '' }}>Vehicle</option>
-                            <option value="unsecured" {{ old('security_type', $application->security_type) == 'unsecured' ? 'selected' : '' }}>Unsecured</option>
+                            <option value="residential_house" {{ old('security_type', $application->security_type) == 'residential_house' ? 'selected' : '' }}>Residential House</option>
+                            <option value="commerial_house" {{ old('security_type', $application->security_type) == 'commerial_house' ? 'selected' : '' }}>Commercial House</option>
+                            <option value="car" {{ old('security_type', $application->security_type) == 'car' ? 'selected' : '' }}>Car</option>
+                            <option value="truck" {{ old('security_type', $application->security_type) == 'truck' ? 'selected' : '' }}>Truck</option>
+                            <option value="others" {{ old('security_type', $application->security_type) == 'others' ? 'selected' : '' }}>Others</option>
                         </select>
                     </div>
                 </div>

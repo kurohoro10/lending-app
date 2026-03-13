@@ -52,7 +52,7 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Message</label>
                     <textarea name="message" rows="4"
                               class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500"
-                              placeholder="Your test message here...">Hello from LoanFlow CRM! This is a test message.</textarea>
+                              placeholder="Your test message here...">Hello from ZYA Capital CRM! This is a test message.</textarea>
                 </div>
 
                 <!-- Submit Button -->

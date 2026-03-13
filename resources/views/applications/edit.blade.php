@@ -65,10 +65,10 @@
             @include('applications.partials.edit.living-expenses-form', ['application' => $application])
 
             <!-- Bank Statements Section (CreditSense) -->
-            @include('applications.partials.edit.bank-statements', ['application' => $application])
+            {{-- @include('applications.partials.edit.bank-statements', ['application' => $application]) --}}
 
             <!-- Documents Section -->
-            @include('applications.partials.edit.documents-upload', ['application' => $application])
+            {{-- @include('applications.partials.edit.documents-upload', ['application' => $application]) --}}
 
             <form method="POST" action="{{ route('applications.submit', $application) }}" onsubmit="return confirm('Are you sure you want to submit this application? You will not be able to edit it after submission.');">
                 @csrf

@@ -369,7 +369,7 @@
                         <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
                     </svg>
                 </div>
-                <span class="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">LoanFlow</span>
+                <span class="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">ZYA Capital</span>
             </div>
 
             <div class="flex items-center space-x-3">
@@ -596,14 +596,19 @@
 
                                 <div class="space-y-5">
                                     <div>
-                                        <label for="loan_amount" class="form-label">Loan Amount Requested <span class="text-indigo-500">*</span></label>
+                                        <label for="loan_amount_display" class="form-label">Loan Amount Requested <span class="text-indigo-500">*</span></label>
                                         <div class="input-icon-wrapper">
                                             <span class="input-icon">$</span>
-                                            <input type="number" name="loan_amount" id="loan_amount" step="0.01" min="1000"
-                                                value="{{ old('loan_amount', $calculatorValues['loan_amount']) }}"
+                                            {{-- Display input: comma-formatted, never submitted --}}
+                                            <input type="text" id="loan_amount_display" inputmode="decimal"
+                                                value="{{ old('loan_amount', $calculatorValues['loan_amount'])
+                                                    ? number_format((float) old('loan_amount', $calculatorValues['loan_amount']), 0, '.', ',')
+                                                    : '' }}"
                                                 placeholder="100,000"
-                                                class="form-input input-with-icon @error('loan_amount') error @enderror"
-                                                required>
+                                                class="form-input input-with-icon @error('loan_amount') error @enderror">
+                                            {{-- Hidden input: raw numeric value sent to server --}}
+                                            <input type="hidden" name="loan_amount" id="loan_amount"
+                                                value="{{ old('loan_amount', $calculatorValues['loan_amount']) }}">
                                         </div>
                                         @error('loan_amount')
                                             <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -903,7 +908,7 @@
 
                     <!-- Trust Signals -->
                     <div class="bg-gradient-to-br from-indigo-600 to-purple-600 rounded-3xl shadow-xl p-6 text-white">
-                        <h3 class="text-base font-bold mb-4">Why LoanFlow?</h3>
+                        <h3 class="text-base font-bold mb-4">Why ZYA Capital?</h3>
                         <div class="space-y-3">
                             <div class="flex items-center gap-3">
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -952,8 +957,8 @@
                         </div>
                         <h4 class="font-bold text-gray-900 mb-1">Need Help?</h4>
                         <p class="text-xs text-gray-500 mb-3">Our specialists are available 24/7</p>
-                        <a href="mailto:support@loanflow.com" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
-                            support@loanflow.com →
+                        <a href="mailto:support@zyacapital.com" class="text-sm font-semibold text-indigo-600 hover:text-indigo-800 transition">
+                            support@zyacapital.com →
                         </a>
                     </div>
                 </div>
@@ -1016,11 +1021,19 @@
 
         // Copies calculator values into the main form inputs
         function useCalculatorValues() {
-            document.getElementById('loan_amount').value = document.getElementById('calcLoanSlider').value;
+            const rawAmount = document.getElementById('calcLoanSlider').value;
+
+            // Update display input with comma formatting
+            const display = document.getElementById('loan_amount_display');
+            display.value = Number(rawAmount).toLocaleString();
+
+            // Update hidden input with raw value for server submission
+            document.getElementById('loan_amount').value = rawAmount;
+
             document.getElementById('term_months').value = document.getElementById('calcTermSlider').value;
 
             // Brief flash to confirm the copy
-            ['loan_amount', 'term_months'].forEach(id => {
+            ['loan_amount_display', 'term_months'].forEach(id => {
                 const el = document.getElementById(id);
                 el.style.borderColor = '#6366F1';
                 el.style.boxShadow   = '0 0 0 4px rgba(99,102,241,0.15)';
@@ -1043,6 +1056,12 @@
 
             // Initial calculation
             calculateLoan();
+
+            // Loan amount: comma-formatted display + raw hidden input
+            initCurrencyInput('loan_amount_display', 'loan_amount', {
+                min: 1000,
+                max: 9_000_000_000,
+            });
 
             // ── Submit button state ──
             const form             = document.querySelector('form');

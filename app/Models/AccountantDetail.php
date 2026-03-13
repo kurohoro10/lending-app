@@ -14,6 +14,7 @@ class AccountantDetail extends Model
     protected $fillable = [
         'application_id',
         'accountant_name',
+        'accountant_email',
         'accountant_phone',
         'years_with_accountant',
     ];

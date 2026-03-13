@@ -285,7 +285,7 @@ class ApplicationController extends Controller
                 'agreed_at'           => now(),
                 'agreement_ip'        => request()->ip(),
                 'signature_data'      => $validated['signature'],
-                'signature_type'      => $validated['signature_type'] ?? 'typed',
+                'signature_type'      => $validated['signature_type'] ?? 'drawn',
                 'signatory_name'      => auth()->user()->name,
                 'signatory_position'  => $validated['signatory_position'] ?? null,
                 'signature_timestamp' => now(),

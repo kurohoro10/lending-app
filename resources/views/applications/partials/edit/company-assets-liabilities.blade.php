@@ -131,17 +131,18 @@
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none"
-                                      aria-hidden="true">$</span>
-                                <input type="number"
-                                       id="cal-asset-value"
-                                       min="0"
-                                       step="1"
-                                       inputmode="numeric"
-                                       aria-required="true"
-                                       aria-describedby="cal-asset-value-error"
-                                       placeholder="0"
-                                       class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
-                                              focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                                    aria-hidden="true">$</span>
+                                {{-- Display input: comma-formatted, never read by JS directly --}}
+                                <input type="text"
+                                    id="cal-asset-value-display"
+                                    inputmode="decimal"
+                                    aria-required="true"
+                                    aria-describedby="cal-asset-value-error"
+                                    placeholder="0"
+                                    class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                            focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500">
+                                {{-- Hidden input: raw numeric value read by JS on save --}}
+                                <input type="hidden" id="cal-asset-value">
                             </div>
                             <p id="cal-asset-value-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
@@ -263,17 +264,18 @@
                             </label>
                             <div class="relative">
                                 <span class="absolute inset-y-0 left-0 pl-4 flex items-center text-gray-400 pointer-events-none"
-                                      aria-hidden="true">$</span>
-                                <input type="number"
-                                       id="cal-liability-value"
-                                       min="0"
-                                       step="1"
-                                       inputmode="numeric"
-                                       aria-required="true"
-                                       aria-describedby="cal-liability-value-error"
-                                       placeholder="0"
-                                       class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
-                                              focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400">
+                                    aria-hidden="true">$</span>
+                                {{-- Display input: comma-formatted, never read by JS directly --}}
+                                <input type="text"
+                                    id="cal-liability-value-display"
+                                    inputmode="decimal"
+                                    aria-required="true"
+                                    aria-describedby="cal-liability-value-error"
+                                    placeholder="0"
+                                    class="block w-full py-3 pl-8 pr-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                            focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-red-400">
+                                {{-- Hidden input: raw numeric value read by JS on save --}}
+                                <input type="hidden" id="cal-liability-value">
                             </div>
                             <p id="cal-liability-value-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
