@@ -23,6 +23,7 @@ class Question extends Model
         'answer_ip',
         'status',
         'is_mandatory',
+        'doc_category_hint',
         'read_by',
         'read_at',
     ];

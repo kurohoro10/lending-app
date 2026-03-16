@@ -21,16 +21,18 @@ class QuestionController extends Controller
     public function store(Request $request, Application $application): JsonResponse
     {
         $validated = $request->validate([
-            'question'     => 'required|string|max:1000',
-            'is_mandatory' => 'nullable|boolean',
+            'question'          => 'required|string|max:1000',
+            'is_mandatory'      => 'nullable|boolean',
+            'doc_category_hint' => 'nullable|string|in:id,income,bank,assets,liabilities,employment,other',
         ]);
-
+        
         $question = $application->questions()->create([
-            'asked_by'     => auth()->id(),
-            'question'     => $validated['question'],
-            'is_mandatory' => $validated['is_mandatory'] ?? false,
-            'status'       => 'pending',
-            'asked_at'     => now(),
+            'asked_by'          => auth()->id(),
+            'question'          => $validated['question'],
+            'is_mandatory'      => $validated['is_mandatory'] ?? false,
+            'doc_category_hint' => $validated['doc_category_hint'] ?? null,
+            'status'            => 'pending',
+            'asked_at'          => now(),
         ]);
 
         $question->load('askedBy');
@@ -92,15 +94,16 @@ class QuestionController extends Controller
     private function formatQuestion(Question $question): array
     {
         return [
-            'id'           => $question->id,
-            'question'     => $question->question,
-            'is_mandatory' => $question->is_mandatory,
-            'status'       => $question->status,
-            'asked_by'     => $question->askedBy->name,
-            'asked_at'     => DateFormatter::datetime($question->asked_at),
-            'answer'       => null,
-            'answered_at'  => null,
-            'answer_ip'    => null,
+            'id'                => $question->id,
+            'question'          => $question->question,
+            'is_mandatory'      => $question->is_mandatory,
+            'doc_category_hint' => $question->doc_category_hint,
+            'status'            => $question->status,
+            'asked_by'          => $question->askedBy->name,
+            'asked_at'          => DateFormatter::datetime($question->asked_at),
+            'answer'            => null,
+            'answered_at'       => null,
+            'answer_ip'         => null,
         ];
     }
 

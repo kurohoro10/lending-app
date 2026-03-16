@@ -1,11 +1,10 @@
 {{-- resources/views/applications/partials/show/questions.blade.php --}}
 @if($application->questions->count() > 0)
 <div id="client-questions-section"
-     class="bg-white overflow-hidden shadow-xl sm:rounded-2xl border border-gray-200
-            transition-all duration-500">
+     class="bg-white overflow-hidden shadow-xl sm:rounded-2xl border border-gray-200 transition-all duration-500">
 
     <div class="bg-gradient-to-r from-indigo-600 to-purple-600 px-6 py-4">
-        <h3 class="text-lg font-bold text-white flex items-center">
+        <h3 class="text-lg font-bold text-white flex items-center" id="client-qa-heading">
             <svg class="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                 <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-8-3a1 1 0 00-.867.5 1 1 0 11-1.731-1A3 3 0 0113 8a3.001 3.001 0 01-2 2.83V11a1 1 0 11-2 0v-1a1 1 0 011-1 1 1 0 100-2zm0 8a1 1 0 100-2 1 1 0 000 2z" clip-rule="evenodd"/>
             </svg>
@@ -15,269 +14,239 @@
 
     <div class="p-6">
 
+        {{-- Live region --}}
+        <div id="client-qa-announcer" role="status" aria-live="polite" aria-atomic="true" class="sr-only"></div>
+
         {{-- Toast --}}
         <div id="client-qa-toast"
-             class="hidden mb-4 p-3 rounded-xl text-sm"
-             role="status"
-             aria-live="polite"
-             aria-atomic="true"></div>
+             class="hidden mb-4 p-3 rounded-xl text-sm font-medium border"
+             role="alert"
+             aria-live="assertive"
+             aria-atomic="true"
+             tabindex="-1"></div>
 
-        <ol class="space-y-3" aria-label="Assessment team questions">
-            @foreach($application->questions as $question)
-                <li class="question-card rounded-xl border p-4 transition-colors
-                           {{ $question->status === 'pending'
-                               ? 'bg-amber-50 border-amber-200'
-                               : 'bg-gray-50 border-gray-200' }}"
-                    data-question-id="{{ $question->id }}"
-                    data-status="{{ $question->status }}">
+        <ol class="space-y-4" aria-labelledby="client-qa-heading">
+            @foreach($application->questions->sortBy('created_at') as $question)
+            @php
+                $isPending  = $question->status === 'pending';
+                $isAnswered = $question->status === 'answered';
+                $requiresDoc = filled($question->doc_category_hint);
 
-                    <div class="flex items-start justify-between gap-3">
+                $docCategoryLabels = [
+                    'id'          => 'Identification',
+                    'income'      => 'Income Documentation',
+                    'bank'        => 'Bank Statements',
+                    'assets'      => 'Asset Documentation',
+                    'liabilities' => 'Liability Documentation',
+                    'employment'  => 'Employment / Business Verification',
+                    'other'       => 'Other Documents',
+                ];
+                $docLabel = $requiresDoc ? ($docCategoryLabels[$question->doc_category_hint] ?? ucfirst($question->doc_category_hint)) : null;
+            @endphp
 
-                        <div class="flex items-start gap-3 flex-1 min-w-0">
-                            <div class="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0
-                                        {{ $question->status === 'pending' ? 'bg-amber-100' : 'bg-gray-200' }}"
-                                 aria-hidden="true">
-                                <svg class="h-4 w-4 {{ $question->status === 'pending' ? 'text-amber-600' : 'text-gray-500' }}"
-                                     fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
-                                          d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                                </svg>
-                            </div>
+            <li class="question-card rounded-xl border p-4 transition-colors
+                        {{ $isPending ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200' }}"
+                id="client-question-card-{{ $question->id }}"
+                data-question-id="{{ $question->id }}"
+                data-status="{{ $question->status }}"
+                data-doc-category="{{ $question->doc_category_hint ?? '' }}"
+                data-upload-route="{{ route('applications.documents.store', $application) }}">
 
-                            <div class="flex-1 min-w-0">
-                                <p class="text-sm font-semibold text-gray-900">
-                                    {{ $question->question }}
-                                    @if($question->is_mandatory)
-                                        <span class="text-red-500 ml-0.5" aria-label="required">*</span>
-                                    @endif
-                                </p>
-                                <p class="mt-0.5 text-xs text-gray-500">
-                                    @if($question->asked_by_name){{ $question->asked_by_name }} · @endif
-                                    {{ $question->created_at->format('d M Y') }}
-                                    @if($question->status === 'answered')
-                                        · Answered {{ $question->answered_at->format('d M Y') }}
-                                    @endif
-                                </p>
-
-                                @if($question->status === 'pending')
-                                    {{-- Answer form --}}
-                                    <div class="answer-form mt-3">
-                                        <label for="answer-input-{{ $question->id }}"
-                                               class="sr-only">
-                                            Your answer to: {{ $question->question }}
-                                        </label>
-                                        <textarea id="answer-input-{{ $question->id }}"
-                                                  class="answer-input w-full text-sm border border-gray-300 rounded-xl
-                                                         px-3 py-2 resize-none
-                                                         focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                                                  rows="3"
-                                                  placeholder="Type your answer here… (Ctrl+Enter to submit)"
-                                                  aria-required="{{ $question->is_mandatory ? 'true' : 'false' }}"
-                                                  data-question-id="{{ $question->id }}"></textarea>
-                                        <p class="answer-error hidden mt-1 text-xs text-red-600" role="alert"></p>
-                                        <div class="mt-2 flex justify-end">
-                                            <button type="button"
-                                                    class="submit-answer-btn inline-flex items-center gap-2 px-4 py-2
-                                                           bg-indigo-600 text-white text-xs font-semibold rounded-xl
-                                                           hover:bg-indigo-700 transition
-                                                           disabled:opacity-50 disabled:cursor-not-allowed
-                                                           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
-                                                    data-question-id="{{ $question->id }}"
-                                                    aria-label="Submit answer for question {{ $loop->iteration }}">
-                                                <span class="btn-text">Submit Answer</span>
-                                                <svg class="btn-spinner hidden animate-spin h-3 w-3"
-                                                     fill="none" viewBox="0 0 24 24" aria-hidden="true">
-                                                    <circle class="opacity-25" cx="12" cy="12" r="10"
-                                                            stroke="currentColor" stroke-width="4"/>
-                                                    <path class="opacity-75" fill="currentColor"
-                                                          d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-                                                </svg>
-                                            </button>
-                                        </div>
-                                    </div>
-                                @else
-                                    {{-- Answered display --}}
-                                    <div class="answer-display mt-3 p-3 bg-white rounded-xl border border-gray-200">
-                                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $question->answer }}</p>
-                                    </div>
+                {{-- Question header --}}
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-start gap-3 flex-1 min-w-0">
+                        <div class="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0
+                                    {{ $isPending ? 'bg-amber-100' : 'bg-gray-200' }}"
+                             aria-hidden="true">
+                            <svg class="h-4 w-4 {{ $isPending ? 'text-amber-600' : 'text-gray-500' }}"
+                                 fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                      d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                            </svg>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-gray-900">
+                                {{ $question->question }}
+                                @if($question->is_mandatory)
+                                    <span class="text-red-500 ml-0.5" aria-label="required">*</span>
                                 @endif
-                            </div>
+                            </p>
+                            <p class="mt-0.5 text-xs text-gray-500">
+                                @if($question->askedBy){{ $question->askedBy->name }} &bull; @endif
+                                <time datetime="{{ $question->asked_at->toIso8601String() }}">
+                                    {{ $question->asked_at->format('d M Y') }}
+                                </time>
+                                @if($isAnswered && $question->answered_at)
+                                    &bull; Answered
+                                    <time datetime="{{ $question->answered_at->toIso8601String() }}">
+                                        {{ $question->answered_at->format('d M Y') }}
+                                    </time>
+                                @endif
+                            </p>
+                        </div>
+                    </div>
+
+                    <span class="question-status flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold
+                                 {{ $isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700' }}"
+                          aria-label="Status: {{ $isPending ? 'Pending your response' : 'Answered' }}">
+                        {{ $isPending ? 'Pending' : 'Answered' }}
+                    </span>
+                </div>
+
+                @if($isPending)
+                    {{-- ── Answer form ─────────────────────────────────────── --}}
+                    <div class="answer-form space-y-3">
+
+                        {{-- Text answer --}}
+                        <div>
+                            <label for="answer-input-{{ $question->id }}" class="sr-only">
+                                Your answer to: {{ $question->question }}
+                            </label>
+                            <textarea id="answer-input-{{ $question->id }}"
+                                      class="answer-input w-full text-sm border border-gray-300 rounded-xl
+                                             px-3 py-2 resize-none
+                                             focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                      rows="3"
+                                      placeholder="Type your answer here… (Ctrl+Enter to submit)"
+                                      aria-required="{{ $question->is_mandatory ? 'true' : 'false' }}"
+                                      data-question-id="{{ $question->id }}"></textarea>
+                            <p class="answer-error hidden mt-1 text-xs text-red-600" role="alert" aria-live="polite"></p>
                         </div>
 
-                        <span class="question-status flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                     {{ $question->status === 'pending'
-                                         ? 'bg-amber-100 text-amber-700'
-                                         : 'bg-green-100 text-green-700' }}">
-                            {{ $question->status === 'pending' ? 'Pending' : 'Answered' }}
-                        </span>
+                        @if($requiresDoc)
+                        {{-- ── Inline document upload ───────────────────────── --}}
+                        <div class="doc-upload-panel"
+                             role="group"
+                             aria-labelledby="doc-upload-label-{{ $question->id }}">
+
+                            {{-- Row: icon + label + upload button --}}
+                            <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl
+                                        border border-indigo-200 bg-indigo-50">
+
+                                <svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                                </svg>
+
+                                <div class="flex-1 min-w-0">
+                                    <p id="doc-upload-label-{{ $question->id }}"
+                                       class="text-xs font-semibold text-indigo-900 leading-tight">
+                                        Supporting document requested
+                                    </p>
+                                    <p class="text-xs text-indigo-600 leading-tight mt-0.5">
+                                        {{ $docLabel }} &mdash;
+                                        <span class="text-gray-400">PDF, JPG, PNG, DOC, XLSX &bull; max 10 MB</span>
+                                    </p>
+                                </div>
+
+                                {{-- Hidden real input --}}
+                                <input type="file"
+                                       id="doc-file-{{ $question->id }}"
+                                       class="doc-file-input sr-only"
+                                       data-question-id="{{ $question->id }}"
+                                       accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
+                                       aria-label="Upload {{ $docLabel }} document"
+                                       aria-describedby="doc-upload-label-{{ $question->id }} doc-upload-error-{{ $question->id }}">
+
+                                {{-- Upload trigger button --}}
+                                <label for="doc-file-{{ $question->id }}"
+                                       class="doc-upload-trigger flex-shrink-0 inline-flex items-center gap-1.5
+                                              px-3 py-1.5 rounded-lg cursor-pointer
+                                              bg-white border border-indigo-300 text-indigo-700
+                                              text-xs font-semibold
+                                              hover:bg-indigo-100 hover:border-indigo-400 transition
+                                              focus-within:ring-2 focus-within:ring-indigo-500">
+                                    <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zM6.293 6.707a1 1 0 010-1.414l3-3a1 1 0 011.414 0l3 3a1 1 0 01-1.414 1.414L11 5.414V13a1 1 0 11-2 0V5.414L7.707 6.707a1 1 0 01-1.414 0z" clip-rule="evenodd"/>
+                                    </svg>
+                                    Choose file
+                                </label>
+                            </div>
+
+                            {{-- File preview (hidden until file chosen) --}}
+                            <div class="doc-file-preview hidden mt-2 flex items-center gap-2
+                                        px-3 py-2 rounded-lg bg-white border border-indigo-200">
+                                <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                </svg>
+                                <div class="flex-1 min-w-0">
+                                    <p class="doc-preview-name text-xs font-semibold text-gray-900 truncate"></p>
+                                    <p class="doc-preview-size text-xs text-gray-400"></p>
+                                </div>
+                                <button type="button"
+                                        class="doc-clear-btn flex-shrink-0 text-gray-400 hover:text-red-500 transition
+                                               focus:outline-none focus:ring-2 focus:ring-red-400 rounded"
+                                        aria-label="Remove selected file">
+                                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                                    </svg>
+                                </button>
+                            </div>
+
+                            {{-- Validation error --}}
+                            <p id="doc-upload-error-{{ $question->id }}"
+                               class="doc-upload-error hidden mt-1.5 text-xs text-red-600"
+                               role="alert"
+                               aria-live="polite"></p>
+
+                            {{-- Upload progress bar (hidden until uploading) --}}
+                            <div class="doc-upload-progress hidden mt-2">
+                                <div class="flex items-center justify-between text-xs text-indigo-700 mb-1">
+                                    <span>Uploading…</span>
+                                    <span class="doc-progress-pct" aria-live="polite" aria-atomic="true">0%</span>
+                                </div>
+                                <div class="h-1 bg-indigo-100 rounded-full overflow-hidden"
+                                     role="progressbar"
+                                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
+                                     aria-label="Document upload progress">
+                                    <div class="doc-progress-bar h-full bg-indigo-500 rounded-full transition-all duration-200"
+                                         style="width: 0%"></div>
+                                </div>
+                            </div>
+
+                            {{-- Upload success confirmation --}}
+                            <div class="doc-upload-success hidden mt-2 flex items-center gap-1.5 text-green-700">
+                                <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <p class="doc-upload-success-name text-xs font-medium"></p>
+                            </div>
+
+                        </div>
+                        @endif
+
+                        {{-- Submit row --}}
+                        <div class="flex justify-end">
+                            <button type="button"
+                                    class="submit-answer-btn inline-flex items-center gap-2 px-4 py-2
+                                           bg-indigo-600 text-white text-xs font-semibold rounded-xl
+                                           hover:bg-indigo-700 transition
+                                           disabled:opacity-50 disabled:cursor-not-allowed
+                                           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
+                                    data-question-id="{{ $question->id }}"
+                                    data-requires-doc="{{ $requiresDoc ? 'true' : 'false' }}"
+                                    data-doc-category="{{ $question->doc_category_hint ?? '' }}"
+                                    aria-label="Submit answer for: {{ Str::limit($question->question, 60) }}">
+                                <span class="btn-text">Submit Answer</span>
+                                <svg class="btn-spinner hidden animate-spin h-3 w-3"
+                                     fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                </svg>
+                            </button>
+                        </div>
 
                     </div>
-                </li>
+
+                @else
+                    {{-- ── Answered display ─────────────────────────────────── --}}
+                    <div class="answer-display mt-1 p-3 bg-white rounded-xl border border-gray-200">
+                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $question->answer }}</p>
+                    </div>
+                @endif
+
+            </li>
             @endforeach
         </ol>
     </div>
 </div>
-
-<script>
-(() => {
-    const section   = document.getElementById('client-questions-section');
-    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
-    if (!section) return;
-
-    // ── Toast ─────────────────────────────────────────────────────────────────
-    function showToast(msg, type = 'success') {
-        const toast = document.getElementById('client-qa-toast');
-        if (!toast) return;
-        const ok = type === 'success';
-        toast.className = `mb-4 p-3 rounded-xl text-sm font-medium border ${
-            ok ? 'bg-green-50 border-green-200 text-green-800'
-               : 'bg-red-50 border-red-200 text-red-800'}`;
-        toast.textContent = msg;
-        toast.classList.remove('hidden');
-        if (ok) setTimeout(() => toast.classList.add('hidden'), 4000);
-    }
-
-    // ── Update pending banner ─────────────────────────────────────────────────
-    function updatePendingBanner() {
-        const count    = section.querySelectorAll('.question-card[data-status="pending"]').length;
-        const banner   = document.getElementById('pending-questions-warning');
-        if (!banner) return;
-        if (count === 0) {
-            banner.style.opacity = '0';
-            banner.style.transition = 'opacity 0.3s ease';
-            setTimeout(() => banner.remove(), 300);
-        } else {
-            const countEl = document.getElementById('pending-count');
-            const badgeEl = document.getElementById('pending-badge');
-            if (countEl) countEl.textContent = count;
-            if (badgeEl) badgeEl.textContent  = count;
-        }
-    }
-
-    // ── Submit answer ─────────────────────────────────────────────────────────
-    async function submitAnswer(questionId, btn) {
-        const card      = section.querySelector(`.question-card[data-question-id="${questionId}"]`);
-        if (!card) return;
-
-        const textarea  = card.querySelector('.answer-input');
-        const errorEl   = card.querySelector('.answer-error');
-        const btnText   = btn.querySelector('.btn-text');
-        const spinner   = btn.querySelector('.btn-spinner');
-
-        if (!textarea.value.trim()) {
-            errorEl.textContent = 'Please enter an answer.';
-            errorEl.classList.remove('hidden');
-            textarea.focus();
-            return;
-        }
-
-        errorEl.classList.add('hidden');
-        btn.disabled         = true;
-        btnText.textContent  = 'Submitting…';
-        spinner.classList.remove('hidden');
-
-        try {
-            const res  = await fetch(`/questions/${questionId}/answer`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': csrfToken,
-                    'Accept':       'application/json',
-                },
-                body: JSON.stringify({ answer: textarea.value.trim() }),
-            });
-
-            const data = await res.json();
-
-            if (data.success) {
-                // Update card styling
-                card.className = card.className
-                    .replace('bg-amber-50 border-amber-200', 'bg-gray-50 border-gray-200');
-                card.dataset.status = 'answered';
-
-                // Update status badge
-                const badge = card.querySelector('.question-status');
-                if (badge) {
-                    badge.className = badge.className
-                        .replace('bg-amber-100 text-amber-700', 'bg-green-100 text-green-700');
-                    badge.textContent = 'Answered';
-                }
-
-                // Update icon
-                const iconWrap = card.querySelector('[aria-hidden="true"].rounded-full');
-                if (iconWrap) {
-                    iconWrap.className = iconWrap.className
-                        .replace('bg-amber-100', 'bg-gray-200');
-                    const svg = iconWrap.querySelector('svg');
-                    if (svg) svg.className = svg.className.replace('text-amber-600', 'text-gray-500');
-                }
-
-                // Update meta line
-                const meta = card.querySelector('.text-xs.text-gray-500');
-                if (meta) {
-                    const base = meta.textContent.split('·')[0].trim();
-                    meta.textContent = `${base} · Answered ${data.answered_at}`;
-                }
-
-                // Swap form → answer display
-                const form = card.querySelector('.answer-form');
-                if (form) {
-                    const div = document.createElement('div');
-                    div.className = 'answer-display mt-3 p-3 bg-white rounded-xl border border-gray-200';
-                    div.innerHTML = `<p class="text-sm text-gray-700 whitespace-pre-wrap">${escHtml(data.answer)}</p>`;
-                    form.replaceWith(div);
-                }
-
-                updatePendingBanner();
-                showToast(data.message ?? 'Answer submitted.', 'success');
-            } else {
-                showToast(data.message ?? 'Failed to submit answer.', 'error');
-                btn.disabled        = false;
-                btnText.textContent = 'Submit Answer';
-                spinner.classList.add('hidden');
-            }
-        } catch {
-            showToast('A network error occurred. Please try again.', 'error');
-            btn.disabled        = false;
-            btnText.textContent = 'Submit Answer';
-            spinner.classList.add('hidden');
-        }
-    }
-
-    // ── Event delegation: click ───────────────────────────────────────────────
-    section.addEventListener('click', (e) => {
-        const btn = e.target.closest('.submit-answer-btn');
-        if (btn) submitAnswer(btn.dataset.questionId, btn);
-    });
-
-    // ── Event delegation: Ctrl/Cmd+Enter ─────────────────────────────────────
-    section.addEventListener('keydown', (e) => {
-        if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
-            const textarea = e.target.closest('.answer-input');
-            if (!textarea) return;
-            const btn = section.querySelector(`.submit-answer-btn[data-question-id="${textarea.dataset.questionId}"]`);
-            if (btn && !btn.disabled) submitAnswer(textarea.dataset.questionId, btn);
-        }
-    });
-
-    function escHtml(str) {
-        return String(str ?? '')
-            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
-            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
-    }
-})();
-
-// Global: called from pending-questions.blade.php banner
-function scrollToQuestions() {
-    const section = document.getElementById('client-questions-section');
-    if (!section) return;
-    section.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    section.style.boxShadow = '0 0 0 3px rgba(99, 102, 241, 0.3)';
-    setTimeout(() => section.style.boxShadow = '', 1500);
-    setTimeout(() => {
-        const first = section.querySelector('.answer-input');
-        if (first) first.focus();
-    }, 500);
-}
-</script>
 @endif

@@ -22,6 +22,7 @@ return new class extends Migration
             $table->ipAddress('answer_ip')->nullable();
             $table->enum('status', ['pending', 'answered', 'withdrawn'])->default('pending');
             $table->boolean('is_mandatory')->default(false);
+            $table->string('doc_category_hint')->nullable();
             $table->timestamps();
 
             $table->index('application_id');

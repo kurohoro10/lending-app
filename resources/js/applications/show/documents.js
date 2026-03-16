@@ -2,8 +2,7 @@
  * File: resources/js/applications/show/documents.js
  * Handles document upload, validation, listing, and deletion
  */
-
-(() => {
+document.addEventListener('DOMContentLoaded', () => {
     const form = document.getElementById('document-form');
     if (!form) return;
     const fileInput = document.getElementById('file-upload');
@@ -441,4 +440,4 @@
         const documentId = btn.dataset.documentId;
         deleteDocument(APP_STATE.applicationId, documentId);
     });
-})();
+});
