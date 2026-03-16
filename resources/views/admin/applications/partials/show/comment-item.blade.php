@@ -30,8 +30,8 @@
 
             {{-- Meta --}}
             <p class="mt-1 text-xs text-gray-500">
-                <time datetime="{{ $comment->created_at->toIso8601String() }}">
-                    {{ $comment->created_at->format('d M Y H:i') }}
+                <time datetime="{{ \App\Helpers\DateFormatter::iso($comment->created_at) }}">
+                    @formatDate($comment->created_at)
                 </time>
                 @if($comment->ip_address)
                     &bull; IP: {{ $comment->ip_address }}

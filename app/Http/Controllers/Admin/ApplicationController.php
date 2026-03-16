@@ -9,6 +9,7 @@ use App\Models\Application;
 use App\Models\ActivityLog;
 use App\Models\Question;
 use App\Models\User;
+use App\Helpers\ActivityLogFormatter;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -55,10 +56,10 @@ class ApplicationController extends Controller
         $applications = $query->paginate(20);
 
         $assessors = auth()->user()->hasRole('admin')
-        ? User::role('assessor')->get()
-        : collect();
+            ? User::role('assessor')->get()
+            : collect();
 
-        $totalAnsweredQuestionsQuery  = Question::where('status', 'answered')->whereNull('read_at');
+        $totalAnsweredQuestionsQuery = Question::where('status', 'answered')->whereNull('read_at');
 
         if (auth()->user()->hasRole('assessor')) {
             $totalAnsweredQuestionsQuery->whereHas('application', function ($q) {
@@ -99,7 +100,6 @@ class ApplicationController extends Controller
             $question->markAsRead(auth()->id());
         }
 
-        // Log this activity
         if ($unreadQuestions->count() > 0) {
             ActivityLog::logActivity(
                 'questions_reviewed',
@@ -108,7 +108,9 @@ class ApplicationController extends Controller
             );
         }
 
-        return view('admin.applications.show', compact('application'));
+        $activityLogs = ActivityLogFormatter::forApplication($application);
+
+        return view('admin.applications.show', compact('application', 'activityLogs'));
     }
 
     public function updateStatus(Request $request, Application $application): RedirectResponse
@@ -137,12 +139,10 @@ class ApplicationController extends Controller
         try {
             $application->update(['status' => $newStatus]);
 
-            $statusNote = $validated['status_note'] ?? null;
-
-            if (filled($statusNote)) {
+            if (filled($validated['status_note'] ?? null)) {
                 $application->comments()->create([
                     'user_id'    => auth()->id(),
-                    'comment'    => 'Status changed to ' . ucwords(str_replace('_', ' ', $newStatus)) . ': ' . $statusNote,
+                    'comment'    => 'Status changed to ' . ucwords(str_replace('_', ' ', $newStatus)) . ': ' . $validated['status_note'],
                     'type'       => 'internal',
                     'ip_address' => $request->ip(),
                 ]);
@@ -174,7 +174,6 @@ class ApplicationController extends Controller
     {
         $this->authorize('assign', $application);
 
-        // ✅ Prevent reassignment for approved or declined applications
         if (in_array($application->status, ['approved', 'declined'])) {
             return back()->with('error', 'Cannot reassign applications that are approved or declined.');
         }
@@ -186,23 +185,16 @@ class ApplicationController extends Controller
         $oldAssignee = $application->assigned_to;
         $newAssignee = $validated['assigned_to'];
 
-        // ✅ Check if assignment actually changed
         if ($oldAssignee == $newAssignee) {
             return back()->with('info', 'Application is already assigned to this assessor.');
         }
 
         DB::beginTransaction();
         try {
-            // ✅ Update assignment
-            $application->update([
-                'assigned_to' => $newAssignee,
-            ]);
+            $application->update(['assigned_to' => $newAssignee]);
 
-            // ✅ Automatically change status to "under_review" when assigned
             if ($application->status === 'submitted') {
-                $application->update([
-                    'status' => 'under_review',
-                ]);
+                $application->update(['status' => 'under_review']);
 
                 ActivityLog::logActivity(
                     'status_changed',
@@ -213,7 +205,6 @@ class ApplicationController extends Controller
                 );
             }
 
-            // Get assignee names for logging
             $oldAssigneeName = $oldAssignee ? User::find($oldAssignee)?->name : 'Unassigned';
             $newAssigneeName = User::find($newAssignee)?->name ?? 'Unknown';
 
@@ -288,46 +279,18 @@ class ApplicationController extends Controller
             $request->boolean('notify_sms')
         );
 
-        if ($request->boolean('notify_sms')) {
-            \Log::info('SMS notification requested', [
-                'has_phone' => $application->personalDetails?->mobile_phone !== null,
-                'phone' => $application->personalDetails?->mobile_phone,
-            ]);
+        if ($request->boolean('notify_sms') && $application->personalDetails?->mobile_phone) {
+            try {
+                $phone   = $application->personalDetails->mobile_phone;
+                $message = "Your loan application #{$application->application_number} has been returned for amendments. Reason: {$validated['return_reason']}. Please log in to update and resubmit.";
 
-            if ($application->personalDetails?->mobile_phone) {
-                try {
-                    $phone = $application->personalDetails->mobile_phone;
-                    $message = "Your loan application #{$application->application_number} has been returned for amendments. Reason: {$validated['return_reason']}. Please log in to update and resubmit.";
-
-                    \Log::info('Attempting to send SMS', [
-                        'phone' => $phone,
-                        'message_length' => strlen($message),
-                    ]);
-
-                    $result = app(MessagingService::class)->send( // CHANGE THIS
-                        $phone,
-                        $message,
-                        $application
-                    );
-
-                    \Log::info('SMS sent successfully', [
-                        'result' => $result,
-                    ]);
-                } catch (\Exception $e) {
-                    \Log::error('Failed to send return SMS', [
-                        'phone' => $phone ?? 'unknown',
-                        'error' => $e->getMessage(),
-                        'trace' => $e->getTraceAsString(),
-                    ]);
-                }
-            } else {
-                \Log::warning('Cannot send SMS - no phone number', [
+                app(MessagingService::class)->send($phone, $message, $application);
+            } catch (\Exception $e) {
+                Log::error('Failed to send return SMS', [
                     'application_id' => $application->id,
-                    'has_personal_details' => $application->personalDetails !== null,
+                    'error'          => $e->getMessage(),
                 ]);
             }
-        } else {
-            \Log::info('SMS notification not requested (checkbox not checked)');
         }
 
         return back()->with('success', 'Application returned to client successfully.');

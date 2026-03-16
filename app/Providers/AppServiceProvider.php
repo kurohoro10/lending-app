@@ -43,5 +43,9 @@ class AppServiceProvider extends ServiceProvider
             ApplicationReturned::class,
             SendReturnNotifications::class,
         );
+
+        \Illuminate\Support\Facades\Blade::directive('formatDate', function ($expression) {
+            return "<?php echo \App\Helpers\DateFormatter::datetime($expression); ?>";
+        });
     }
 }

@@ -10,6 +10,7 @@ use App\Notifications\Admin\QuestionAnswered;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\DateFormatter;
 
 class QuestionController extends Controller
 {
@@ -43,7 +44,7 @@ class QuestionController extends Controller
             'message'     => 'Your answer has been submitted successfully.',
             'question_id' => $question->id,
             'answer'      => $question->answer,
-            'answered_at' => $question->answered_at->format('d M Y H:i'),
+            'answered_at' => DateFormatter::datetime($question->answered_at),
             'answer_ip'   => $question->answer_ip,
         ]);
     }

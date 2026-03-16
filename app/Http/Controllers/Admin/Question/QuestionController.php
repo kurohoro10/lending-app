@@ -11,6 +11,7 @@ use App\Services\MessagingService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use App\Helpers\DateFormatter;
 
 class QuestionController extends Controller
 {
@@ -96,7 +97,7 @@ class QuestionController extends Controller
             'is_mandatory' => $question->is_mandatory,
             'status'       => $question->status,
             'asked_by'     => $question->askedBy->name,
-            'asked_at'     => $question->asked_at->format('d M Y H:i'),
+            'asked_at'     => DateFormatter::datetime($question->asked_at),
             'answer'       => null,
             'answered_at'  => null,
             'answer_ip'    => null,
@@ -120,7 +121,7 @@ class QuestionController extends Controller
         return response()->json([
             'success' => true,
             'message' => 'Question marked as read.',
-            'read_at' => $question->read_at->format('d M Y H:i'),
+            'read_at' => DateFormatter::datetime($question->read_at),
             'read_by' => $question->readBy->name,
         ]);
     }
