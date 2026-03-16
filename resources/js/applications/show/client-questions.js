@@ -152,6 +152,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 callback: (code) => handleCsCallback(code, questionId, completeRoute, card),
             });
 
+            // SDK initialised — hide the connect button row; the iframe loading
+            // spinner inside the container is now the only visible progress indicator
+            connectBtn.closest('.flex.items-center')?.classList.add('hidden');
+
         } catch (err) {
             // Restore the connect button
             connectBtn.disabled = false;
@@ -182,7 +186,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 errEl.focus();
             }
         }
-    }
+    } // end launchCreditSense
 
     function handleCsCallback(code, questionId, completeRoute, card) {
         const iframeLoading = card.querySelector('.cs-iframe-loading');
@@ -207,8 +211,10 @@ document.addEventListener('DOMContentLoaded', () => {
                 break;
 
             case '-1':
-                // Cancelled — restore connect button
+                // Cancelled — hide the iframe container and restore the connect button row
                 card.querySelector('.cs-iframe-container')?.classList.add('hidden');
+                const btnRow = card.querySelector('.cs-connect-btn')?.closest('.flex.items-center');
+                if (btnRow) btnRow.classList.remove('hidden');
                 const btn = card.querySelector('.cs-connect-btn');
                 if (btn) {
                     btn.disabled = false;
@@ -375,7 +381,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Document upload (XHR for progress) ───────────────────────────────────
 
     function uploadDocument(card, file, docCategory, questionId) {
-        const uploadRoute = card.dataset.uploadRoute;
+        const uploadRoute  = card.dataset.uploadRoute;
         const progressWrap = card.querySelector('.doc-upload-progress');
         const progressBar  = card.querySelector('.doc-progress-bar');
         const progressPct  = card.querySelector('.doc-progress-pct');
@@ -383,11 +389,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const successName  = card.querySelector('.doc-upload-success-name');
         const uploadError  = card.querySelector('.doc-upload-error');
 
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
             const formData = new FormData();
-            formData.append('document', file);
+            formData.append('document',          file);
             formData.append('document_category', docCategory);
-            formData.append('description', `Uploaded in response to question #${questionId}`);
+            formData.append('description',       `Uploaded in response to question #${questionId}`);
+            // _token in FormData body as fallback; header below is the primary mechanism
             formData.append('_token', csrf());
 
             const xhr = new XMLHttpRequest();
@@ -396,38 +403,59 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (!e.lengthComputable) return;
                 const pct = Math.round((e.loaded / e.total) * 100);
                 progressWrap?.classList.remove('hidden');
-                if (progressBar)  { progressBar.style.width = `${pct}%`; }
-                if (progressPct)  { progressPct.textContent  = `${pct}%`; }
-                const pb = progressWrap?.querySelector('[role="progressbar"]');
-                if (pb) pb.setAttribute('aria-valuenow', pct);
+                if (progressBar) progressBar.style.width = `${pct}%`;
+                if (progressPct) progressPct.textContent  = `${pct}%`;
+                progressWrap?.querySelector('[role="progressbar"]')
+                    ?.setAttribute('aria-valuenow', pct);
             });
 
             xhr.addEventListener('load', () => {
                 progressWrap?.classList.add('hidden');
+
+                // Try to parse as JSON first — Laravel returns JSON when
+                // Accept: application/json is set, even for error responses.
+                // If parsing fails the server returned an HTML error page
+                // (e.g. APP_DEBUG=false 500), which we surface as a readable message.
+                let data = null;
                 try {
-                    const data = JSON.parse(xhr.responseText);
-                    if (xhr.status >= 200 && xhr.status < 300 && data.success) {
-                        successName.textContent = file.name;
-                        successWrap?.classList.remove('hidden');
-                        announce(`Document "${file.name}" uploaded successfully.`);
-                        resolve(data);
-                    } else {
-                        showUploadError(uploadError, data.message || 'Document upload failed.');
-                        resolve(null); // non-blocking — answer was already saved
-                    }
+                    data = JSON.parse(xhr.responseText);
                 } catch {
-                    showUploadError(uploadError, 'Unexpected response from server.');
+                    // Non-JSON response — HTML error page from server
+                    const friendlyMsg = xhr.status === 500
+                        ? 'Server error during upload. Check storage permissions, php_fileinfo extension, and that APP_KEY is set in production.'
+                        : `Upload failed with status ${xhr.status}.`;
+                    showUploadError(uploadError, friendlyMsg);
+                    console.error('[DocumentUpload] Non-JSON response:', xhr.status, xhr.responseText.slice(0, 300));
                     resolve(null);
+                    return;
+                }
+
+                if (xhr.status >= 200 && xhr.status < 300 && data?.success) {
+                    if (successName) successName.textContent = file.name;
+                    successWrap?.classList.remove('hidden');
+                    announce(`Document "${file.name}" uploaded successfully.`);
+                    resolve(data);
+                } else {
+                    // Laravel validation errors come back as { message, errors: { field: [...] } }
+                    const msg = data?.message
+                        ?? data?.error
+                        ?? 'Document upload failed.';
+                    showUploadError(uploadError, msg);
+                    console.error('[DocumentUpload] Server rejected upload:', xhr.status, data);
+                    resolve(null); // non-blocking — text answer was already saved
                 }
             });
 
             xhr.addEventListener('error', () => {
                 progressWrap?.classList.add('hidden');
-                showUploadError(uploadError, 'Network error during upload. Please upload the document separately.');
-                resolve(null); // non-blocking
+                showUploadError(uploadError, 'Network error during upload. Please try uploading the document separately.');
+                resolve(null);
             });
 
             xhr.open('POST', uploadRoute);
+            // Do NOT set Content-Type — the browser sets it automatically with the
+            // correct multipart boundary when sending FormData. Setting it manually
+            // breaks multipart parsing in production (missing boundary parameter).
             xhr.setRequestHeader('X-CSRF-TOKEN', csrf());
             xhr.setRequestHeader('Accept', 'application/json');
             xhr.send(formData);

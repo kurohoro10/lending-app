@@ -101,4 +101,14 @@ class ApplicationPolicy
     {
         return $user->hasRole(['admin', 'assessor']);
     }
+
+    public function uploadDocument(User $user, Application $application): bool
+    {
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        // Clients can upload documents at any stage (e.g. responding to questions)
+        return $user->id === $application->user_id;
+    }
 }
