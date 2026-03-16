@@ -77,7 +77,24 @@
                             <option value="income|What is the nature and source of any non-recurring income shown in your financials?|false|false">Nature of non-recurring income items</option>
                         </optgroup>
 
-                        <optgroup label="Bank Statements">
+                        @php
+                            $csConfigured = \App\Models\Setting::whereIn('key', ['creditsense_store_code', 'creditsense_api_key'])
+                                ->whereNotNull('value')->where('value', '!=', '')->count() === 2;
+                        @endphp
+
+                        <optgroup label="⚡ Bank Connection">
+                            @if($csConfigured)
+                                <option value="bank_connect|To assess your application we need to verify your bank statements. Please connect your bank account securely using our CreditSense integration — it takes less than 2 minutes and only provides read-only access.|true|true">
+                                    Request bank connection via CreditSense
+                                </option>
+                            @else
+                                <option value="" disabled>
+                                    ⚠ CreditSense not configured — go to Settings → CreditSense
+                                </option>
+                            @endif
+                        </optgroup>
+
+                        <optgroup label="Bank Statement Documents">
                             <option value="bank|Please provide 6 months of business bank statements for all operating accounts.|true|true">6 months business bank statements</option>
                             <option value="bank|Please provide 3 months of personal bank statements for all guarantors.|true|true">3 months personal bank statements (guarantors)</option>
                             <option value="bank|Can you explain the large credits/debits appearing on your bank statements? Please provide supporting documentation.|false|true">Explain large unexplained transactions</option>
@@ -118,9 +135,11 @@
                 </p>
             </div>
 
-            {{-- Document-required indicator (shown/hidden by JS) --}}
+            {{-- Requirement indicator (shown/hidden by JS; content swapped for bank_connect) --}}
             <div id="doc-required-indicator" class="hidden mb-4">
-                <div class="flex items-center gap-2 px-3 py-2.5 bg-white rounded-lg border border-amber-200">
+
+                {{-- Standard document indicator --}}
+                <div id="doc-indicator-standard" class="flex items-center gap-2 px-3 py-2.5 bg-white rounded-lg border border-amber-200">
                     <svg class="h-4 w-4 text-amber-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                         <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
                     </svg>
@@ -141,7 +160,27 @@
                         </svg>
                     </button>
                 </div>
-                {{-- Hidden field carries the value to JS at submit time --}}
+
+                {{-- Bank-connect indicator --}}
+                <div id="doc-indicator-bank" class="hidden flex items-center gap-2 px-3 py-2.5 bg-white rounded-lg border border-blue-200">
+                    <svg class="h-4 w-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                    </svg>
+                    <div class="flex-1">
+                        <p class="text-xs font-semibold text-blue-800">CreditSense bank connection will be requested</p>
+                        <p class="text-xs text-blue-600">Client will see a "Connect My Bank" button inline in the question card.</p>
+                    </div>
+                    <button type="button"
+                            id="remove-bank-requirement-btn"
+                            class="text-blue-400 hover:text-blue-600 flex-shrink-0
+                                   focus:outline-none focus:ring-2 focus:ring-blue-400 rounded"
+                            aria-label="Remove bank connection requirement">
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"/>
+                        </svg>
+                    </button>
+                </div>
+
                 <input type="hidden" id="doc-category-hint-value" value="">
             </div>
 

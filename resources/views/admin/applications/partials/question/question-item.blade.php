@@ -24,6 +24,12 @@
         'employment'  => 'Employment / Business Verification',
         'other'       => 'Other Documents',
     ];
+
+    $isBankConnect = $question->doc_category_hint === 'bank_connect';
+
+    // Warn admin if this is a bank_connect question but CreditSense isn't configured
+    $csNotConfigured = $isBankConnect && $isPending
+        && blank(\App\Models\Setting::where('key', 'creditsense_store_code')->value('value'));
 @endphp
 
 <div id="question-card-{{ $question->id }}"
@@ -59,7 +65,17 @@
                     </span>
                 @endif
 
-                @if($question->doc_category_hint && isset($docCategories[$question->doc_category_hint]))
+                @if($isBankConnect)
+                    <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
+                                 bg-blue-100 text-blue-700 font-medium"
+                          aria-label="CreditSense bank connection requested">
+                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                  d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                        </svg>
+                        Bank Connection
+                    </span>
+                @elseif($question->doc_category_hint && isset($docCategories[$question->doc_category_hint]))
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
                                  bg-indigo-100 text-indigo-700 font-medium"
                           aria-label="Document requested: {{ $docCategories[$question->doc_category_hint] }}">
@@ -74,6 +90,26 @@
                     Asked by {{ $question->askedBy->name ?? 'Unknown' }}
                 </span>
             </div>
+
+            @if($csNotConfigured)
+            {{-- Admin warning: CreditSense not configured in Settings --}}
+            <div class="mt-2 flex items-start gap-2 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50"
+                 role="alert">
+                <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                </svg>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-semibold text-amber-800">CreditSense not configured</p>
+                    <p class="text-xs text-amber-700 mt-0.5">
+                        The client will not be able to connect their bank account until CreditSense credentials are saved in
+                        <a href="{{ route('admin.settings.index') }}#creditsense"
+                           class="underline hover:text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded">
+                            Settings → CreditSense
+                        </a>.
+                    </p>
+                </div>
+            </div>
+            @endif
 
             {{-- Question text --}}
             <p class="text-sm font-semibold text-gray-900 mb-1">

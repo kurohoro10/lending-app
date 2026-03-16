@@ -31,13 +31,14 @@
     const announcer        = document.getElementById('qa-announcer');
 
     const DOC_LABELS = {
-        id:          'Identification',
-        income:      'Income Documentation',
-        bank:        'Bank Statements',
-        assets:      'Asset Documentation',
-        liabilities: 'Liability Documentation',
-        employment:  'Employment / Business Verification',
-        other:       'Other Documents',
+        id:           'Identification',
+        income:       'Income Documentation',
+        bank:         'Bank Statements',
+        assets:       'Asset Documentation',
+        liabilities:  'Liability Documentation',
+        employment:   'Employment / Business Verification',
+        other:        'Other Documents',
+        bank_connect: 'CreditSense Bank Connection',
     };
 
     // ── Ask-form toggle ───────────────────────────────────────────────────────
@@ -75,6 +76,10 @@
     // ── Template picker ───────────────────────────────────────────────────────
     // Value format: "docCategory|questionText|isMandatory|requiresDoc"
 
+    const docIndicatorStandard = document.getElementById('doc-indicator-standard');
+    const docIndicatorBank     = document.getElementById('doc-indicator-bank');
+    const removeBankBtn        = document.getElementById('remove-bank-requirement-btn');
+
     templateSelect?.addEventListener('change', () => {
         const raw = templateSelect.value;
         if (!raw) return;
@@ -85,10 +90,20 @@
         mandatoryCheck.checked = mandatoryStr === 'true';
         updateCharCount();
 
-        if (requiresDocStr === 'true' && category && DOC_LABELS[category]) {
-            docCategoryValue.value       = category;
-            docCategoryLabel.textContent = DOC_LABELS[category];
+        if (requiresDocStr === 'true' && category) {
+            docCategoryValue.value = category;
             docIndicator.classList.remove('hidden');
+
+            if (category === 'bank_connect') {
+                // Show bank-connect indicator, hide standard doc indicator
+                docIndicatorStandard?.classList.add('hidden');
+                docIndicatorBank?.classList.remove('hidden');
+            } else {
+                // Show standard doc indicator
+                docIndicatorBank?.classList.add('hidden');
+                docIndicatorStandard?.classList.remove('hidden');
+                if (docCategoryLabel) docCategoryLabel.textContent = DOC_LABELS[category] ?? category;
+            }
         } else {
             clearDocRequirement();
         }
@@ -104,9 +119,16 @@
         announce('Document upload requirement removed.');
     });
 
+    removeBankBtn?.addEventListener('click', () => {
+        clearDocRequirement();
+        announce('Bank connection requirement removed.');
+    });
+
     function clearDocRequirement() {
         if (docCategoryValue) docCategoryValue.value = '';
         docIndicator?.classList.add('hidden');
+        docIndicatorStandard?.classList.add('hidden');
+        docIndicatorBank?.classList.add('hidden');
     }
 
     // ── Submit question ───────────────────────────────────────────────────────
@@ -253,16 +275,26 @@
     // ── Card builder (optimistic insert) ─────────────────────────────────────
 
     function buildQuestionCard(q) {
-        const docBadge = q.doc_category_hint && DOC_LABELS[q.doc_category_hint]
-            ? `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
-                            bg-indigo-100 text-indigo-700 font-medium"
-                     aria-label="Document requested: ${esc(DOC_LABELS[q.doc_category_hint])}">
-                   <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                       <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
-                   </svg>
-                   ${esc(DOC_LABELS[q.doc_category_hint])}
-               </span>`
-            : '';
+        let hintBadge = '';
+        if (q.doc_category_hint === 'bank_connect') {
+            hintBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
+                                      bg-blue-100 text-blue-700 font-medium"
+                               aria-label="CreditSense bank connection requested">
+                             <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                             </svg>
+                             Bank Connection
+                         </span>`;
+        } else if (q.doc_category_hint && DOC_LABELS[q.doc_category_hint]) {
+            hintBadge = `<span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
+                                      bg-indigo-100 text-indigo-700 font-medium"
+                               aria-label="Document requested: ${esc(DOC_LABELS[q.doc_category_hint])}">
+                             <svg class="w-3 h-3" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                 <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
+                             </svg>
+                             ${esc(DOC_LABELS[q.doc_category_hint])}
+                         </span>`;
+        }
 
         return `
         <div id="question-card-${q.id}"
@@ -274,7 +306,7 @@
                     <div class="flex flex-wrap items-center gap-2 mb-2">
                         <span class="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">Pending</span>
                         ${q.is_mandatory ? '<span class="px-2 py-0.5 text-xs rounded-full bg-red-100 text-red-700 font-medium">Mandatory</span>' : ''}
-                        ${docBadge}
+                        ${hintBadge}
                         <span class="text-xs text-gray-500">Asked by ${esc(q.asked_by)}</span>
                     </div>
                     <p class="text-sm font-semibold text-gray-900 mb-1">Q: ${esc(q.question)}</p>

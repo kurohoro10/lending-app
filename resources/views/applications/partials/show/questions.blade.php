@@ -28,9 +28,11 @@
         <ol class="space-y-4" aria-labelledby="client-qa-heading">
             @foreach($application->questions->sortBy('created_at') as $question)
             @php
-                $isPending  = $question->status === 'pending';
-                $isAnswered = $question->status === 'answered';
-                $requiresDoc = filled($question->doc_category_hint);
+                $isPending      = $question->status === 'pending';
+                $isAnswered     = $question->status === 'answered';
+                $hint           = $question->doc_category_hint ?? '';
+                $isBankConnect  = $hint === 'bank_connect';
+                $requiresDoc    = filled($hint) && !$isBankConnect;
 
                 $docCategoryLabels = [
                     'id'          => 'Identification',
@@ -41,7 +43,7 @@
                     'employment'  => 'Employment / Business Verification',
                     'other'       => 'Other Documents',
                 ];
-                $docLabel = $requiresDoc ? ($docCategoryLabels[$question->doc_category_hint] ?? ucfirst($question->doc_category_hint)) : null;
+                $docLabel = $requiresDoc ? ($docCategoryLabels[$hint] ?? ucfirst($hint)) : null;
             @endphp
 
             <li class="question-card rounded-xl border p-4 transition-colors
@@ -49,8 +51,10 @@
                 id="client-question-card-{{ $question->id }}"
                 data-question-id="{{ $question->id }}"
                 data-status="{{ $question->status }}"
-                data-doc-category="{{ $question->doc_category_hint ?? '' }}"
-                data-upload-route="{{ route('applications.documents.store', $application) }}">
+                data-doc-category="{{ $hint }}"
+                data-bank-connect="{{ $isBankConnect ? 'true' : 'false' }}"
+                data-upload-route="{{ route('applications.documents.store', $application) }}"
+                data-answer-route="/questions/{{ $question->id }}/answer">
 
                 {{-- Question header --}}
                 <div class="flex items-start justify-between gap-3 mb-3">
@@ -97,7 +101,108 @@
                     {{-- ── Answer form ─────────────────────────────────────── --}}
                     <div class="answer-form space-y-3">
 
-                        {{-- Text answer --}}
+                        @if($isBankConnect)
+                        {{-- ── CreditSense panel — bank connect IS the answer ── --}}
+                        <div class="cs-bank-panel"
+                             role="group"
+                             aria-labelledby="cs-panel-label-{{ $question->id }}"
+                             data-config-route="{{ route('creditsense.config', $application) }}"
+                             data-complete-route="{{ route('creditsense.complete', $application) }}">
+
+                            @if($application->credit_sense_completed_at)
+                            {{-- Already connected — show confirmation --}}
+                            <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50"
+                                 role="status">
+                                <svg class="w-5 h-5 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                                </svg>
+                                <div>
+                                    <p class="text-xs font-semibold text-green-800">Bank account already connected</p>
+                                    <p class="text-xs text-green-600">
+                                        Connected
+                                        <time datetime="{{ $application->credit_sense_completed_at->toIso8601String() }}">
+                                            {{ $application->credit_sense_completed_at->format('d M Y, g:ia') }}
+                                        </time>
+                                    </p>
+                                </div>
+                            </div>
+
+                            @else
+                            {{-- Connect prompt --}}
+                            <div class="rounded-xl border border-blue-200 bg-blue-50 overflow-hidden">
+
+                                {{-- Header row with connect button --}}
+                                <div class="flex items-center gap-3 px-3 py-2.5">
+                                    <svg class="w-4 h-4 text-blue-500 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
+                                    </svg>
+                                    <div class="flex-1 min-w-0">
+                                        <p id="cs-panel-label-{{ $question->id }}"
+                                           class="text-xs font-semibold text-blue-900 leading-tight">
+                                            Bank connection required
+                                        </p>
+                                        <p class="text-xs text-blue-600 leading-tight mt-0.5">
+                                            Secure, read-only access &mdash; your login details are never stored.
+                                        </p>
+                                    </div>
+                                    <button type="button"
+                                            class="cs-connect-btn flex-shrink-0 inline-flex items-center gap-1.5
+                                                   px-3 py-1.5 rounded-lg
+                                                   bg-white border border-blue-300 text-blue-700
+                                                   text-xs font-semibold
+                                                   hover:bg-blue-100 hover:border-blue-400 transition
+                                                   disabled:opacity-50 disabled:cursor-not-allowed
+                                                   focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                            data-question-id="{{ $question->id }}"
+                                            aria-label="Connect bank account to answer: {{ Str::limit($question->question, 60) }}">
+                                        <svg class="cs-connect-icon w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/>
+                                        </svg>
+                                        <svg class="cs-connect-spinner hidden animate-spin w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                        <span class="cs-connect-label">Connect My Bank</span>
+                                    </button>
+                                </div>
+
+                                {{-- Inline iframe (hidden until launched) --}}
+                                <div class="cs-iframe-container hidden border-t border-blue-200 bg-white"
+                                     role="region"
+                                     aria-label="CreditSense bank connection portal"
+                                     aria-live="polite">
+                                    <div class="cs-iframe-loading flex items-center justify-center gap-2 py-6 text-sm text-gray-500"
+                                         role="status" aria-live="polite" aria-busy="true">
+                                        <svg class="animate-spin h-4 w-4 text-indigo-500" fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
+                                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
+                                        </svg>
+                                        Loading secure bank portal…
+                                    </div>
+                                    <iframe class="cs-iframe hidden w-full border-0"
+                                            src="about:blank"
+                                            id="creditSenseIFrame-{{ $question->id }}"
+                                            title="CreditSense bank connection"
+                                            style="height: 560px;"
+                                            aria-label="Secure bank statement connection — follow the on-screen instructions"
+                                            sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox">
+                                    </iframe>
+                                    <div class="cs-iframe-error hidden flex items-center gap-2 px-4 py-3 bg-red-50 border-t border-red-100"
+                                         role="alert">
+                                        <svg class="w-4 h-4 text-red-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+                                        </svg>
+                                        <p class="cs-iframe-error-msg text-xs text-red-700"></p>
+                                    </div>
+                                </div>
+
+                            </div>
+                            @endif
+
+                        </div>
+
+                        @else
+                        {{-- ── Standard text answer ─────────────────────────── --}}
                         <div>
                             <label for="answer-input-{{ $question->id }}" class="sr-only">
                                 Your answer to: {{ $question->question }}
@@ -119,14 +224,10 @@
                              role="group"
                              aria-labelledby="doc-upload-label-{{ $question->id }}">
 
-                            {{-- Row: icon + label + upload button --}}
-                            <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl
-                                        border border-indigo-200 bg-indigo-50">
-
+                            <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-indigo-200 bg-indigo-50">
                                 <svg class="w-4 h-4 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clip-rule="evenodd"/>
                                 </svg>
-
                                 <div class="flex-1 min-w-0">
                                     <p id="doc-upload-label-{{ $question->id }}"
                                        class="text-xs font-semibold text-indigo-900 leading-tight">
@@ -137,8 +238,6 @@
                                         <span class="text-gray-400">PDF, JPG, PNG, DOC, XLSX &bull; max 10 MB</span>
                                     </p>
                                 </div>
-
-                                {{-- Hidden real input --}}
                                 <input type="file"
                                        id="doc-file-{{ $question->id }}"
                                        class="doc-file-input sr-only"
@@ -146,8 +245,6 @@
                                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx,.xls,.xlsx"
                                        aria-label="Upload {{ $docLabel }} document"
                                        aria-describedby="doc-upload-label-{{ $question->id }} doc-upload-error-{{ $question->id }}">
-
-                                {{-- Upload trigger button --}}
                                 <label for="doc-file-{{ $question->id }}"
                                        class="doc-upload-trigger flex-shrink-0 inline-flex items-center gap-1.5
                                               px-3 py-1.5 rounded-lg cursor-pointer
@@ -162,9 +259,7 @@
                                 </label>
                             </div>
 
-                            {{-- File preview (hidden until file chosen) --}}
-                            <div class="doc-file-preview hidden mt-2 flex items-center gap-2
-                                        px-3 py-2 rounded-lg bg-white border border-indigo-200">
+                            <div class="doc-file-preview hidden mt-2 flex items-center gap-2 px-3 py-2 rounded-lg bg-white border border-indigo-200">
                                 <svg class="w-4 h-4 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
                                 </svg>
@@ -182,39 +277,32 @@
                                 </button>
                             </div>
 
-                            {{-- Validation error --}}
                             <p id="doc-upload-error-{{ $question->id }}"
                                class="doc-upload-error hidden mt-1.5 text-xs text-red-600"
-                               role="alert"
-                               aria-live="polite"></p>
+                               role="alert" aria-live="polite"></p>
 
-                            {{-- Upload progress bar (hidden until uploading) --}}
                             <div class="doc-upload-progress hidden mt-2">
                                 <div class="flex items-center justify-between text-xs text-indigo-700 mb-1">
                                     <span>Uploading…</span>
                                     <span class="doc-progress-pct" aria-live="polite" aria-atomic="true">0%</span>
                                 </div>
                                 <div class="h-1 bg-indigo-100 rounded-full overflow-hidden"
-                                     role="progressbar"
-                                     aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"
-                                     aria-label="Document upload progress">
-                                    <div class="doc-progress-bar h-full bg-indigo-500 rounded-full transition-all duration-200"
-                                         style="width: 0%"></div>
+                                     role="progressbar" aria-valuemin="0" aria-valuemax="100"
+                                     aria-valuenow="0" aria-label="Document upload progress">
+                                    <div class="doc-progress-bar h-full bg-indigo-500 rounded-full transition-all duration-200" style="width:0%"></div>
                                 </div>
                             </div>
 
-                            {{-- Upload success confirmation --}}
                             <div class="doc-upload-success hidden mt-2 flex items-center gap-1.5 text-green-700">
                                 <svg class="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
                                 <p class="doc-upload-success-name text-xs font-medium"></p>
                             </div>
-
                         </div>
                         @endif
 
-                        {{-- Submit row --}}
+                        {{-- Submit button — only for standard text answers --}}
                         <div class="flex justify-end">
                             <button type="button"
                                     class="submit-answer-btn inline-flex items-center gap-2 px-4 py-2
@@ -224,24 +312,44 @@
                                            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
                                     data-question-id="{{ $question->id }}"
                                     data-requires-doc="{{ $requiresDoc ? 'true' : 'false' }}"
-                                    data-doc-category="{{ $question->doc_category_hint ?? '' }}"
+                                    data-doc-category="{{ $hint }}"
                                     aria-label="Submit answer for: {{ Str::limit($question->question, 60) }}">
                                 <span class="btn-text">Submit Answer</span>
-                                <svg class="btn-spinner hidden animate-spin h-3 w-3"
-                                     fill="none" viewBox="0 0 24 24" aria-hidden="true">
+                                <svg class="btn-spinner hidden animate-spin h-3 w-3" fill="none" viewBox="0 0 24 24" aria-hidden="true">
                                     <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"/>
                                     <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
                                 </svg>
                             </button>
                         </div>
+                        @endif {{-- end @if($isBankConnect) / @else --}}
 
                     </div>
 
                 @else
                     {{-- ── Answered display ─────────────────────────────────── --}}
+                    @if($isBankConnect)
+                    <div class="answer-display mt-1 flex items-center gap-2.5 px-3 py-2.5
+                                rounded-xl border border-green-200 bg-green-50">
+                        <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                            <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                        </svg>
+                        <div>
+                            <p class="text-xs font-semibold text-green-800">Bank account connected</p>
+                            @if($application->credit_sense_completed_at)
+                            <p class="text-xs text-green-600">
+                                Completed
+                                <time datetime="{{ $application->credit_sense_completed_at->toIso8601String() }}">
+                                    {{ $application->credit_sense_completed_at->format('d M Y, g:ia') }}
+                                </time>
+                            </p>
+                            @endif
+                        </div>
+                    </div>
+                    @else
                     <div class="answer-display mt-1 p-3 bg-white rounded-xl border border-gray-200">
                         <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $question->answer }}</p>
                     </div>
+                    @endif
                 @endif
 
             </li>

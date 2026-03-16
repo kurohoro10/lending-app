@@ -72,6 +72,214 @@ document.addEventListener('DOMContentLoaded', () => {
     // Wire all cards present on load
     section.querySelectorAll('.question-card').forEach(wireCard);
 
+    // ── CreditSense bank-connect wiring ───────────────────────────────────────
+
+    function wireBankConnectCard(card) {
+        const connectBtn = card.querySelector('.cs-connect-btn');
+        if (!connectBtn || connectBtn.dataset.wired) return;
+        connectBtn.dataset.wired = '1';
+
+        connectBtn.addEventListener('click', () => launchCreditSense(card));
+    }
+
+    section.querySelectorAll('.question-card[data-bank-connect="true"]').forEach(wireBankConnectCard);
+
+    async function launchCreditSense(card) {
+        const questionId   = card.dataset.questionId;
+        const configRoute  = card.querySelector('.cs-bank-panel')?.dataset.configRoute;
+        const completeRoute = card.querySelector('.cs-bank-panel')?.dataset.completeRoute;
+        const connectBtn   = card.querySelector('.cs-connect-btn');
+        const connectIcon  = card.querySelector('.cs-connect-icon');
+        const connectSpinner = card.querySelector('.cs-connect-spinner');
+        const connectLabel = card.querySelector('.cs-connect-label');
+        const iframeContainer = card.querySelector('.cs-iframe-container');
+        const iframeLoading   = card.querySelector('.cs-iframe-loading');
+        const iframeEl        = card.querySelector('.cs-iframe');
+        const iframeError     = card.querySelector('.cs-iframe-error');
+        const iframeErrorMsg  = card.querySelector('.cs-iframe-error-msg');
+
+        if (!configRoute) return;
+
+        // Loading state on button
+        connectBtn.disabled = true;
+        connectIcon?.classList.add('hidden');
+        connectSpinner?.classList.remove('hidden');
+        if (connectLabel) connectLabel.textContent = 'Connecting…';
+
+        try {
+            const res = await fetch(configRoute, {
+                headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+            });
+
+            // Read the JSON body regardless of status so we can surface the server message
+            const config = await res.json().catch(() => null);
+
+            if (!res.ok) {
+                // 500 from iframeConfig means CreditSense is not configured in Settings
+                const serverMsg = config?.error ?? null;
+                const isNotConfigured = res.status === 500 || (serverMsg && serverMsg.toLowerCase().includes('not configured'));
+
+                throw new Error(
+                    isNotConfigured
+                        ? 'Bank connection is not available right now. Please contact support.'
+                        : (serverMsg ?? 'Failed to load bank connection config.')
+                );
+            }
+
+            if (config.already_completed) {
+                await autoAnswerBankConnect(questionId, completeRoute, card);
+                return;
+            }
+
+            // Show iframe container
+            iframeContainer?.classList.remove('hidden');
+
+            // Load SDK
+            const cdnUrl = config.cdn_url
+                ?? 'https://6dadc58e31982fd9f0be-d4a1ccb0c1936ef2a5b7f304db75b8a4.ssl.cf4.rackcdn.com/CS-Integrated-Iframe-v1.min.js';
+            await loadCsSdk(cdnUrl);
+
+            // Init SDK pointing at this card's iframe
+            if (typeof jQuery === 'undefined' || !jQuery.CreditSense?.Iframe) {
+                throw new Error('CreditSense SDK did not load correctly.');
+            }
+
+            jQuery.CreditSense.Iframe({
+                client:              config.client_code,
+                elementSelector:     `#creditSenseIFrame-${questionId}`,
+                enableDynamicHeight: true,
+                params: { appRef: config.app_ref, centrelink: true },
+                callback: (code) => handleCsCallback(code, questionId, completeRoute, card),
+            });
+
+        } catch (err) {
+            // Restore the connect button
+            connectBtn.disabled = false;
+            connectIcon?.classList.remove('hidden');
+            connectSpinner?.classList.add('hidden');
+            if (connectLabel) connectLabel.textContent = 'Try Again';
+
+            // If the iframe container was never shown (config failed before we got there),
+            // show the error inline below the connect button row instead
+            const containerVisible = iframeContainer && !iframeContainer.classList.contains('hidden');
+
+            if (containerVisible) {
+                iframeLoading?.classList.add('hidden');
+                if (iframeErrorMsg) iframeErrorMsg.textContent = err.message;
+                iframeError?.classList.remove('hidden');
+            } else {
+                // Show error inside the panel without opening the iframe container
+                let errEl = card.querySelector('.cs-config-error');
+                if (!errEl) {
+                    errEl = document.createElement('p');
+                    errEl.className = 'cs-config-error mt-2 text-xs text-red-600 flex items-center gap-1';
+                    errEl.setAttribute('role', 'alert');
+                    errEl.setAttribute('aria-live', 'polite');
+                    card.querySelector('.cs-bank-panel')?.appendChild(errEl);
+                }
+                errEl.innerHTML = `<svg class="w-3.5 h-3.5 flex-shrink-0 text-red-400" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM9 9a1 1 0 000 2v3a1 1 0 102 0v-3a1 1 0 000-2H9zm0-4a1 1 0 100 2 1 1 0 000-2z" clip-rule="evenodd"/></svg> ${esc(err.message)}`;
+                errEl.classList.remove('hidden');
+                errEl.focus();
+            }
+        }
+    }
+
+    function handleCsCallback(code, questionId, completeRoute, card) {
+        const iframeLoading = card.querySelector('.cs-iframe-loading');
+        const iframeEl      = card.querySelector('.cs-iframe');
+        const iframeError   = card.querySelector('.cs-iframe-error');
+        const iframeErrorMsg = card.querySelector('.cs-iframe-error-msg');
+
+        switch (String(code)) {
+            case '0':
+                // Iframe ready — show it
+                iframeLoading?.classList.add('hidden');
+                if (iframeEl) {
+                    iframeEl.classList.remove('hidden');
+                    iframeEl.setAttribute('aria-busy', 'false');
+                }
+                break;
+
+            case '99':
+            case '100':
+                // Success — mark complete on server, then auto-answer the question
+                autoAnswerBankConnect(questionId, completeRoute, card);
+                break;
+
+            case '-1':
+                // Cancelled — restore connect button
+                card.querySelector('.cs-iframe-container')?.classList.add('hidden');
+                const btn = card.querySelector('.cs-connect-btn');
+                if (btn) {
+                    btn.disabled = false;
+                    card.querySelector('.cs-connect-icon')?.classList.remove('hidden');
+                    card.querySelector('.cs-connect-spinner')?.classList.add('hidden');
+                    const lbl = card.querySelector('.cs-connect-label');
+                    if (lbl) lbl.textContent = 'Connect My Bank';
+                    btn.focus();
+                }
+                break;
+
+            case '-2':
+                // Timed out
+                iframeLoading?.classList.add('hidden');
+                if (iframeErrorMsg) iframeErrorMsg.textContent = 'Connection timed out. Please refresh the page and try again.';
+                iframeError?.classList.remove('hidden');
+                break;
+        }
+    }
+
+    async function autoAnswerBankConnect(questionId, completeRoute, card) {
+        try {
+            // Step 1: mark CreditSense complete on server
+            if (completeRoute) {
+                await fetch(completeRoute, {
+                    method: 'POST',
+                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': csrf() },
+                });
+            }
+
+            // Step 2: submit a system answer — stored server-side, not shown to client
+            const answerRes = await fetch(card.dataset.answerRoute, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                    'Accept':       'application/json',
+                },
+                body: JSON.stringify({ answer: 'Bank account connected via CreditSense.' }),
+            });
+            const answerData = await answerRes.json();
+
+            if (answerData.success) {
+                // No text to display — markCardAnswered detects bank_connect and shows the pill
+                markCardAnswered(card, answerData.answered_at);
+                updatePendingBanner();
+                showToast('Bank account connected successfully.', 'success');
+                announce('Bank account connected. Question marked as answered.');
+            }
+        } catch {
+            showToast('Bank connected but failed to update question. Please refresh.', 'error');
+        }
+    }
+
+    function loadCsSdk(cdnUrl) {
+        return new Promise((resolve, reject) => {
+            if (typeof jQuery !== 'undefined' && jQuery.CreditSense) { resolve(); return; }
+            if (document.getElementById('cs-sdk-script')) {
+                document.getElementById('cs-sdk-script').addEventListener('load', resolve);
+                return;
+            }
+            if (typeof jQuery === 'undefined') { reject(new Error('jQuery is required by the CreditSense SDK.')); return; }
+            const s = document.createElement('script');
+            s.id = 'cs-sdk-script';
+            s.src = cdnUrl;
+            s.onload = resolve;
+            s.onerror = () => reject(new Error('Failed to load CreditSense SDK.'));
+            document.head.appendChild(s);
+        });
+    }
+
     // ── Delegated: submit answer button ──────────────────────────────────────
 
     section.addEventListener('click', e => {
@@ -150,7 +358,8 @@ document.addEventListener('DOMContentLoaded', () => {
             }
 
             // Step 3 — update DOM to answered state
-            markCardAnswered(card, answerText, answerData.answered_at);
+            card._pendingAnswerText = answerText;
+            markCardAnswered(card, answerData.answered_at);
             updatePendingBanner();
             showToast(answerData.message ?? 'Answer submitted successfully.', 'success');
             announce(answerData.message ?? 'Answer submitted.');
@@ -227,7 +436,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── DOM: mark a card as answered ─────────────────────────────────────────
 
-    function markCardAnswered(card, answerText, answeredAt) {
+    function markCardAnswered(card, answeredAt) {
+        const isBankConnect = card.dataset.bankConnect === 'true';
+
         // Swap background
         card.classList.replace('bg-amber-50', 'bg-gray-50');
         card.classList.replace('border-amber-200', 'border-gray-200');
@@ -258,12 +469,27 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        // Replace form with answer display
+        // Replace form with appropriate answered display
         const form = card.querySelector('.answer-form');
         if (form) {
             const div = document.createElement('div');
-            div.className = 'answer-display mt-1 p-3 bg-white rounded-xl border border-gray-200';
-            div.innerHTML = `<p class="text-sm text-gray-700 whitespace-pre-wrap">${esc(answerText)}</p>`;
+
+            if (isBankConnect) {
+                div.className = 'answer-display mt-1 flex items-center gap-2.5 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50';
+                div.setAttribute('role', 'status');
+                div.innerHTML = `
+                    <svg class="w-4 h-4 text-green-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                        <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
+                    </svg>
+                    <div>
+                        <p class="text-xs font-semibold text-green-800">Bank account connected</p>
+                        ${answeredAt ? `<p class="text-xs text-green-600">Completed ${esc(answeredAt)}</p>` : ''}
+                    </div>`;
+            } else {
+                div.className = 'answer-display mt-1 p-3 bg-white rounded-xl border border-gray-200';
+                div.innerHTML = `<p class="text-sm text-gray-700 whitespace-pre-wrap">${esc(card._pendingAnswerText ?? '')}</p>`;
+            }
+
             form.replaceWith(div);
         }
     }

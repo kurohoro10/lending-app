@@ -23,7 +23,7 @@ class QuestionController extends Controller
         $validated = $request->validate([
             'question'          => 'required|string|max:1000',
             'is_mandatory'      => 'nullable|boolean',
-            'doc_category_hint' => 'nullable|string|in:id,income,bank,assets,liabilities,employment,other',
+            'doc_category_hint' => 'nullable|string|in:id,income,bank,assets,liabilities,employment,other,bank_connect',
         ]);
         
         $question = $application->questions()->create([

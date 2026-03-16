@@ -1,5 +1,5 @@
 <?php
-
+// routes/api.php
 use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
 use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use Illuminate\Http\Request;
