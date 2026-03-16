@@ -67,6 +67,38 @@
                   novalidate>
                 @csrf
 
+                {{-- Income vs Expenses Summary --}}
+                <div id="income-vs-expenses-bar"
+                    class="grid grid-cols-3 gap-3 mb-6"
+                    aria-label="Income and expenses summary">
+
+                    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl px-4 py-3 text-center">
+                        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-1">Total Annual Income</p>
+                        <p id="expense-summary-annual-income"
+                        class="text-lg font-bold text-indigo-700 tabular-nums"
+                        aria-live="polite"
+                        aria-label="Total annual income">$0.00</p>
+                    </div>
+
+                    <div class="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl px-4 py-3 text-center">
+                        <p class="text-xs font-semibold text-red-500 uppercase tracking-wide mb-1">Total Monthly Expenses</p>
+                        <p id="expense-summary-monthly-expenses"
+                        class="text-lg font-bold text-red-700 tabular-nums"
+                        aria-live="polite"
+                        aria-label="Total monthly expenses">$0.00</p>
+                    </div>
+
+                    <div class="rounded-xl px-4 py-3 text-center border"
+                        id="expense-summary-net-container">
+                        <p class="text-xs font-semibold uppercase tracking-wide mb-1" id="expense-summary-net-label">Monthly Surplus</p>
+                        <p id="expense-summary-net"
+                        class="text-lg font-bold tabular-nums"
+                        aria-live="polite"
+                        aria-label="Monthly net surplus or deficit">$0.00</p>
+                    </div>
+
+                </div>
+
                 <p class="text-sm text-gray-500 mb-4">
                     Fill in the amount for each expense that applies to you. Leave blank or enter $0 for categories that don't apply.
                     Frequency defaults to monthly — change it if yours differs.
@@ -232,5 +264,6 @@
     Object.assign(window.EXPENSES_CONFIG ?? (window.EXPENSES_CONFIG = {}), {
         applicationId: @js($application->id),
         storeRoute: @js(route('applications.living-expenses.store', $application)),
+        initialAnnualIncome: @js($application->employmentDetails->sum(fn($e) => $e->getAnnualIncome())),
     });
 </script>

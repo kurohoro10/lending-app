@@ -1,5 +1,9 @@
 // resources/js/applications/show/livingExpenses.js
 document.addEventListener('DOMContentLoaded', () => {
+    // Read directly from EXPENSES_CONFIG — set by PHP in the same blade, always present.
+    // EMPLOYMENT_CONFIG may not exist yet depending on script order, so never rely on it here.
+    window.EMPLOYMENT_ANNUAL_INCOME = window.EXPENSES_CONFIG?.initialAnnualIncome ?? 0;
+
     const FREQ_MULTIPLIERS = {
         weekly:      52 / 12,
         fortnightly: 26 / 12,
@@ -18,6 +22,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const accordionBtn = document.getElementById('living-expenses-btn');
     const submitSpinner   = document.getElementById('submit-expense-spinner');
     const submitCheckIcon = document.getElementById('submit-expense-check-icon');
+    const summaryAnnualIncome    = document.getElementById('expense-summary-annual-income');
+    const summaryMonthlyExpenses = document.getElementById('expense-summary-monthly-expenses');
+    const summaryNet             = document.getElementById('expense-summary-net');
+    const summaryNetContainer    = document.getElementById('expense-summary-net-container');
+    const summaryNetLabel        = document.getElementById('expense-summary-net-label');
 
     if (!form) return;
 
@@ -59,6 +68,11 @@ document.addEventListener('DOMContentLoaded', () => {
         monthlyEl.textContent = hidden.value ? fmt(monthly) : '—';
     }
 
+    document.addEventListener('employmentIncomeUpdated', e => {
+        window.EMPLOYMENT_ANNUAL_INCOME = e.detail.annualIncome ?? 0;
+        recalcAll(); // recalcAll computes fresh totalMonthly and passes it to updateSummary
+    });
+
     function recalcAll() {
         let total = 0;
 
@@ -75,6 +89,43 @@ document.addEventListener('DOMContentLoaded', () => {
             grandTotal.textContent = fmt(total);
             grandTotal.setAttribute('aria-label', `Total monthly expenses: ${fmt(total)}`);
             announceChange(`Total monthly expenses updated: ${fmt(total)}`);
+        }
+        updateSummary(total);
+    }
+
+    function updateSummary(totalMonthly) {
+
+        if (totalMonthly === undefined) {
+            totalMonthly = 0;
+            form.querySelectorAll('.expense-input-row, [data-other-row]').forEach(row => {
+                const hidden     = row.querySelector('.expense-amount-input');
+                const freqSelect = row.querySelector('.expense-frequency-select');
+                if (hidden?.value) {
+                    totalMonthly += toMonthly(hidden.value, freqSelect?.value ?? 'monthly');
+                }
+            });
+        }
+
+        const annualIncome  = parseFloat(window.EMPLOYMENT_ANNUAL_INCOME ?? 0);
+        const monthlyIncome = annualIncome / 12;
+        const net           = monthlyIncome - parseFloat(totalMonthly ?? 0);
+        const surplus       = net >= 0;
+
+        if (summaryAnnualIncome) {
+            summaryAnnualIncome.textContent = fmt(annualIncome);
+            summaryAnnualIncome.setAttribute('aria-label', `Total annual income: ${fmt(annualIncome)}`);
+        }
+        if (summaryMonthlyExpenses) {
+            summaryMonthlyExpenses.textContent = fmt(totalMonthly);
+            summaryMonthlyExpenses.setAttribute('aria-label', `Total monthly expenses: ${fmt(totalMonthly)}`);
+        }
+        if (summaryNet && summaryNetContainer && summaryNetLabel) {
+            const absNet = isNaN(net) ? 0 : Math.abs(net);   // ← guard against NaN
+            summaryNet.textContent      = fmt(absNet);
+            summaryNetLabel.textContent = surplus ? 'Surplus' : 'Deficit';
+            summaryNet.setAttribute('aria-label', `${surplus ? 'Surplus' : 'Deficit'}: ${fmt(absNet)}`);
+            summaryNetContainer.dataset.state = surplus ? 'surplus' : 'deficit';
+            switchNetStyles(surplus);
         }
     }
 
@@ -306,4 +357,17 @@ document.addEventListener('DOMContentLoaded', () => {
         messages.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
+    function switchNetStyles(surplus) {
+        if (!summaryNetContainer || !summaryNet || !summaryNetLabel) return;
+
+        if (surplus) {
+            summaryNetContainer.className = 'rounded-xl px-4 py-3 text-center border bg-gradient-to-br from-green-50 to-emerald-50 border-green-200';
+            summaryNetLabel.className     = 'text-xs font-semibold uppercase tracking-wide mb-1 text-green-500';
+            summaryNet.className          = 'text-lg font-bold tabular-nums text-green-700';
+        } else {
+            summaryNetContainer.className = 'rounded-xl px-4 py-3 text-center border bg-gradient-to-br from-red-50 to-rose-50 border-red-200';  
+            summaryNetLabel.className     = 'text-xs font-semibold uppercase tracking-wide mb-1 text-red-500';
+            summaryNet.className          = 'text-lg font-bold tabular-nums text-red-700';
+        }
+    }
 });

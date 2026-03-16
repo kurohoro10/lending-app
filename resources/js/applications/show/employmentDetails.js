@@ -8,6 +8,12 @@ document.addEventListener('DOMContentLoaded', () => {
     const submitSpinner                 = document.getElementById('submit-employment-spinner');
     const submitPlusIcon                = document.getElementById('submit-employment-plus-icon');
 
+    // Seed the shared income total from server-rendered config
+    window.EMPLOYMENT_ANNUAL_INCOME = window.EMPLOYMENT_CONFIG?.initialAnnualIncome ?? 0;
+    document.dispatchEvent(new CustomEvent('employmentIncomeUpdated', {
+        detail: { annualIncome: window.EMPLOYMENT_ANNUAL_INCOME }
+    }));
+
     if (employmentDetailsAccordionBtn) {
         employmentDetailsAccordionBtn.addEventListener('click', () => {
             window.toggleAccordion('employment-details');
@@ -19,6 +25,21 @@ document.addEventListener('DOMContentLoaded', () => {
     window.initCurrencyInput('additional-income-display', 'additional-income', { min: 0, max: 9_000_000_000, errorId: 'additional_income-error' });
 
     // ── Helpers ───────────────────────────────────────────────────────────
+
+    function broadcastTotalIncome() {
+        let total = 0;
+        document.querySelectorAll('.employment-item').forEach(card => {
+            // Read data attributes set by createEmploymentElement
+            const base       = parseFloat(card.dataset.baseIncome       || 0);
+            const additional = parseFloat(card.dataset.additionalIncome  || 0);
+            const freq       = card.dataset.incomeFrequency              || 'annual';
+            total += calculateAnnualIncome(base, additional, freq);
+        });
+        window.EMPLOYMENT_ANNUAL_INCOME = total;
+        document.dispatchEvent(new CustomEvent('employmentIncomeUpdated', {
+            detail: { annualIncome: total }
+        }));
+    }
 
     function clearErrors() {
         const errorElements = form.querySelectorAll('[id$="-error"]');
@@ -188,6 +209,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const employmentItem = createEmploymentElement(employment);
         document.getElementById('employment-list').insertAdjacentHTML('beforeend', employmentItem);
+
+        broadcastTotalIncome();
     }
 
     function createEmploymentElement(employment) {
@@ -198,7 +221,12 @@ document.addEventListener('DOMContentLoaded', () => {
         );
 
         return `
-            <div data-employment-card class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="${employment.id}">
+            <div data-employment-card
+                class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition"
+                data-employment-id="${employment.id}"
+                data-base-income="${employment.base_income}"
+                data-additional-income="${employment.additional_income || 0}"
+                data-income-frequency="${employment.income_frequency}">
                 <div class="flex justify-between items-start">
                     <div class="flex items-start space-x-4">
                         <div class="flex-shrink-0">
@@ -280,6 +308,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 document.querySelector(`[data-employment-id="${employmentId}"]`)?.remove();
 
                 updateEmploymentCount();
+                broadcastTotalIncome();
 
                 document.dispatchEvent(new CustomEvent('ajaxSuccess', {
                     detail: { type: 'employment' }

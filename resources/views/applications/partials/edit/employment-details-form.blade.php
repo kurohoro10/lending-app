@@ -43,7 +43,11 @@
                     </div>
                     <div id="employment-list" data-employment-section class="space-y-3">
                         @foreach($application->employmentDetails as $employment)
-                        <div data-employment-card class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="{{ $employment->id }}">
+                        <div data-employment-card
+                            data-base-income="{{ $employment->base_income }}"
+                            data-additional-income="{{ $employment->additional_income ?? 0 }}"
+                            data-income-frequency="{{ $employment->income_frequency }}"
+                            class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="{{ $employment->id }}">
                             <div class="flex justify-between items-start">
                                 <div class="flex items-start space-x-4">
                                     <div class="flex-shrink-0">
@@ -216,6 +220,7 @@
 
 <script>
     Object.assign(window.EMPLOYMENT_CONFIG, {
-        deleteRoute: @js(route('applications.employment-details.destroy', [$application, ':id']))
+        deleteRoute: @js(route('applications.employment-details.destroy', [$application, ':id'])),
+        initialAnnualIncome: @js($application->employmentDetails->sum(fn($e) => $e->getAnnualIncome())),
     });
 </script>
