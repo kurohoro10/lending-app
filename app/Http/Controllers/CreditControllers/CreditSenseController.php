@@ -30,7 +30,7 @@ class CreditSenseController extends Controller
      */
     public function iframeConfig(Application $application): JsonResponse
     {
-        $this->authorize('update', $application);
+        $this->authorize('connectBank', $application);
 
         if (blank($this->storeCode())) {
             return response()->json([
@@ -55,7 +55,7 @@ class CreditSenseController extends Controller
      */
     public function complete(Application $application): JsonResponse
     {
-        $this->authorize('update', $application);
+        $this->authorize('connectBank', $application);
 
         if (!$application->credit_sense_completed_at) {
             $application->update([

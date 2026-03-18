@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Register - {{ config('app.name', 'LoanFlow') }}</title>
+    <title>Register - {{ config('app.name', 'ZYA Capital') }}</title>
     <link rel="preconnect" href="https://fonts.bunny.net">
     <link href="https://fonts.bunny.net/css?family=poppins:300,400,500,600,700&display=swap" rel="stylesheet" />
     @vite(['resources/css/app.css', 'resources/js/app.js'])
@@ -113,13 +113,13 @@
     <!-- Floating Navigation -->
     <nav class="fixed top-6 left-1/2 transform -translate-x-1/2 z-50 px-6 py-3 bg-white/90 backdrop-blur-lg rounded-full shadow-xl border border-gray-200 max-w-4xl w-full mx-4" role="navigation" aria-label="Main navigation">
         <div class="flex justify-between items-center">
-            <a href="{{ route('welcome') }}" class="flex items-center focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full" aria-label="LoanFlow Home">
+            <a href="{{ route('welcome') }}" class="flex items-center focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded-full" aria-label="ZYA Capital Home">
                 <div class="h-10 w-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center mr-3">
                     <svg class="h-6 w-6 text-white" fill="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                         <path d="M12 2L2 7v10c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V7l-10-5z"/>
                     </svg>
                 </div>
-                <span class="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">LoanFlow</span>
+                <span class="text-lg font-bold bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">ZYA Capital</span>
             </a>
 
             <div class="flex items-center space-x-3">
@@ -223,7 +223,7 @@
                                 <span class="ml-1 text-gray-900 font-semibold">4.9/5</span>
                             </div>
                         </div>
-                        <p class="text-sm text-gray-600">Join 10,000+ businesses that trust LoanFlow</p>
+                        <p class="text-sm text-gray-600">Join 10,000+ businesses that trust ZYA Capital</p>
                     </div>
                 </div>
 
@@ -430,7 +430,16 @@
                                         placeholder="Minimum 8 characters"
                                     >
                                 </div>
-                                <p id="password-hint" class="mt-1 text-xs text-gray-500">Use at least 8 characters with letters and numbers</p>
+                                <!-- Password strength meter -->
+                                <div id="password-strength-wrap" class="mt-2 hidden" aria-live="polite">
+                                    <div class="password-strength" role="progressbar" aria-valuemin="0" aria-valuemax="4" aria-valuenow="0" aria-label="Password strength">
+                                        <div id="password-strength-bar" class="password-strength-bar w-0"></div>
+                                    </div>
+                                    <p id="password-strength-label" class="mt-1 text-xs text-gray-500"></p>
+                                </div>
+                                <p id="password-hint" class="mt-1 text-xs text-gray-500">
+                                    Min. 8 characters with at least one letter, number, and special character
+                                </p>
                             </div>
 
                             <!-- Password Confirmation Field -->
@@ -513,7 +522,7 @@
 
                     <!-- Additional Help -->
                     <div class="mt-6 text-center text-sm text-gray-600">
-                        <p>Questions? <a href="mailto:support@loanflow.com" class="text-indigo-600 hover:text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-1">Contact our team</a></p>
+                        <p>Questions? <a href="mailto:support@zyacapital.com" class="text-indigo-600 hover:text-indigo-700 font-medium focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-1">Contact our team</a></p>
                     </div>
                 </div>
             </div>
@@ -525,7 +534,7 @@
         <div class="max-w-6xl mx-auto">
             <div class="pt-8 border-t border-gray-200 text-center">
                 <div class="flex flex-col md:flex-row justify-between items-center text-gray-600 text-sm">
-                    <p class="mb-4 md:mb-0">&copy; {{ date('Y') }} LoanFlow. All rights reserved.</p>
+                    <p class="mb-4 md:mb-0">&copy; {{ date('Y') }} ZYA Capital. All rights reserved.</p>
                     <div class="flex items-center space-x-6">
                         <a href="{{ route('privacy-policy') }}" class="hover:text-indigo-600 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">Privacy Policy</a>
                         <a href="{{ route('terms-and-conditions') }}" class="hover:text-indigo-600 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">Terms of Service</a>
@@ -535,5 +544,48 @@
             </div>
         </div>
     </footer>
+
+    <script>
+        (function () {
+            const input   = document.getElementById('password');
+            const wrap    = document.getElementById('password-strength-wrap');
+            const bar     = document.getElementById('password-strength-bar');
+            const label   = document.getElementById('password-strength-label');
+            const tracker = bar.closest('[role="progressbar"]');
+
+            const levels = [
+                { color: '#EF4444', text: 'Too weak',  width: '25%'  },
+                { color: '#F97316', text: 'Weak',      width: '50%'  },
+                { color: '#EAB308', text: 'Fair',      width: '75%'  },
+                { color: '#22C55E', text: 'Strong',    width: '100%' },
+            ];
+
+            function score(pw) {
+                let s = 0;
+                if (pw.length >= 8)                     s++;
+                if (/[a-zA-Z]/.test(pw) && /\d/.test(pw)) s++;
+                if (/[@$!%*#?&^_\-]/.test(pw))         s++;
+                if (pw.length >= 12)                    s++;
+                return Math.min(s, 3);
+            }
+
+            input.addEventListener('input', function () {
+                const pw = this.value;
+                if (!pw) {
+                    wrap.classList.add('hidden');
+                    tracker.setAttribute('aria-valuenow', '0');
+                    return;
+                }
+                wrap.classList.remove('hidden');
+                const s   = score(pw);
+                const lvl = levels[s];
+                bar.style.width           = lvl.width;
+                bar.style.backgroundColor = lvl.color;
+                label.textContent         = lvl.text;
+                label.style.color         = lvl.color;
+                tracker.setAttribute('aria-valuenow', String(s + 1));
+            });
+        })();
+    </script>
 </body>
 </html>

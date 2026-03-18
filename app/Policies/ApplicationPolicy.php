@@ -111,4 +111,13 @@ class ApplicationPolicy
         // Clients can upload documents at any stage (e.g. responding to questions)
         return $user->id === $application->user_id;
     }
+
+    public function connectBank(User $user, Application $application): bool
+    {
+        if ($user->hasRole('admin')) {
+            return true;
+        }
+
+        return $user->id === $application->user_id;
+    }
 }
