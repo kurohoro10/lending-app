@@ -15,6 +15,7 @@ use App\Http\Controllers\Admin\Communication\EmailCommunicationController;
 use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use App\Http\Controllers\Admin\CreditControllers\CreditSenseController;
 use App\Http\Controllers\Admin\CommunicationController;
+use App\Http\Controllers\Admin\UserController;
 
 /*
 |--------------------------------------------------------------------------
@@ -132,3 +133,8 @@ Route::post('applications/{application}/creditsense/fetch-report', [CreditSenseC
     ->name('creditsense.fetchReport');
 Route::post('applications/{application}/creditsense/quicklink',    [CreditSenseController::class, 'createQuicklink'])
     ->name('creditsense.quicklink');
+
+Route::get('/users',                    [UserController::class, 'index'])
+    ->name('users.index');
+Route::patch('/users/{user}/unlock',    [UserController::class, 'unlock'])
+    ->name('users.unlock');
