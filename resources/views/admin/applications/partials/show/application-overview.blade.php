@@ -2,7 +2,7 @@
 <div class="bg-white overflow-hidden shadow-xl sm:rounded-lg">
     <div class="p-6">
         <h3 class="text-lg font-medium text-gray-900 mb-4">Application Overview</h3>
-        <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
             <div>
                 <span class="text-sm font-medium text-gray-500">Status:</span>
                 @php
@@ -18,6 +18,10 @@
             <div>
                 <span class="text-sm font-medium text-gray-500">Loan Amount:</span>
                 <p class="mt-1 text-xl font-semibold text-gray-900">${{ number_format($application->loan_amount, 2) }}</p>
+            </div>
+            <div>
+                <span class="text-sm font-medium text-gray-500">Loan Purpose:</span>
+                <p class="mt-1 text-xl font-semibold text-gray-900">{{ ucwords(str_replace('_', ' ', $application->loan_purpose)) }}</p>
             </div>
             <div>
                 <span class="text-sm font-medium text-gray-500">Term:</span>
