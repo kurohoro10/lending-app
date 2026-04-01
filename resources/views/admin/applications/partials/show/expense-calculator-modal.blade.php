@@ -33,7 +33,7 @@
                     Expense Verification — {{ $providerLabel }}
                 </h2>
                 <p id="expense-modal-desc" class="text-xs text-gray-500 mt-0.5">
-                    Compare client-stated expenses against {{ $providerLabel }} bank data, then set verified amounts.
+                    Compare client-stated expenses against {{ $providerLabel }} data, set verified amounts, and add internal notes per expense.
                 </p>
             </div>
 
@@ -87,37 +87,36 @@
         <div id="expense-table-area" class="hidden flex-1 overflow-auto px-6 pb-2">
             <form id="expense-calc-form"
                   data-save-route="{{ route('admin.expenses.verify', $application) }}"
+                  data-comment-route="{{ route('admin.comments.store', $application) }}"
                   novalidate>
 
                 <table class="w-full text-sm border-separate border-spacing-0 mt-4"
                        role="table"
-                       aria-label="Expense verification calculator with {{ $providerLabel }} bank data">
+                       aria-label="Expense verification calculator">
                     <thead class="sticky top-0 z-10">
                         <tr>
-                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 rounded-tl-lg">
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 rounded-tl-lg w-44">
                                 Description
                             </th>
-                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-32">
-                                Amount
-                            </th>
-                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200 w-36">
-                                Frequency
-                            </th>
-                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-indigo-600 uppercase tracking-wider bg-indigo-50 border-b border-indigo-200 w-36">
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-indigo-600 uppercase tracking-wider bg-indigo-50 border-b border-indigo-200 w-32">
                                 Client Stated
                                 <span class="block text-indigo-400 font-normal normal-case tracking-normal">(monthly)</span>
                             </th>
-                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-emerald-600 uppercase tracking-wider bg-emerald-50 border-b border-emerald-200 w-36">
-                                {{ $providerLabel }} Bank
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-emerald-600 uppercase tracking-wider bg-emerald-50 border-b border-emerald-200 w-32">
+                                {{ $providerLabel }}
                                 <span class="block text-emerald-400 font-normal normal-case tracking-normal">(monthly)</span>
                             </th>
-                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-violet-600 uppercase tracking-wider bg-violet-50 border-b border-violet-200 w-36">
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-violet-600 uppercase tracking-wider bg-violet-50 border-b border-violet-200 w-32">
                                 Verified
                                 <span class="block text-violet-400 font-normal normal-case tracking-normal">(monthly)</span>
                             </th>
-                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-100 border-b border-gray-200 rounded-tr-lg w-36">
+                            <th scope="col" class="px-3 py-3 text-right text-xs font-semibold text-gray-700 uppercase tracking-wider bg-gray-100 border-b border-gray-200 w-28">
                                 Annual
                                 <span class="block text-gray-400 font-normal normal-case tracking-normal">(×12)</span>
+                            </th>
+                            <th scope="col" class="px-3 py-3 text-left text-xs font-semibold text-amber-600 uppercase tracking-wider bg-amber-50 border-b border-amber-200 rounded-tr-lg">
+                                Internal Note
+                                <span class="block text-amber-400 font-normal normal-case tracking-normal">(saved to comments)</span>
                             </th>
                         </tr>
                     </thead>
@@ -126,11 +125,12 @@
                     </tbody>
                     <tfoot>
                         <tr class="border-t-2 border-gray-300 bg-gray-50">
-                            <td colspan="3" class="px-3 py-3 text-sm font-bold text-gray-700 rounded-bl-lg">TOTAL</td>
+                            <td class="px-3 py-3 text-sm font-bold text-gray-700 rounded-bl-lg">TOTAL</td>
                             <td class="px-3 py-3 text-right font-bold text-indigo-700 tabular-nums" id="total-client-stated">$0.00</td>
                             <td class="px-3 py-3 text-right font-bold text-emerald-700 tabular-nums" id="total-bank-provider">$0.00</td>
                             <td class="px-3 py-3 text-right font-bold text-violet-700 tabular-nums" id="total-verified">$0.00</td>
-                            <td class="px-3 py-3 text-right font-bold text-gray-900 tabular-nums rounded-br-lg" id="total-annual">$0.00</td>
+                            <td class="px-3 py-3 text-right font-bold text-gray-900 tabular-nums" id="total-annual">$0.00</td>
+                            <td class="rounded-br-lg"></td>
                         </tr>
                     </tfoot>
                 </table>
