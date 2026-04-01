@@ -36,6 +36,8 @@ class User extends Authenticatable implements MustVerifyEmail
         'name_extension',
         'email',
         'password',
+        'failed_login_attempts',  // lockout tracking
+        'locked_at',              // lockout tracking
     ];
 
     /**
@@ -68,14 +70,14 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
-            'email_verified_at' => 'datetime',
-            'password' => 'hashed',
+            'email_verified_at'      => 'datetime',
+            'locked_at'              => 'datetime',   // lockout tracking
+            'password'               => 'hashed',
         ];
     }
 
-    /**
-     * Relationships
-     */
+    // ── Relationships ─────────────────────────────────────────────────────────
+
     public function applications(): HasMany
     {
         return $this->hasMany(Application::class);
@@ -134,6 +136,44 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasRole(['admin', 'assessor']);
     }
 
+    public function isSystem(): bool
+    {
+        return $this->hasRole('system');
+    }
+
+    /**
+     * Whether this account is subject to lockout rules.
+     * Admin and system accounts are always exempt.
+     */
+    public function isLockoutExempt(): bool
+    {
+        return $this->hasRole(['admin', 'system']);
+    }
+
+    /**
+     * Whether this account is currently locked.
+     */
+    public function isLocked(): bool
+    {
+        if ($this->isLockoutExempt()) {
+            return false;
+        }
+
+        return $this->locked_at !== null;
+    }
+
+    /**
+     * Unlock this account and reset failure counter.
+     * Useful for admin "unlock user" actions.
+     */
+    public function unlock(): void
+    {
+        $this->update([
+            'failed_login_attempts' => 0,
+            'locked_at'             => null,
+        ]);
+    }
+
     public function sendEmailVerificationNotification()
     {
         $this->notify(new CustomVerifyEmail);
@@ -151,10 +191,5 @@ class User extends Authenticatable implements MustVerifyEmail
             $this->last_name,
             $this->name_extension,
         ])->filter()->implode(' ') ?: 'Unnamed User';
-    }
-
-    public function isSystem(): bool
-    {
-        return $this->hasRole('system');
     }
 }

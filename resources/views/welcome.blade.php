@@ -307,16 +307,16 @@
                         <div>
                             <div class="flex justify-between items-center mb-4">
                                 <label class="text-sm font-semibold text-gray-700">Interest Rate</label>
-                                <span class="text-xl font-bold text-indigo-600" id="interestRate">8.5%</span>
+                                <span class="text-xl font-bold text-indigo-600" id="interestRate">20%</span>
                             </div>
                             <div class="py-2 range-wrapper">
                                 <div class="range-background"></div>
                                 <div class="range-fill" id="rateFill"></div>
-                                <input type="range" min="5" max="15" value="8.5" step="0.5" id="rateSlider" class="w-full">
+                                <input type="range" min="15" max="35" value="20" step="0.5" id="rateSlider" class="w-full">
                             </div>
                             <div class="flex justify-between text-xs text-gray-500 mt-2">
-                                <span>5%</span>
                                 <span>15%</span>
+                                <span>35%</span>
                             </div>
                         </div>
 

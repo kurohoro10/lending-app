@@ -142,18 +142,6 @@
                     <!-- Trust Badges -->
                     <div class="space-y-4 pt-6 border-t border-gray-200">
                         <div class="flex items-center">
-                            <div class="w-12 h-12 bg-gradient-to-br from-green-400 to-green-600 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
-                                <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                                </svg>
-                            </div>
-                            <div>
-                                <h3 class="font-semibold text-gray-900">256-bit Encryption</h3>
-                                <p class="text-sm text-gray-600">Bank-level security protects your data</p>
-                            </div>
-                        </div>
-
-                        <div class="flex items-center">
                             <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-blue-600 rounded-xl flex items-center justify-center mr-4 flex-shrink-0">
                                 <svg class="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                                     <path d="M10 12a2 2 0 100-4 2 2 0 000 4z"/>

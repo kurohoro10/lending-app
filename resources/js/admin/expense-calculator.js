@@ -1,8 +1,8 @@
 // resources/js/admin/expense-calculator.js
 // Expense Verification Calculator modal.
 // Loads client-stated expenses + Basiq bank data via AJAX, renders an
-// editable comparison table, auto-calculates totals, and saves verified
-// amounts via AJAX.
+// editable comparison table, auto-calculates totals, saves verified
+// amounts via AJAX, and posts per-row internal notes to comments.
 
 (() => {
     if (window.__expenseModalInitialized) return;
@@ -32,17 +32,7 @@
 
     let previousFocus = null;
 
-    // ── Frequency multipliers (amount → monthly) ─────────────────────────────
-    const FREQ_TO_MONTHLY = {
-        weekly:      52 / 12,
-        fortnightly: 26 / 12,
-        monthly:     1,
-        quarterly:   1 / 3,
-        annually:    1 / 12,
-    };
-
-    const toMonthly = (amount, freq) =>
-        (parseFloat(amount) || 0) * (FREQ_TO_MONTHLY[freq] ?? 1);
+    // ── Helpers ───────────────────────────────────────────────────────────────
 
     const fmt = n =>
         '$' + Number(n || 0).toLocaleString('en-AU', {
@@ -56,6 +46,9 @@
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;');
+
+    const csrf = () =>
+        document.querySelector('meta[name="csrf-token"]')?.content ?? '';
 
     // ── Open / Close ─────────────────────────────────────────────────────────
 
@@ -155,7 +148,7 @@
             if (exp.basiq_label) matchedBasiqLabels.add(exp.basiq_label);
 
             const prevVerified = previouslyVerified[exp.description] ?? exp.basiq_amount ?? exp.amount;
-            addRow(idx, exp.description, exp.amount, exp.frequency, exp.basiq_amount, prevVerified);
+            addRow(idx, exp.description, exp.amount, exp.basiq_amount, prevVerified);
         });
 
         // If no rows at all, start with one blank row
@@ -188,7 +181,6 @@
                         count,
                         btn.dataset.label,
                         btn.dataset.amount,
-                        'monthly',
                         btn.dataset.amount,
                         btn.dataset.amount
                     );
@@ -206,116 +198,132 @@
 
     // ── Row management ───────────────────────────────────────────────────────
 
-    function addRow(idx, description = '', amount = 0, frequency = 'monthly', basiqAmount = null, verifiedAmount = null) {
+    function addRow(idx, description = '', clientMonthly = 0, basiqAmount = null, verifiedAmount = null) {
         const tr = document.createElement('tr');
         tr.className = 'group hover:bg-gray-50 transition-colors';
 
         const hasBasiq      = basiqAmount !== null && basiqAmount !== undefined && basiqAmount !== '';
-        const clientMonthly = toMonthly(amount, frequency);
+        const clientMo      = parseFloat(clientMonthly) || 0;
         const basiqMonthly  = hasBasiq ? parseFloat(basiqAmount) : null;
         const verifiedVal   = verifiedAmount !== null && verifiedAmount !== undefined
             ? parseFloat(verifiedAmount)
-            : clientMonthly;
+            : clientMo;
 
         const diffClass = hasBasiq
-            ? (Math.abs(clientMonthly - basiqMonthly) > 50 ? 'text-amber-600 font-semibold' : 'text-emerald-600')
+            ? (Math.abs(clientMo - basiqMonthly) > 50 ? 'text-amber-600 font-semibold' : 'text-emerald-600')
             : 'text-gray-300';
 
-        const freqOptions = ['weekly', 'fortnightly', 'monthly', 'quarterly', 'annually']
-            .map(f => `<option value="${f}" ${f === frequency ? 'selected' : ''}>${f.charAt(0).toUpperCase() + f.slice(1)}</option>`)
-            .join('');
-
-        tr.innerHTML = `
-            <td class="px-3 py-2">
-                <input type="text"
-                       name="expenses[${idx}][description]"
-                       value="${escHtml(description)}"
-                       placeholder="e.g. Rent"
-                       required
-                       aria-label="Expense description row ${idx + 1}"
-                       class="w-full border border-gray-200 rounded-md px-2 py-1.5 text-sm
-                              focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none">
-            </td>
-            <td class="px-3 py-2">
-                <input type="number"
-                       name="expenses[${idx}][amount]"
-                       value="${escHtml(String(amount))}"
-                       min="0"
-                       step="0.01"
-                       required
-                       aria-label="Stated amount row ${idx + 1}"
-                       class="amount-input w-full border border-gray-200 rounded-md px-2 py-1.5
-                              text-sm text-right focus:ring-2 focus:ring-indigo-400
-                              focus:border-indigo-400 focus:outline-none">
-            </td>
-            <td class="px-3 py-2">
-                <select name="expenses[${idx}][frequency]"
-                        aria-label="Frequency row ${idx + 1}"
-                        class="freq-select w-full border border-gray-200 rounded-md px-2 py-1.5
-                               text-sm focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400
-                               focus:outline-none">
-                    ${freqOptions}
-                </select>
-            </td>
-            <td class="px-3 py-2 text-right tabular-nums text-indigo-700 font-medium client-monthly">
-                ${fmt(clientMonthly)}
-            </td>
-            <td class="px-3 py-2 text-right tabular-nums ${diffClass} basiq-cell">
-                ${hasBasiq
-                    ? `${fmt(basiqMonthly)}<input type="hidden" name="expenses[${idx}][basiq_amount]" value="${basiqMonthly}">`
-                    : '<span class="text-gray-300 text-xs">—</span>'}
-            </td>
-            <td class="px-3 py-2">
-                <input type="number"
-                       name="expenses[${idx}][verified_amount]"
-                       value="${verifiedVal}"
-                       min="0"
-                       step="0.01"
-                       required
-                       aria-label="Verified amount row ${idx + 1}"
-                       class="verified-input w-full border border-violet-200 bg-violet-50 rounded-md
-                              px-2 py-1.5 text-sm text-right font-medium text-violet-700
-                              focus:ring-2 focus:ring-violet-400 focus:border-violet-400 focus:outline-none">
-            </td>
-            <td class="px-3 py-2 text-right tabular-nums text-gray-800 font-medium annual-cell">
-                ${fmt(verifiedVal * 12)}
-            </td>
+        // Description cell
+        const tdDesc = document.createElement('td');
+        tdDesc.className = 'px-3 py-2';
+        tdDesc.innerHTML = `
+            <input type="text"
+                   name="expenses[${idx}][description]"
+                   value="${escHtml(description)}"
+                   placeholder="e.g. Rent"
+                   required
+                   aria-label="Expense description row ${idx + 1}"
+                   class="w-full border border-gray-200 rounded-md px-2 py-1.5 text-sm
+                          focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 focus:outline-none">
         `;
+
+        // Client stated monthly (read-only display + hidden inputs)
+        const tdClient = document.createElement('td');
+        tdClient.className = 'px-3 py-2 text-right tabular-nums text-indigo-700 font-medium client-monthly';
+        tdClient.innerHTML = `
+            ${fmt(clientMo)}
+            <input type="hidden" name="expenses[${idx}][amount]" value="${clientMo}">
+            <input type="hidden" name="expenses[${idx}][frequency]" value="monthly">
+        `;
+
+        // Basiq provider monthly
+        const tdBasiq = document.createElement('td');
+        tdBasiq.className = `px-3 py-2 text-right tabular-nums ${diffClass} basiq-cell`;
+        if (hasBasiq) {
+            tdBasiq.innerHTML = `
+                ${fmt(basiqMonthly)}
+                <input type="hidden" name="expenses[${idx}][basiq_amount]" value="${basiqMonthly}">
+            `;
+        } else {
+            tdBasiq.innerHTML = '<span class="text-gray-300 text-xs">—</span>';
+        }
+
+        // Verified amount (editable)
+        const tdVerified = document.createElement('td');
+        tdVerified.className = 'px-3 py-2';
+        tdVerified.innerHTML = `
+            <input type="number"
+                   name="expenses[${idx}][verified_amount]"
+                   value="${verifiedVal}"
+                   min="0"
+                   step="0.01"
+                   required
+                   aria-label="Verified amount row ${idx + 1}"
+                   class="verified-input w-full border border-violet-200 bg-violet-50 rounded-md
+                          px-2 py-1.5 text-sm text-right font-medium text-violet-700
+                          focus:ring-2 focus:ring-violet-400 focus:border-violet-400 focus:outline-none">
+        `;
+
+        // Annual (auto-calculated)
+        const tdAnnual = document.createElement('td');
+        tdAnnual.className = 'px-3 py-2 text-right tabular-nums text-gray-800 font-medium annual-cell';
+        tdAnnual.textContent = fmt(verifiedVal * 12);
+
+        // Internal note
+        const tdNote = document.createElement('td');
+        tdNote.className = 'px-3 py-2';
+        tdNote.innerHTML = `
+            <textarea name="expenses[${idx}][comment]"
+                      rows="1"
+                      placeholder="Add internal note… (optional)"
+                      aria-label="Internal note for row ${idx + 1}"
+                      class="comment-input w-full border border-amber-200 bg-amber-50 rounded-md
+                             px-2 py-1.5 text-sm text-gray-700 resize-none
+                             focus:ring-2 focus:ring-amber-400 focus:border-amber-400 focus:outline-none
+                             placeholder-amber-300"></textarea>
+        `;
+
+        tr.appendChild(tdDesc);
+        tr.appendChild(tdClient);
+        tr.appendChild(tdBasiq);
+        tr.appendChild(tdVerified);
+        tr.appendChild(tdAnnual);
+        tr.appendChild(tdNote);
 
         // "↑ use" quick-fill button — only injected when Basiq data exists
         if (hasBasiq) {
-            const basiqCell = tr.querySelector('.basiq-cell');
-            const useBtn    = document.createElement('button');
-            useBtn.type     = 'button';
+            const useBtn     = document.createElement('button');
+            useBtn.type      = 'button';
             useBtn.className = 'ml-1 text-xs text-emerald-600 hover:text-emerald-800 focus:outline-none focus:underline';
             useBtn.setAttribute('aria-label', `Use Basiq amount ${fmt(basiqMonthly)} as verified amount`);
             useBtn.textContent = '↑ use';
             useBtn.addEventListener('click', () => {
                 tr.querySelector('.verified-input').value = basiqMonthly;
+                tdAnnual.textContent = fmt(basiqMonthly * 12);
                 recalcTotals();
             });
-            basiqCell.appendChild(useBtn);
+            tdBasiq.appendChild(useBtn);
         }
 
         tbody.appendChild(tr);
-        bindRowListeners(tr);
+        bindRowListeners(tr, tdAnnual);
     }
 
-    function bindRowListeners(tr) {
-        const amountInput   = tr.querySelector('.amount-input');
-        const freqSelect    = tr.querySelector('.freq-select');
+    function bindRowListeners(tr, tdAnnual) {
         const verifiedInput = tr.querySelector('.verified-input');
+        const commentInput  = tr.querySelector('.comment-input');
 
-        const updateRow = () => {
-            const monthly = toMonthly(amountInput.value, freqSelect.value);
-            tr.querySelector('.client-monthly').textContent = fmt(monthly);
-            tr.querySelector('.annual-cell').textContent    = fmt((parseFloat(verifiedInput.value) || 0) * 12);
+        verifiedInput.addEventListener('input', () => {
+            const val = parseFloat(verifiedInput.value) || 0;
+            tdAnnual.textContent = fmt(val * 12);
             recalcTotals();
-        };
+        });
 
-        amountInput.addEventListener('input', updateRow);
-        freqSelect.addEventListener('change', updateRow);
-        verifiedInput.addEventListener('input', updateRow);
+        // Auto-grow comment textarea
+        commentInput?.addEventListener('input', () => {
+            commentInput.style.height = 'auto';
+            commentInput.style.height = commentInput.scrollHeight + 'px';
+        });
     }
 
     // ── Totals ───────────────────────────────────────────────────────────────
@@ -333,7 +341,7 @@
         });
 
         document.getElementById('total-client-stated').textContent = fmt(clientTotal);
-        document.getElementById('total-bank-provider').textContent         = fmt(basiqTotal);
+        document.getElementById('total-bank-provider').textContent = fmt(basiqTotal);
         document.getElementById('total-verified').textContent      = fmt(verifiedTotal);
         document.getElementById('total-annual').textContent        = fmt(verifiedTotal * 12);
     }
@@ -348,23 +356,30 @@
     });
 
     // ── Save ─────────────────────────────────────────────────────────────────
+    //
+    // Two sequential operations on save:
+    //   1. POST verified amounts → LivingExpenseVerificationController@store
+    //   2. POST one internal comment per row that has a note → CommentController@store
+    //      Format: "[Expense Verification] {description}: {note}"
 
     saveBtn.addEventListener('click', async () => {
         clearStatus();
         saveBtn.disabled = true;
         spinner.classList.remove('hidden');
 
-        const rows = [];
-        let valid  = true;
+        const rows  = [];
+        const notes = [];
+        let   valid = true;
 
         tbody.querySelectorAll('tr').forEach((tr, idx) => {
             const desc     = tr.querySelector(`input[name="expenses[${idx}][description]"]`)?.value?.trim();
             const amount   = tr.querySelector(`input[name="expenses[${idx}][amount]"]`)?.value;
-            const freq     = tr.querySelector(`select[name="expenses[${idx}][frequency]"]`)?.value;
+            const freq     = tr.querySelector(`input[name="expenses[${idx}][frequency]"]`)?.value;
             const verified = tr.querySelector(`input[name="expenses[${idx}][verified_amount]"]`)?.value;
             const basiq    = tr.querySelector(`input[name="expenses[${idx}][basiq_amount]"]`)?.value;
+            const comment  = tr.querySelector(`textarea[name="expenses[${idx}][comment]"]`)?.value?.trim();
 
-            if (!desc || amount === '' || !freq || verified === '') {
+            if (!desc || amount === '' || verified === '') {
                 valid = false;
                 return;
             }
@@ -372,10 +387,14 @@
             rows.push({
                 description:     desc,
                 amount:          parseFloat(amount),
-                frequency:       freq,
+                frequency:       freq ?? 'monthly',
                 verified_amount: parseFloat(verified),
                 basiq_amount:    basiq !== undefined ? parseFloat(basiq) : null,
             });
+
+            if (comment) {
+                notes.push({ description: desc, comment });
+            }
         });
 
         if (!valid || rows.length === 0) {
@@ -385,32 +404,73 @@
             return;
         }
 
+        // Step 1: Save verified expenses
         try {
-            const csrf = document.querySelector('meta[name="csrf-token"]')?.content;
-            const res  = await fetch(form.dataset.saveRoute, {
+            const res = await fetch(form.dataset.saveRoute, {
                 method:  'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept':       'application/json',
-                    'X-CSRF-TOKEN': csrf,
+                    'X-CSRF-TOKEN': csrf(),
                 },
                 body: JSON.stringify({ expenses: rows }),
             });
 
             const json = await res.json();
 
-            if (res.ok && json.success) {
-                setStatus('✓ Saved successfully', false);
-                setTimeout(closeModal, 1200);
-            } else {
+            if (!res.ok || !json.success) {
                 setStatus(json.message || 'Save failed. Please try again.', true);
+                saveBtn.disabled = false;
+                spinner.classList.add('hidden');
+                return;
             }
         } catch {
-            setStatus('Network error. Please try again.', true);
-        } finally {
+            setStatus('Network error saving expenses. Please try again.', true);
             saveBtn.disabled = false;
             spinner.classList.add('hidden');
+            return;
         }
+
+        // Step 2: Post internal comments for rows that have notes
+        if (notes.length > 0) {
+            const commentRoute = form.dataset.commentRoute;
+
+            const commentPromises = notes.map(({ description, comment }) =>
+                fetch(commentRoute, {
+                    method:  'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept':       'application/json',
+                        'X-CSRF-TOKEN': csrf(),
+                    },
+                    body: JSON.stringify({
+                        comment:   `[Expense Verification] ${description}: ${comment}`,
+                        type:      'internal',
+                        is_pinned: false,
+                    }),
+                }).then(r => r.json())
+            );
+
+            try {
+                await Promise.all(commentPromises);
+            } catch {
+                setStatus('Expenses saved, but some notes failed to post.', true);
+                saveBtn.disabled = false;
+                spinner.classList.add('hidden');
+                return;
+            }
+        }
+
+        // Done
+        const noteCount = notes.length;
+        setStatus(
+            noteCount > 0
+                ? `✓ Saved — ${noteCount} note${noteCount > 1 ? 's' : ''} posted to internal comments`
+                : '✓ Saved successfully',
+            false
+        );
+
+        setTimeout(closeModal, 1400);
     });
 
     // ── Status helpers ───────────────────────────────────────────────────────
