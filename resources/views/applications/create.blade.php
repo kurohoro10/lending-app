@@ -132,8 +132,8 @@
         .custom-checkbox:checked::after {
             content: '';
             position: absolute;
-            left: 3px;
-            top: 0px;
+            left: 4px;
+            top: 1px;
             width: 6px;
             height: 10px;
             border: 2px solid white;
@@ -813,18 +813,18 @@
                             <div>
                                 <div class="flex justify-between items-center mb-3">
                                     <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Interest Rate</label>
-                                    <span class="text-lg font-bold text-indigo-600" id="calcInterestRate">8.5%</span>
+                                    <span class="text-lg font-bold text-indigo-600" id="calcInterestRate">20%</span>
                                 </div>
                                 <div class="py-2 range-wrapper">
                                     <div class="range-background"></div>
                                     <div class="range-fill" id="calcRateFill"></div>
-                                    <input type="range" min="5" max="15"
+                                    <input type="range" min="15" max="35"
                                         value="{{ $calculatorValues['interest_rate'] }}"
                                         step="0.5" id="calcRateSlider" class="w-full">
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-400 mt-2">
-                                    <span>5%</span>
                                     <span>15%</span>
+                                    <span>35%</span>
                                 </div>
                             </div>
 
@@ -926,7 +926,7 @@
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="text-sm text-indigo-100">Decision within 24–48 hours</span>
+                                <span class="text-sm text-indigo-100">Decision within 24-48 hours</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
