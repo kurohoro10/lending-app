@@ -368,7 +368,9 @@ class LivingExpenseVerificationController extends Controller
                 'description'  => $name,
                 'amount'       => (float) ($expense->client_declared_amount ?? 0),
                 'frequency'    => $expense->frequency ?? 'monthly',
-                'basiq_amount' => $bankMatch ? round($bankMatch['monthly_amount'], 2) : null,
+                'basiq_amount' => $bankMatch
+                    ? round($bankMatch['monthly_amount'], 2)
+                    : ($expense->provider_amount !== null ? (float) $expense->provider_amount : null),
                 'basiq_label'  => $bankMatch ? $bankMatch['label'] : null,
             ];
         });
@@ -389,6 +391,7 @@ class LivingExpenseVerificationController extends Controller
             ->map(fn ($e) => [
                 'description'     => $e->expense_name ?? '',
                 'verified_amount' => (float) $e->verified_amount,
+                'note'            => $e->latestVerificationNoteText(),
             ])
             ->values()
             ->toArray();
@@ -493,6 +496,7 @@ class LivingExpenseVerificationController extends Controller
 
             $expense->update([
                 'verified_amount' => $row['verified_amount'],
+                'provider_amount' => $row['basiq_amount'] ?? null,
                 'is_verified'     => true,
                 'verified_by'     => auth()->id(),
                 'verified_at'     => now(),

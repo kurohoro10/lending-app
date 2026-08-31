@@ -35,7 +35,8 @@ class ApplicationUnderReview extends Notification
             ->line('**Expected Timeline:** We aim to complete our review within 2-3 business days.')
             ->action('View Application', route('applications.show', $this->application))
             ->line('You will receive an update once our assessment is complete.')
-            ->line('If you have any questions, please reply to this email.');
+            ->line('If you have any questions, please reply to this email.')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toArray($notifiable): array

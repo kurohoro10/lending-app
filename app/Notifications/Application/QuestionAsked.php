@@ -42,7 +42,8 @@ class QuestionAsked extends Notification implements ShouldQueue
             ->line('**Application:** ' . $application->application_number)
             ->line('**Question:** ' . $this->question->question)
             ->action('Answer Question', route('applications.show', $application))
-            ->line('Please log in and provide your answer at your earliest convenience.');
+            ->line('Please log in and provide your answer at your earliest convenience.')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toArray($notifiable): array

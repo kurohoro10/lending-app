@@ -1,5 +1,6 @@
 // resources/js/app.js
 import './bootstrap';
+import './dashboard-charts.js';
 
 // Import globals first and assign to window explicitly so all
 // eagerly-loaded module scripts below can safely call window.*

@@ -13,6 +13,9 @@
         "laravel/sanctum": "^4.0",
         "laravel/tinker": "^2.10.1",
         "livewire/livewire": "^3.6.4",
+        "setasign/fpdi": "^2.6",
+        "setasign/fpdi-fpdf": "^2.3",
+        "smalot/pdfparser": "^2.12",
         "spatie/laravel-permission": "^6.24",
         "twilio/sdk": "^8.11"
     },

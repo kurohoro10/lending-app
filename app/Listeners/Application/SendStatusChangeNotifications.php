@@ -18,11 +18,12 @@ class SendStatusChangeNotifications
 
         try {
             match ($event->newStatus) {
-                'under_review'             => $this->underReview($application, $phone, $number),
-                'approved'                 => $this->approved($application, $phone, $number),
-                'declined'                 => $this->declined($application, $phone, $number),
-                'additional_info_required' => $this->additionalInfo($application, $phone, $number),
-                default                    => null,
+                'wip'                  => $this->underReview($application, $phone, $number),
+                'approved'             => $this->approved($application, $phone, $number),
+                'declined'             => $this->declined($application, $phone, $number),
+                'deferred'             => $this->deferred($application, $phone, $number),
+                'outstanding_document' => $this->additionalInfo($application, $phone, $number),
+                default                => null,
             };
         } catch (\Exception $e) {
             // Log but don't bubble — a notification failure should never break the status update
@@ -42,7 +43,7 @@ class SendStatusChangeNotifications
         if ($phone) {
             $this->messaging->send(
                 $phone,
-                "Your loan application #{$number} is now under review. - Loan Team",
+                "Your loan application #{$number} is now under review. - Loan Team\n" . config('app.url'),
                 $application
             );
         }
@@ -57,7 +58,7 @@ class SendStatusChangeNotifications
         if ($phone) {
             $this->messaging->send(
                 $phone,
-                "Congratulations! Your loan application #{$number} has been APPROVED! - Loan Team",
+                "Congratulations! Your loan application #{$number} has been APPROVED! - Loan Team\n" . config('app.url'),
                 $application
             );
         }
@@ -72,7 +73,7 @@ class SendStatusChangeNotifications
         if ($phone) {
             $this->messaging->send(
                 $phone,
-                "Regarding your loan application #{$number} — we're unable to proceed. Check email for details. - Loan Team",
+                "Regarding your loan application #{$number} — we're unable to proceed. Check email for details. - Loan Team\n" . config('app.url'),
                 $application
             );
         }
@@ -87,7 +88,22 @@ class SendStatusChangeNotifications
         if ($phone) {
             $this->messaging->send(
                 $phone,
-                "We need additional information for your application #{$number}. Please log in. - Loan Team",
+                "We need additional information for your application #{$number}. Please log in. - Loan Team\n" . config('app.url'),
+                $application
+            );
+        }
+    }
+
+    private function deferred($application, $phone, $number): void
+    {
+        $application->user->notify(
+            new \App\Notifications\Application\ApplicationDeferred($application)
+        );
+
+        if ($phone) {
+            $this->messaging->send(
+                $phone,
+                "Regarding your loan application #{$number} — we need some time to review further. Check email for details. - Loan Team\n" . config('app.url'),
                 $application
             );
         }

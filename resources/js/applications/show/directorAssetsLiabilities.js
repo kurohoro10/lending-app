@@ -4,11 +4,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const CSRF           = document.querySelector('meta[name="csrf-token"]')?.content;
     const ASSET_STORE    = routes?.assetStore;
+    const ASSET_UPDATE   = routes?.assetUpdate;
     const ASSET_DEL      = routes?.assetDestroy;
     const LIAB_STORE     = routes?.liabilityStore;
+    const LIAB_UPDATE    = routes?.liabilityUpdate;
     const LIAB_DEL       = routes?.liabilityDestroy;
 
     const CURRENCY_MAX = 9_000_000_000;
+
+    // ── State for edit mode ───────────────────────────────────────────────────
+    let editingAssetId  = null;
+    let editingLiabId   = null;
 
     // ── Accordion ─────────────────────────────────────────────────────────────
     const dalBtn     = document.getElementById('dal-btn');
@@ -23,9 +29,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     // ── Currency inputs ───────────────────────────────────────────────────────
-    window.initCurrencyInput('asset-value-display',       'asset-value',       { min: 0, max: CURRENCY_MAX, errorId: 'asset-value-error' });
-    window.initCurrencyInput('liability-balance-display', 'liability-balance', { min: 0, max: CURRENCY_MAX, errorId: 'liability-balance-error' });
-    window.initCurrencyInput('liability-limit-display',   'liability-limit',   { min: 0, max: CURRENCY_MAX, errorId: 'liability-limit-error' });
+    window.initCurrencyInput('asset-value-display',              'asset-value',              { min: 0, max: CURRENCY_MAX, errorId: 'asset-value-error' });
+    window.initCurrencyInput('liability-balance-display',        'liability-balance',        { min: 0, max: CURRENCY_MAX, errorId: 'liability-balance-error' });
+    window.initCurrencyInput('liability-limit-display',          'liability-limit',          { min: 0, max: CURRENCY_MAX, errorId: 'liability-limit-error' });
+    window.initCurrencyInput('liability-repayment-display',      'liability-repayment',      { min: 0, max: CURRENCY_MAX, errorId: 'liability-repayment-error' });
+
+    updateTotals();
 
     // ── Asset type → show/hide property use ──────────────────────────────────
     const assetTypeEl      = document.getElementById('asset-type');
@@ -56,15 +65,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const assetFormPanel = document.getElementById('asset-form-panel');
 
     addAssetBtn?.addEventListener('click', () => {
+        editingAssetId = null;
         const open = assetFormPanel.classList.toggle('hidden');
         addAssetBtn.setAttribute('aria-expanded', String(!open));
         if (!open) assetTypeEl.focus();
+        resetAssetForm();
+        updateAssetFormLabel();
     });
 
     cancelAssetBtn?.addEventListener('click', () => {
         assetFormPanel.classList.add('hidden');
         addAssetBtn.setAttribute('aria-expanded', 'false');
+        editingAssetId = null;
         resetAssetForm();
+        updateAssetFormLabel();
     });
 
     // ── Liability form panel toggle ───────────────────────────────────────────
@@ -73,15 +87,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const liabFormPanel = document.getElementById('liability-form-panel');
 
     addLiabBtn?.addEventListener('click', () => {
+        editingLiabId = null;
         const open = liabFormPanel.classList.toggle('hidden');
         addLiabBtn.setAttribute('aria-expanded', String(!open));
         if (!open) liabTypeEl.focus();
+        resetLiabForm();
+        updateLiabFormLabel();
     });
 
     cancelLiabBtn?.addEventListener('click', () => {
         liabFormPanel.classList.add('hidden');
         addLiabBtn.setAttribute('aria-expanded', 'false');
+        editingLiabId = null;
         resetLiabForm();
+        updateLiabFormLabel();
     });
 
     // ── Save asset ────────────────────────────────────────────────────────────
@@ -107,27 +126,48 @@ document.addEventListener('DOMContentLoaded', () => {
         setSpinner('asset', true);
 
         const payload = {
-            asset_type:      assetTypeEl.value,
-            description:     document.getElementById('asset-description').value || null,
-            property_use:    document.getElementById('asset-property-use').value || 'na',
-            estimated_value: valueEl.value,
+            asset_type:           assetTypeEl.value,
+            description:          document.getElementById('asset-description').value || null,
+            property_use:         document.getElementById('asset-property-use').value || 'na',
+            estimated_value:      valueEl.value,
+            is_owned:             document.getElementById('asset-is-owned').value,
+            ownership_percentage: document.getElementById('asset-ownership-pct').value || null,
+            comment:              document.getElementById('asset-comment').value || null,
+            name:                 document.getElementById('asset-name').value || null,
         };
 
         try {
-            const res  = await post(ASSET_STORE, payload);
+            const url = editingAssetId 
+                ? ASSET_UPDATE.replace(':id', editingAssetId)
+                : ASSET_STORE;
+            const method = editingAssetId ? 'PATCH' : 'POST';
+            
+            const res  = await fetch(url, {
+                method:  method,
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                body:    JSON.stringify(payload),
+            });
             const data = await res.json();
+            
             if (res.ok && data.success) {
+                if (editingAssetId) {
+                    // Update existing row
+                    const tr = document.querySelector(`tr[data-asset-id="${editingAssetId}"]`);
+                    if (tr) tr.remove();
+                }
                 appendAssetRow(data.asset);
                 resetAssetForm();
                 assetFormPanel.classList.add('hidden');
                 addAssetBtn.setAttribute('aria-expanded', 'false');
-                showMessage('asset-messages', 'Asset added.', 'success');
+                editingAssetId = null;
+                updateAssetFormLabel();
+                showMessage('asset-messages', editingAssetId ? 'Asset updated.' : 'Asset added.', 'success');
                 updateTotals();
                 document.getElementById('assets-empty')?.remove();
             } else if (res.status === 422 && data.errors) {
                 handleServerErrors(data.errors, 'asset');
             } else {
-                showMessage('asset-messages', data.message ?? 'Failed to add asset.', 'error');
+                showMessage('asset-messages', data.message ?? 'Failed to save asset.', 'error');
             }
         } catch {
             showMessage('asset-messages', 'A network error occurred.', 'error');
@@ -164,29 +204,141 @@ document.addEventListener('DOMContentLoaded', () => {
             lender_name:         document.getElementById('liability-lender').value || null,
             credit_limit:        limitEl.value || null,
             outstanding_balance: balanceEl.value,
+            monthly_repayment:   document.getElementById('liability-repayment').value || null,
+            comment:             document.getElementById('liability-comment').value || null,
+            name:                document.getElementById('liability-name').value || null,
         };
 
         try {
-            const res  = await post(LIAB_STORE, payload);
+            const url = editingLiabId 
+                ? LIAB_UPDATE.replace(':id', editingLiabId)
+                : LIAB_STORE;
+            const method = editingLiabId ? 'PATCH' : 'POST';
+            
+            const res  = await fetch(url, {
+                method:  method,
+                headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
+                body:    JSON.stringify(payload),
+            });
             const data = await res.json();
+            
             if (res.ok && data.success) {
+                if (editingLiabId) {
+                    // Update existing row
+                    const tr = document.querySelector(`tr[data-liability-id="${editingLiabId}"]`);
+                    if (tr) tr.remove();
+                }
                 appendLiabilityRow(data.liability);
                 resetLiabForm();
                 liabFormPanel.classList.add('hidden');
                 addLiabBtn.setAttribute('aria-expanded', 'false');
-                showMessage('liability-messages', 'Liability added.', 'success');
+                editingLiabId = null;
+                updateLiabFormLabel();
+                showMessage('liability-messages', 'Liability saved.', 'success');
                 updateTotals();
                 document.getElementById('liabilities-empty')?.remove();
             } else if (res.status === 422 && data.errors) {
                 handleServerErrors(data.errors, 'liability');
             } else {
-                showMessage('liability-messages', data.message ?? 'Failed to add liability.', 'error');
+                showMessage('liability-messages', data.message ?? 'Failed to save liability.', 'error');
             }
         } catch {
             showMessage('liability-messages', 'A network error occurred.', 'error');
         } finally {
             setSpinner('liability', false);
         }
+    });
+
+    // ── Edit asset (delegated) ────────────────────────────────────────────────
+    document.getElementById('assets-list')?.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.edit-asset-btn');
+        if (!editBtn) return;
+
+        const assetId = editBtn.dataset.assetId;
+        const tr = document.querySelector(`tr[data-asset-id="${assetId}"]`);
+        
+        // Extract data from table row
+        const cells = tr.querySelectorAll('td');
+        const assetTypeLabel = cells[0].textContent.trim();
+        const description = cells[1].textContent.trim();
+        const propertyUseText = cells[2].textContent.trim();
+        const isOwned = cells[3].textContent.trim() === 'Yes';
+        const ownershipPct = cells[4].textContent.trim().replace('%', '');
+        const estimatedValue = cells[5].textContent.replace(/[$,]/g, '').trim();
+
+        // Populate form
+        editingAssetId = assetId;
+        
+        // Find correct asset type from label
+        const typeMap = {
+            'House / Property': 'house',
+            'Bank Account': 'bank',
+            'Superannuation': 'super',
+            'Vehicle': 'vehicle',
+            'Other': 'other'
+        };
+        assetTypeEl.value = typeMap[assetTypeLabel] || '';
+        assetTypeEl.dispatchEvent(new Event('change'));
+
+        document.getElementById('asset-property-use').value = propertyUseText === 'Main Residence' ? 'main_residence' : (propertyUseText === 'Rental' ? 'rental' : '');
+        document.getElementById('asset-description').value = description === '—' ? '' : description;
+        document.getElementById('asset-name').value = tr.dataset.assetName || '';
+        document.getElementById('asset-is-owned').value = isOwned ? '1' : '0';
+        document.getElementById('asset-ownership-pct').value = ownershipPct === '100%' ? '' : ownershipPct;
+        document.getElementById('asset-value-display').value = estimatedValue;
+        document.getElementById('asset-value').value = estimatedValue;
+        document.getElementById('asset-comment').value = ''; // Fetch from data or empty
+
+        // Show form
+        assetFormPanel.classList.remove('hidden');
+        addAssetBtn.setAttribute('aria-expanded', 'true');
+        updateAssetFormLabel();
+        assetTypeEl.focus();
+    });
+
+    // ── Edit liability (delegated) ─────────────────────────────────────────────
+    document.getElementById('liabilities-list')?.addEventListener('click', async (e) => {
+        const editBtn = e.target.closest('.edit-liability-btn');
+        if (!editBtn) return;
+
+        const liabId = editBtn.dataset.liabilityId;
+        const tr = document.querySelector(`tr[data-liability-id="${liabId}"]`);
+        
+        // Extract data from table row
+        const cells = tr.querySelectorAll('td');
+        const liabTypeLabel = cells[0].textContent.trim();
+        const lenderName = cells[1].textContent.trim();
+        const creditLimit = cells[2].textContent.replace(/[$,]/g, '').trim();
+        const balance = cells[3].textContent.replace(/[$,]/g, '').trim();
+        const monthlyRepayment = cells[4].textContent.replace(/[$,]/g, '').trim();
+
+        // Populate form
+        editingLiabId = liabId;
+
+        const typeMap = {
+            'Credit Card': 'credit_card',
+            'Home Loan': 'home_loan',
+            'Car Loan': 'car_loan',
+            'Other': 'other'
+        };
+        liabTypeEl.value = typeMap[liabTypeLabel] || '';
+        liabTypeEl.dispatchEvent(new Event('change'));
+
+        document.getElementById('liability-lender').value = lenderName === '—' ? '' : lenderName;
+        document.getElementById('liability-name').value = tr.dataset.liabilityName || '';
+        document.getElementById('liability-limit-display').value = creditLimit === '—' ? '' : creditLimit;
+        document.getElementById('liability-limit').value = creditLimit === '—' ? '' : creditLimit;
+        document.getElementById('liability-balance-display').value = balance;
+        document.getElementById('liability-balance').value = balance;
+        document.getElementById('liability-repayment-display').value = monthlyRepayment === '—' ? '' : monthlyRepayment;
+        document.getElementById('liability-repayment').value = monthlyRepayment === '—' ? '' : monthlyRepayment;
+        document.getElementById('liability-comment').value = ''; // Fetch from data or empty
+
+        // Show form
+        liabFormPanel.classList.remove('hidden');
+        addLiabBtn.setAttribute('aria-expanded', 'true');
+        updateLiabFormLabel();
+        liabTypeEl.focus();
     });
 
     // ── Delete asset (delegated) ──────────────────────────────────────────────
@@ -235,6 +387,21 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ── Update form labels ─────────────────────────────────────────────────────
+    function updateAssetFormLabel() {
+        const label = document.querySelector('#asset-form-panel h5');
+        if (label) {
+            label.textContent = editingAssetId ? 'Edit Asset' : 'New Asset';
+        }
+    }
+
+    function updateLiabFormLabel() {
+        const label = document.querySelector('#liability-form-panel h5');
+        if (label) {
+            label.textContent = editingLiabId ? 'Edit Liability' : 'New Liability';
+        }
+    }
+
     // ── DOM builders ──────────────────────────────────────────────────────────
     function appendAssetRow(a) {
         ensureAssetTable();
@@ -243,6 +410,7 @@ document.addEventListener('DOMContentLoaded', () => {
             : '—';
         const tr = document.createElement('tr');
         tr.dataset.assetId = a.id;
+        tr.dataset.assetName = a.name || '';
         tr.innerHTML = `
             <td class="px-4 py-3">
                 <span class="px-2 py-0.5 bg-emerald-100 text-emerald-700 rounded-full text-xs font-medium">
@@ -251,8 +419,18 @@ document.addEventListener('DOMContentLoaded', () => {
             </td>
             <td class="px-4 py-3 text-gray-600">${escHtml(a.description ?? '—')}</td>
             <td class="px-4 py-3 text-gray-600">${propertyUseLabel}</td>
+            <td class="px-4 py-3 text-gray-600">${a.is_owned ? 'Yes' : 'No'}</td>
+            <td class="px-4 py-3 text-right text-gray-600">${a.ownership_percentage != null ? a.ownership_percentage + '%' : '100%'}</td>
             <td class="px-4 py-3 text-right font-semibold text-gray-900">$${fmtMoney(a.estimated_value)}</td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-right flex items-center justify-end gap-2">
+                <button type="button" data-asset-id="${a.id}"
+                        aria-label="Edit asset ${escHtml(a.asset_type_label)}"
+                        class="edit-asset-btn text-blue-500 hover:text-blue-700
+                               focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                    </svg>
+                </button>
                 <button type="button" data-asset-id="${a.id}"
                         aria-label="Remove asset ${escHtml(a.asset_type_label)}"
                         class="delete-asset-btn text-red-500 hover:text-red-700
@@ -269,6 +447,7 @@ document.addEventListener('DOMContentLoaded', () => {
         ensureLiabilityTable();
         const tr = document.createElement('tr');
         tr.dataset.liabilityId = l.id;
+        tr.dataset.liabilityName = l.name || '';
         tr.innerHTML = `
             <td class="px-4 py-3">
                 <span class="px-2 py-0.5 bg-red-100 text-red-700 rounded-full text-xs font-medium">
@@ -280,7 +459,18 @@ document.addEventListener('DOMContentLoaded', () => {
                 ${l.credit_limit != null ? '$' + fmtMoney(l.credit_limit) : '—'}
             </td>
             <td class="px-4 py-3 text-right font-semibold text-gray-900">$${fmtMoney(l.outstanding_balance)}</td>
-            <td class="px-4 py-3 text-right">
+            <td class="px-4 py-3 text-right text-gray-600">
+                ${l.monthly_repayment != null ? '$' + fmtMoney(l.monthly_repayment) : '—'}
+            </td>
+            <td class="px-4 py-3 text-right flex items-center justify-end gap-2">
+                <button type="button" data-liability-id="${l.id}"
+                        aria-label="Edit liability ${escHtml(l.liability_type_label)}"
+                        class="edit-liability-btn text-blue-500 hover:text-blue-700
+                               focus:outline-none focus:ring-2 focus:ring-blue-500 rounded transition">
+                    <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                    </svg>
+                </button>
                 <button type="button" data-liability-id="${l.id}"
                         aria-label="Remove liability ${escHtml(l.liability_type_label)}"
                         class="delete-liability-btn text-red-500 hover:text-red-700
@@ -304,6 +494,8 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property Use</th>
+                            <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Owned</th>
+                            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ownership %</th>
                             <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Estimated Value</th>
                             <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
                         </tr>
@@ -311,7 +503,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <tbody id="assets-tbody" class="bg-white divide-y divide-gray-100"></tbody>
                     <tfoot class="bg-gray-50 border-t border-gray-200">
                         <tr>
-                            <td colspan="3" class="px-4 py-3 text-sm font-semibold text-gray-700">Total Assets</td>
+                            <td colspan="5" class="px-4 py-3 text-sm font-semibold text-gray-700">Total Assets</td>
                             <td id="assets-total" class="px-4 py-3 text-right font-bold text-emerald-700">$0.00</td>
                             <td></td>
                         </tr>
@@ -331,6 +523,7 @@ document.addEventListener('DOMContentLoaded', () => {
                             <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Lender</th>
                             <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Limit</th>
                             <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Balance</th>
+                            <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Repayment</th>
                             <th scope="col" class="px-4 py-3"><span class="sr-only">Actions</span></th>
                         </tr>
                     </thead>
@@ -339,6 +532,7 @@ document.addEventListener('DOMContentLoaded', () => {
                         <tr>
                             <td colspan="3" class="px-4 py-3 text-sm font-semibold text-gray-700">Total Liabilities</td>
                             <td id="liabilities-total" class="px-4 py-3 text-right font-bold text-red-600">$0.00</td>
+                            <td id="liabilities-total-repayment" class="px-4 py-3 text-right font-bold text-red-600">$0.00</td>
                             <td></td>
                         </tr>
                     </tfoot>
@@ -351,14 +545,18 @@ document.addEventListener('DOMContentLoaded', () => {
         let assetTotal = 0;
         document.querySelectorAll('#assets-tbody tr').forEach(tr => {
             assetTotal += parseFloat(
-                tr.querySelectorAll('td')[3]?.textContent.replace(/[$,]/g, '') || 0
+                tr.querySelectorAll('td')[5]?.textContent.replace(/[$,]/g, '') || 0
             );
         });
 
         let liabTotal = 0;
+        let liabRepaymentTotal = 0;
         document.querySelectorAll('#liabilities-tbody tr').forEach(tr => {
             liabTotal += parseFloat(
                 tr.querySelectorAll('td')[3]?.textContent.replace(/[$,]/g, '') || 0
+            );
+            liabRepaymentTotal += parseFloat(
+                tr.querySelectorAll('td')[4]?.textContent.replace(/[$,]/g, '') || 0
             );
         });
 
@@ -369,6 +567,14 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const liabsTotal = document.getElementById('liabilities-total');
         if (liabsTotal) liabsTotal.textContent = '$' + fmtMoney(liabTotal);
+
+        const liabsRepaymentTotal = document.getElementById('liabilities-total-repayment');
+        if (liabsRepaymentTotal) liabsRepaymentTotal.textContent = '$' + fmtMoney(liabRepaymentTotal);
+
+        // Let Living Expenses know the current total monthly loan repayment
+        document.dispatchEvent(new CustomEvent('directorLiabilityRepaymentUpdated', {
+            detail: { totalMonthlyRepayment: liabRepaymentTotal },
+        }));
 
         document.getElementById('summary-assets').textContent      = '$' + fmtMoney(assetTotal);
         document.getElementById('summary-liabilities').textContent = '$' + fmtMoney(liabTotal);
@@ -385,6 +591,10 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('asset-description').value    = '';
         document.getElementById('asset-value-display').value  = '';
         document.getElementById('asset-value').value          = '';
+        document.getElementById('asset-is-owned').value       = '1';
+        document.getElementById('asset-ownership-pct').value  = '';
+        document.getElementById('asset-comment').value        = '';
+        document.getElementById('asset-name').value           = '';
         propertyUseField.classList.add('hidden');
         clearFormErrors('asset');
     }
@@ -396,19 +606,15 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('liability-limit').value           = '';
         document.getElementById('liability-balance-display').value = '';
         document.getElementById('liability-balance').value         = '';
+        document.getElementById('liability-repayment-display').value = '';
+        document.getElementById('liability-repayment').value       = '';
+        document.getElementById('liability-comment').value         = '';
+        document.getElementById('liability-name').value            = '';
         creditLimitField.classList.add('hidden');
         clearFormErrors('liability');
     }
 
     // ── Fetch helpers ─────────────────────────────────────────────────────────
-    function post(url, payload) {
-        return fetch(url, {
-            method:  'POST',
-            headers: { 'Content-Type': 'application/json', 'X-CSRF-TOKEN': CSRF, 'Accept': 'application/json' },
-            body:    JSON.stringify(payload),
-        });
-    }
-
     function del(url) {
         return fetch(url, {
             method:  'DELETE',
@@ -456,7 +662,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         document.getElementById(ids.spinner).classList.toggle('hidden', !on);
         document.getElementById(ids.btn).disabled      = on;
-        document.getElementById(ids.label).textContent = on ? 'Saving…' : `Add ${ids.text}`;
+        document.getElementById(ids.label).textContent = on ? 'Saving…' : (editingAssetId || editingLiabId) ? `Update ${ids.text}` : `Add ${ids.text}`;
     }
 
     const toastTimers = {};

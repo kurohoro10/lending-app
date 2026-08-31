@@ -23,17 +23,28 @@ class QuestionController extends Controller
             return response()->json(['success' => false, 'message' => 'Unauthorized.'], 403);
         }
 
+        // File-only checklist items (e.g. Passport, Driver Licence) don't
+        // expect a typed comment — everything else keeps the existing
+        // required-answer behaviour, unchanged for freeform questions.
+        $answerRule = $question->checklistItemType() === 'upload' ? 'nullable' : 'required';
+
         $validated = $request->validate([
-            'answer' => 'required|string|max:2000',
+            'answer' => $answerRule . '|string|max:2000',
         ]);
 
-        $question->update([
-            'answer'      => $validated['answer'],
+        $updates = [
+            'answer'      => $validated['answer'] ?? null,
             'status'      => 'answered',
             'answered_at' => now(),
             'answered_by' => auth()->id(),
             'answer_ip'   => $request->ip(),
-        ]);
+        ];
+
+        if ($question->isChecklistItem()) {
+            $updates['review_status'] = Question::REVIEW_AWAITING_REVIEW;
+        }
+
+        $question->update($updates);
 
         ActivityLog::logActivity('question_answered', 'Client answered question', $question->application);
 

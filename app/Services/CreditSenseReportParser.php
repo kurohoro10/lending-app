@@ -1,11 +1,12 @@
 <?php
 
 namespace App\Services;
+use Illuminate\Support\Facades\Log;
 
 /**
  * CreditSenseReportParser
  *
- * Parses the CreditSense v2 JSON report structure into normalised arrays
+ * Parses the CreditSense v2.3 JSON report structure into normalised arrays
  * suitable for the expense calculator modal.
  *
  * CreditSense report structure (stored in applications.credit_sense_report):
@@ -39,6 +40,22 @@ class CreditSenseReportParser
 {
     private array $report;
 
+    private const REPORT_GROUP_MAP = [
+        'housing'    => ['residential_running_costs', 'rent_board', 'land_tax_body_corporate_strata_fees'],
+        'internet'   => ['communications_media'],
+        'groceries'  => ['groceries'],
+        'recreation' => ['recreation_entertainment'],
+        'clothing'   => ['clothing_personal_care'],
+        'medical'    => ['medical_health'],
+        'transport'  => ['transport'],
+        'education'  => ['childcare', 'private_schooling_tuition', 'public_schooling', 'higher_education_vocational_training_professional_fees'],
+        'insurance'  => ['general_basic_insurance', 'health_insurance', 'life_sickness_personal_accident_insurance'],
+        'atm'        => ['atm_withdrawals'],
+        'dishonours' => ['dishonours'],
+        'debt'       => ['credit_cards', 'home_loans', 'personal_loans', 'mixed_finance', 'motor_finance', 'peer_to_peer_finance', 'buy_now_pay_later', 'lease_rental', 'salary_advance', 'collection_agencies', 'insolvency', 'small_amount_lending', 'budget_management_services'],
+        'other'      => ['other_banking', 'other_commercial', 'other_donations', 'other_government', 'other_miscellaneous', 'other_superannuation', 'other_uncategorised', 'other_external_transfers', 'pet_care', 'child_spousal_maintenance'],
+    ];
+
     public function __construct(array|string $rawReport)
     {
         if (is_string($rawReport)) {
@@ -55,6 +72,11 @@ class CreditSenseReportParser
      */
     public function isValid(): bool
     {
+        if (isset($this->report['banking'])) {
+            return ! empty($this->report['banking']['reportGroups'])
+                || ! empty($this->report['banking']['transactionGroups']);
+        }
+
         return ! empty($this->getAccounts());
     }
 
@@ -139,7 +161,56 @@ class CreditSenseReportParser
      */
     public function getExpenseCategories(): array
     {
-        return $this->getCategories(includeIncome: false);
+    if (($this->report['source'] ?? null) === 'pdf_upload') {
+        return $this->report['categories'] ?? [];
+    }
+
+    if (isset($this->report['banking']['reportGroups'])) {
+        return $this->getExpenseCategoriesFromReportGroups();
+    }
+
+    return $this->getCategories(includeIncome: false);
+    }
+
+    private function getExpenseCategoriesFromReportGroups(): array
+    {
+    $byCode = [];
+    foreach ($this->report['banking']['reportGroups'] ?? [] as $group) {
+        if (isset($group['reportGroupCode'])) {
+            $byCode[$group['reportGroupCode']] = $group;
+        }
+    }
+
+    $categories = [];
+
+    foreach (self::REPORT_GROUP_MAP as $internalKey => $codes) {
+        $total = 0.0;
+        $label = null;
+
+        foreach ($codes as $code) {
+            $group = $byCode[$code] ?? null;
+            if (! $group) continue;
+
+            $label ??= $group['title'] ?? $internalKey;
+            $total += (float) ($group['analysis']['trend']['total']['ongoing'] ?? 0);
+        }
+
+        if ($total <= 0) continue;
+
+        $categories[] = [
+            'label'          => $label ?? ucfirst($internalKey),
+            'category'       => 'Expenses',
+            'subcategory'    => $internalKey,
+            'monthly_amount' => $total,
+            'total_amount'   => 0,
+            'count'          => 0,
+            'frequency'      => 'monthly',
+        ];
+    }
+
+    usort($categories, fn($a, $b) => $b['monthly_amount'] <=> $a['monthly_amount']);
+
+    return $categories;
     }
 
     /**
@@ -277,13 +348,33 @@ class CreditSenseReportParser
 
     private function getAccounts(): array
     {
-        $accounts = data_get($this->report, 'Applications.Application.Accounts.Account', []);
-
-        // Normalise single-account responses (object instead of array)
-        if (isset($accounts['AccountID'])) {
-            return [$accounts];
+        // PDF upload shape has no Accounts structure
+        if (($this->report['source'] ?? null) === 'pdf_upload') {
+            return [];
         }
 
+        $accounts = data_get($this->report, 'Applications.Application.Accounts.Account', []);
+        if (isset($accounts['AccountID'])) return [$accounts];
         return is_array($accounts) ? $accounts : [];
+    }
+
+    private function decode(array $rawReport): ?array
+    {
+        $attachments = $rawReport['attachments']
+            ?? $rawReport['Response']['attachments']
+            ?? null;
+
+        if (! $attachments) {
+            return null;
+        }
+
+        foreach ($attachments as $attachment) {
+            if (($attachment['contentType'] ?? '') === 'json') {
+                $content = base64_decode($attachment['content']);
+                return json_decode($content, true);
+            }
+        }
+
+        return null;
     }
 }

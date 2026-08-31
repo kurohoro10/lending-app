@@ -9,6 +9,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
@@ -31,9 +32,14 @@ class DocumentController extends Controller
         try {
             $validated = $request->validate([
                 'document'          => 'required|file|max:10240|mimes:pdf,jpg,jpeg,png,doc,docx,xls,xlsx',
-                'document_category' => 'required|string|in:id,income,bank,assets,liabilities,employment,other',
+                'document_category' => ['required', 'string', Rule::in(array_keys(Document::getDocumentCategories()))],
                 'document_type'     => 'nullable|string|max:255',
                 'description'       => 'nullable|string|max:500',
+                'question_id'       => [
+                    'nullable',
+                    'integer',
+                    Rule::exists('questions', 'id')->where('application_id', $application->id),
+                ],
             ]);
         } catch (\Illuminate\Validation\ValidationException $e) {
             Log::warning('[DocumentUpload] Validation failed', [
@@ -119,17 +125,30 @@ class DocumentController extends Controller
                 'file_path'      => $filePath,
             ]);
 
+            // Re-upload for the same checklist item (e.g. after a Return) —
+            // link via version/parent_document_id rather than losing the
+            // prior file, mirroring how Document already versions uploads.
+            $previousVersion = null;
+            if (! empty($validated['question_id'])) {
+                $previousVersion = Document::where('question_id', $validated['question_id'])
+                    ->latest('version')
+                    ->first();
+            }
+
             $document = $application->documents()->create([
-                'uploaded_by'       => auth()->id(),
-                'document_category' => $validated['document_category'],
-                'document_type'     => $validated['document_type'] ?? null,
-                'original_filename' => $originalFilename,
-                'stored_filename'   => $storedFilename,
-                'file_path'         => $filePath,
-                'mime_type'         => $file->getMimeType(),
-                'file_size'         => $file->getSize(),
-                'description'       => $validated['description'] ?? null,
-                'upload_ip'         => $request->ip(),
+                'question_id'        => $validated['question_id'] ?? null,
+                'uploaded_by'        => auth()->id(),
+                'document_category'  => $validated['document_category'],
+                'document_type'      => $validated['document_type'] ?? null,
+                'original_filename'  => $originalFilename,
+                'stored_filename'    => $storedFilename,
+                'file_path'          => $filePath,
+                'mime_type'          => $file->getMimeType(),
+                'file_size'          => $file->getSize(),
+                'description'        => $validated['description'] ?? null,
+                'upload_ip'          => $request->ip(),
+                'parent_document_id' => $previousVersion?->id,
+                'version'            => $previousVersion ? $previousVersion->version + 1 : 1,
             ]);
 
             Log::info('[DocumentUpload] Document record created', [

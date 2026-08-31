@@ -37,7 +37,7 @@ class ApplicationNotificationService
         try {
             $this->sendSMS(
                 $application,
-                "Your application #{$application->application_number} has been submitted successfully. We'll review it within 24-48 hours."
+                "Application {$application->application_number} has been received, our assessor will contact you for further information and verification."
             );
             Log::info('SMS notification sent successfully');
         } catch (\Exception $e) {
@@ -71,6 +71,23 @@ class ApplicationNotificationService
 
         } catch (\Exception $e) {
             Log::error('Decline notification failed: ' . $e->getMessage());
+        }
+    }
+
+    public function handleDeferred(Application $application, string $reason): void
+    {
+        try {
+            $application->user->notify(
+                new \App\Notifications\Application\ApplicationDeferred($application, $reason)
+            );
+
+            $this->sendSMS(
+                $application,
+                "Your application #{$application->application_number} has been deferred. Reason: {$reason}. Our team will be in touch if further information is required."
+            );
+
+        } catch (\Exception $e) {
+            Log::error('Deferral notification failed: ' . $e->getMessage());
         }
     }
 

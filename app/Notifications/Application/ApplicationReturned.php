@@ -34,7 +34,8 @@ class ApplicationReturned extends Notification
             ->line('**Reason:** ' . $this->application->return_reason)
             ->action('Update Your Application', route('applications.edit', $this->application))
             ->line('Please log in, make the necessary changes, and resubmit your application.')
-            ->line('If you have any questions, please reply to this email or contact our support team.');
+            ->line('If you have any questions, please reply to this email or contact our support team.')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toArray($notifiable): array

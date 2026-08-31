@@ -28,7 +28,7 @@ class SendReturnNotifications
             try {
                 $this->messaging->send(
                     $application->personalDetails->mobile_phone,
-                    "Your application #{$application->application_number} has been returned. Reason: {$event->reason}.",
+                    "Your application #{$application->application_number} has been returned. Reason: {$event->reason}.\n" . config('app.url'),
                     $application
                 );
             } catch (\Exception $e) {

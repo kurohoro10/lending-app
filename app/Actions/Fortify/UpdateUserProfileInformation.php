@@ -18,9 +18,12 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     public function update(User $user, array $input): void
     {
         Validator::make($input, [
-            'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
-            'photo' => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
+            'first_name'     => ['required', 'string', 'max:255'],
+            'middle_name'    => ['nullable', 'string', 'max:255'],
+            'last_name'      => ['required', 'string', 'max:255'],
+            'name_extension' => ['nullable', 'string', 'max:50'],
+            'email'          => ['required', 'email', 'max:255', Rule::unique('users')->ignore($user->id)],
+            'photo'          => ['nullable', 'mimes:jpg,jpeg,png', 'max:1024'],
         ])->validateWithBag('updateProfileInformation');
 
         if (isset($input['photo'])) {
@@ -32,8 +35,11 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
             $this->updateVerifiedUser($user, $input);
         } else {
             $user->forceFill([
-                'name' => $input['name'],
-                'email' => $input['email'],
+                'first_name'     => $input['first_name'],
+                'middle_name'    => $input['middle_name'] ?? null,
+                'last_name'      => $input['last_name'],
+                'name_extension' => $input['name_extension'] ?? null,
+                'email'          => $input['email'],
             ])->save();
         }
     }
@@ -46,8 +52,11 @@ class UpdateUserProfileInformation implements UpdatesUserProfileInformation
     protected function updateVerifiedUser(User $user, array $input): void
     {
         $user->forceFill([
-            'name' => $input['name'],
-            'email' => $input['email'],
+            'first_name'        => $input['first_name'],
+            'middle_name'       => $input['middle_name'] ?? null,
+            'last_name'         => $input['last_name'],
+            'name_extension'    => $input['name_extension'] ?? null,
+            'email'             => $input['email'],
             'email_verified_at' => null,
         ])->save();
 

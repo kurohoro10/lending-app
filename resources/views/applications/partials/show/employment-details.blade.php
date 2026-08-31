@@ -41,6 +41,26 @@
                         </dd>
                     </div>
 
+                    <div>
+                        <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Base Income (After Tax)</dt>
+                        <dd class="mt-1 text-sm font-medium text-gray-900">
+                            @if($employment->after_tax_income !== null)
+                                ${{ number_format($employment->after_tax_income, 2) }} / {{ ucfirst($employment->income_frequency) }}
+                            @else
+                                —
+                            @endif
+                        </dd>
+                    </div>
+
+                    <div>
+                        <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Monthly Income (After Tax)</dt>
+                        <dd class="mt-1 text-lg font-bold text-green-700">
+                            ${{ number_format($employment->getMonthlyAfterTaxIncome(), 2) }}
+                        </dd>
+                    </div>
+
+                    </dl>
+
                 </dl>
             </div>
         @endforeach

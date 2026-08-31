@@ -65,65 +65,97 @@
 
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                    {{-- ── Name fields (read-only) ──────────────────────── --}}
+                    {{-- ── Name fields (now editable, from User table) ──────────────────────── --}}
                     <div class="md:col-span-2">
                         <div class="flex flex-col gap-6 lg:flex-row">
                             @foreach([
-                                ['first_name',      'First Name'],
-                                ['middle_name',     'Middle Name'],
-                                ['last_name',       'Last Name'],
-                                ['name_extension',  'Name Extension'],
-                            ] as [$field, $label])
+                                ['first_name',      'First Name',       true],
+                                ['middle_name',     'Middle Name',      false],
+                                ['last_name',       'Last Name',        true],
+                                ['name_extension',  'Name Extension',   false],
+                            ] as [$field, $label, $required])
                                 <div class="{{ $field === 'name_extension' ? 'w-full lg:w-32 shrink-0' : 'flex-1 min-w-0' }}">
                                     <label for="{{ $field }}"
-                                           class="block text-sm font-semibold text-gray-700 mb-2">
+                                        class="block text-sm font-semibold text-gray-700 mb-2">
                                         {{ $label }}
+                                        @if($required)
+                                            <span class="text-red-500" aria-hidden="true">*</span>
+                                        @endif
                                     </label>
                                     <input type="text"
-                                           id="{{ $field }}"
-                                           name="{{ $field }}"
-                                           value="{{ $application->user->{$field} }}"
-                                           readonly
-                                           aria-readonly="true"
-                                           title="{{ $label }} is linked to your account and cannot be changed here."
-                                           class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500
-                                                  cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300">
+                                        id="{{ $field }}"
+                                        name="{{ $field }}"
+                                        value="{{ old($field, $application->user->{$field}) }}"
+                                        {{ $required ? 'required' : '' }}
+                                        {{ $required ? 'aria-required="true"' : '' }}
+                                        aria-describedby="{{ $field }}-error"
+                                        class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
+                                                focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                    <p id="{{ $field }}-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                                 </div>
                             @endforeach
                         </div>
                     </div>
 
-                    {{-- Email (read-only) --}}
+                    {{-- Email (now editable, from User table) --}}
                     <div>
                         <label for="email" class="block text-sm font-semibold text-gray-700 mb-2">
-                            Email Address
+                            Email Address <span class="text-red-500" aria-hidden="true">*</span>
                         </label>
                         <input type="email"
-                               id="email"
-                               name="email"
-                               value="{{ $application->user?->email }}"
-                               readonly
-                               aria-readonly="true"
-                               title="Email is linked to your account and cannot be changed here."
-                               class="block w-full py-3 px-4 border-gray-300 bg-gray-100 text-gray-500
-                                      cursor-not-allowed rounded-xl shadow-sm focus:ring-0 focus:border-gray-300">
+                            id="email"
+                            name="email"
+                            value="{{ old('email', $application->user?->email) }}"
+                            required
+                            aria-required="true"
+                            aria-describedby="email-error"
+                            class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
+                                    focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        <p id="email-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                     </div>
 
-                    {{-- Mobile --}}
+                    {{-- Phone Country + Number --}}
                     <div>
-                        <label for="mobile_phone" class="block text-sm font-semibold text-gray-700 mb-2">
+                        <label class="block text-sm font-semibold text-gray-700 mb-2">
                             Mobile Phone <span class="text-red-500" aria-hidden="true">*</span>
                         </label>
-                        <input type="tel"
-                               id="mobile_phone"
-                               name="mobile_phone"
-                               value="{{ old('mobile_phone', $pd?->mobile_phone) }}"
-                               required
-                               aria-required="true"
-                               aria-describedby="mobile_phone-error"
-                               class="mt-1 block w-full py-3 px-4 border border-gray-300 rounded-xl shadow-sm
-                                      focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                        
+                        {{-- Unified Input Container --}}
+                        <div class="flex items-center w-full border border-gray-300 rounded-xl shadow-sm bg-white focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 overflow-hidden h-12">
+                            
+                            {{-- Country Selector (Flags Only) --}}
+                            <div class="relative flex items-center h-full pl-3 bg-gray-50 border-r border-gray-200">
+                                <select id="phone_country"
+                                        name="phone_country"
+                                        aria-describedby="phone_country-error"
+                                        {{-- Removed appearance-none so the native arrow shows up safely --}}
+                                        class="bg-transparent text-lg focus:outline-none pr-8 cursor-pointer z-10 border-none">
+                                    <option value="AU" {{ old('phone_country', $pd?->phone_country ?? 'AU') === 'AU' ? 'selected' : '' }}>🇦🇺</option>
+                                    <option value="NZ" {{ old('phone_country', $pd?->phone_country ?? 'AU') === 'NZ' ? 'selected' : '' }}>🇳🇿</option>
+                                    <option value="US" {{ old('phone_country', $pd?->phone_country ?? 'AU') === 'US' ? 'selected' : '' }}>🇺🇸</option>
+                                    <option value="GB" {{ old('phone_country', $pd?->phone_country ?? 'AU') === 'GB' ? 'selected' : '' }}>🇬🇧</option>
+                                    <option value="CA" {{ old('phone_country', $pd?->phone_country ?? 'AU') === 'CA' ? 'selected' : '' }}>🇨🇦</option>
+                                </select>
+                                {{-- Custom span arrow completely removed from here --}}
+                            </div>
+
+                            {{-- Prefix & Number Input Area --}}
+                            <div class="flex flex-1 items-center h-full relative pl-3">
+                                <span class="text-gray-400 text-sm select-none mr-1.5" id="phone-prefix">+61</span>
+                                <input type="tel"
+                                    id="mobile_phone"
+                                    name="mobile_phone"
+                                    value="{{ old('mobile_phone', $pd?->mobile_phone ? preg_replace('/^\+?61/', '', $pd?->mobile_phone) : '') }}"
+                                    placeholder="410829900"
+                                    required
+                                    aria-required="true"
+                                    aria-describedby="mobile_phone-error"
+                                    class="w-full h-full border-0 p-0 focus:ring-0 focus:outline-none text-gray-900 placeholder-gray-400 text-sm">
+                            </div>
+                        </div>
+                        
                         <p id="mobile_phone-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                        <p class="mt-1 text-xs text-gray-400">Enter number without country code</p>
                     </div>
 
                     {{-- Date of Birth --}}
@@ -204,6 +236,19 @@
                             @endforeach
                         </select>
                         <p id="citizenship_status-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                    </div>
+
+                    {{-- Visa Type --}}
+                    <div>
+                        <label for="visa_type" class="block text-sm font-semibold text-gray-700 mb-2">Visa Type</label>
+                        <select name="visa_type" id="visa_type" class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <option value="">Select visa type (if applicable)...</option>
+                            <option value="student_visa" {{ old('visa_type', $application->personalDetails?->visa_type) === 'student_visa' ? 'selected' : '' }}>Student Visa</option>
+                            <option value="work_visa" {{ old('visa_type', $application->personalDetails?->visa_type) === 'work_visa' ? 'selected' : '' }}>Work Visa</option>
+                            <option value="refugee_visa" {{ old('visa_type', $application->personalDetails?->visa_type) === 'refugee_visa' ? 'selected' : '' }}>Refugee Visa</option>
+                            <option value="working_holiday_visa" {{ old('visa_type', $application->personalDetails?->visa_type) === 'working_holiday_visa' ? 'selected' : '' }}>Working Holiday Visa</option>
+                        </select>
+                        <p id="visa_type-error" class="mt-2 text-sm text-red-600 hidden"></p>
                     </div>
 
                     {{-- Marital Status --}}
@@ -296,6 +341,22 @@
                         </div>
 
                     </fieldset>
+
+                    {{-- Agree as Guarantor --}}
+                    <div class="md:col-span-2">
+                        <label for="agree_as_guarantor" class="flex items-center cursor-pointer">
+                            <input type="checkbox"
+                                id="agree_as_guarantor"
+                                name="agree_as_guarantor"
+                                value="1"
+                                {{ old('agree_as_guarantor', $pd?->agree_as_guarantor) ? 'checked' : '' }}
+                                class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-2 focus:ring-indigo-500">
+                            <span class="ml-3 text-sm font-medium text-gray-700">
+                                I agree to act as guarantor for this loan application
+                            </span>
+                        </label>
+                        <p id="agree_as_guarantor-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
+                    </div>
 
                 </div>{{-- /grid --}}
 

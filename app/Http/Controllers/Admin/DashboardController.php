@@ -31,6 +31,7 @@ use App\Models\Application;
 use App\Models\Question;
 use App\Models\Task;
 use App\Models\User;
+use App\Support\LoanPurpose;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\View\View;
@@ -64,6 +65,7 @@ class DashboardController extends Controller
         $applicationsByStatus = $this->getApplicationsByStatus($baseQuery);
         $loanStats            = $this->buildLoanStats($baseQuery);
         $assessorWorkload     = $this->getAssessorWorkload($user);
+        $chartData            = $this->getChartData();  // ADD THIS LINE
 
         return view('admin.dashboard', compact(
             'stats',
@@ -73,7 +75,8 @@ class DashboardController extends Controller
             'myTasks',
             'applicationsByStatus',
             'loanStats',
-            'assessorWorkload'
+            'assessorWorkload',
+            'chartData'
         ));
     }
 
@@ -116,15 +119,17 @@ class DashboardController extends Controller
     private function buildApplicationStats(Builder $baseQuery, mixed $user): array
     {
         $stats = [
-            'total_applications'       => (clone $baseQuery)->count(),
-            'draft'                    => (clone $baseQuery)->where('status', 'draft')->count(),
-            'submitted'                => (clone $baseQuery)->where('status', 'submitted')->count(),
-            'under_review'             => (clone $baseQuery)->where('status', 'under_review')->count(),
-            'additional_info_required' => (clone $baseQuery)->where('status', 'additional_info_required')->count(),
-            'approved'                 => (clone $baseQuery)->where('status', 'approved')->count(),
-            'declined'                 => (clone $baseQuery)->where('status', 'declined')->count(),
+            'total_applications' => (clone $baseQuery)->count(),
+            'application'        => (clone $baseQuery)->where('status', 'application')->count(),
+            'wip'                => (clone $baseQuery)->where('status', 'wip')->count(),
+            'outdoc'             => (clone $baseQuery)->where('status', 'outdoc')->count(),
+            'approved'           => (clone $baseQuery)->where('status', 'approved')->count(),
+            'settled'            => (clone $baseQuery)->where('status', 'settled')->count(),
+            'declined'           => (clone $baseQuery)->where('status', 'declined')->count(),
+            'deferred'           => (clone $baseQuery)->where('status', 'deferred')->count(),
         ];
 
+        // task stats unchanged...
         $stats['my_tasks'] = $user->isAssessor()
             ? Task::where('assigned_to', $user->id)->whereNull('completed_at')->count()
             : 0;
@@ -313,5 +318,58 @@ class DashboardController extends Controller
                 },
             ])
             ->get();
+    }
+
+    public function getChartData(): array
+    {
+        $total   = Application::count();
+        $settled = Application::where('status', 'settled')->count();
+        $avg     = (int) Application::avg('loan_amount');
+        $pending = Application::whereIn('status', ['application', 'wip'])->count();
+
+        return [
+            'metrics' => compact('total', 'settled', 'avg', 'pending'),
+
+            'loanPurposeData' => Application::query()
+                ->whereNotNull('loan_purpose')
+                ->groupBy('loan_purpose')
+                ->selectRaw('loan_purpose, COUNT(*) as count')
+                ->get()
+                ->map(fn ($row) => [
+                    'loan_purpose' => LoanPurpose::label($row->loan_purpose),
+                    'count' => $row->count,
+                ]),
+
+            'statusData' => Application::query()
+                ->groupBy('status')
+                ->selectRaw('status, COUNT(*) as count')
+                ->get(),
+
+            'loanAmountData' => Application::query()
+                ->whereNotNull('loan_amount')
+                ->selectRaw("
+                    CASE
+                        WHEN loan_amount < 10000  THEN 'Under \$10k'
+                        WHEN loan_amount < 25000  THEN '\$10k–\$25k'
+                        WHEN loan_amount < 50000  THEN '\$25k–\$50k'
+                        WHEN loan_amount < 100000 THEN '\$50k–\$100k'
+                        ELSE 'Over \$100k'
+                    END as `range`, COUNT(*) as count
+                ")
+                ->groupByRaw("CASE
+                        WHEN loan_amount < 10000  THEN 'Under \$10k'
+                        WHEN loan_amount < 25000  THEN '\$10k–\$25k'
+                        WHEN loan_amount < 50000  THEN '\$25k–\$50k'
+                        WHEN loan_amount < 100000 THEN '\$50k–\$100k'
+                        ELSE 'Over \$100k'
+                    END")
+                ->get(),
+
+            'trendData' => Application::query()
+                ->selectRaw('DATE(created_at) as date, COUNT(*) as count')
+                ->groupByRaw('DATE(created_at)')
+                ->orderBy('date')
+                ->get(),
+        ];
     }
 }

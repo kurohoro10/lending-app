@@ -18,7 +18,9 @@
                 <p class="mt-1 p-2 bg-orange-100 rounded">{{ $application->return_reason }}</p>
             </div>
             <div class="mt-2 text-xs text-orange-600">
-                Returned on {{ $application->returned_at->format('d M Y \a\t H:i') }}
+                @if($application->returned_at)
+                    Returned on {{ $application->returned_at->format('d M Y \a\t H:i') }}
+                @endif
                 @if($application->returnedBy)
                     by {{ $application->returnedBy->name }}
                 @endif

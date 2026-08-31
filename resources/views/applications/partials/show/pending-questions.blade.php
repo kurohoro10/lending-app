@@ -1,5 +1,11 @@
 {{-- resources/views/applications/partials/show/pending-questions.blade.php --}}
-@php $pendingCount = $application->questions->where('status', 'pending')->count(); @endphp
+@php
+    // "Needs your action" = never answered, or was returned for correction —
+    // matches the same definition used by the client card badges.
+    $pendingCount = $application->questions
+        ->filter(fn ($q) => $q->status === 'pending' || $q->review_status === 'returned')
+        ->count();
+@endphp
 
 @if($pendingCount > 0)
     <div id="pending-questions-warning"

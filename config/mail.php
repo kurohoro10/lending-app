@@ -16,6 +16,8 @@ return [
 
     'default' => env('MAIL_MAILER', 'log'),
 
+    'archive_email' => env('ARCHIVE_EMAIL'),
+
     /*
     |--------------------------------------------------------------------------
     | Mailer Configurations

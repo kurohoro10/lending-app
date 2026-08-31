@@ -31,6 +31,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Application;
 use App\Models\Question;
+use App\Notifications\Application\AssessmentItemReturned;
 use App\Notifications\Application\QuestionAsked;
 use App\Services\MessagingService;
 use Illuminate\Http\JsonResponse;
@@ -166,6 +167,107 @@ class QuestionController extends Controller
             'read_at' => DateFormatter::datetime($question->read_at),
             'read_by' => $question->readBy->name,
         ]);
+    }
+
+    // =========================================================================
+    // Assessment Checklist Review (approve / return)
+    // =========================================================================
+
+    /**
+     * Approve a checklist item. Only valid for checklist-originated questions
+     * (review_status not null) that are currently awaiting review.
+     */
+    public function approve(Question $question): JsonResponse
+    {
+        if (! $this->isAwaitingReview($question)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only checklist items awaiting review can be approved.',
+            ], 400);
+        }
+
+        $question->markApproved(auth()->id());
+        $this->syncLinkedDocumentStatus($question, 'approved');
+
+        ActivityLog::logActivity('assessment_item_approved', 'Assessment item approved', $question->application);
+
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Item approved.',
+            'reviewed_at' => DateFormatter::datetime($question->reviewed_at),
+            'reviewed_by' => $question->reviewedBy->name,
+        ]);
+    }
+
+    /**
+     * Return a checklist item to the client for correction, with a required
+     * note explaining why, and notify the client by email.
+     */
+    public function return(Request $request, Question $question): JsonResponse
+    {
+        if (! $this->isAwaitingReview($question)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Only checklist items awaiting review can be returned.',
+            ], 400);
+        }
+
+        $validated = $request->validate([
+            'review_notes' => ['required', 'string', 'max:1000'],
+        ]);
+
+        $question->markReturned(auth()->id(), $validated['review_notes']);
+        $this->syncLinkedDocumentStatus($question, 'rejected', $validated['review_notes']);
+
+        ActivityLog::logActivity('assessment_item_returned', 'Assessment item returned to client', $question->application);
+
+        $this->notifyClientOfReturn($question);
+
+        return response()->json([
+            'success'     => true,
+            'message'     => 'Item returned to client.',
+            'reviewed_at' => DateFormatter::datetime($question->reviewed_at),
+            'reviewed_by' => $question->reviewedBy->name,
+            'review_notes' => $question->review_notes,
+        ]);
+    }
+
+    private function isAwaitingReview(Question $question): bool
+    {
+        return $question->review_status === Question::REVIEW_AWAITING_REVIEW;
+    }
+
+    /**
+     * Keep the linked Document's own status in sync with the review
+     * decision, reusing its existing status enum rather than introducing a
+     * second source of truth. No-op when the item had no file attached
+     * (e.g. comment-only items).
+     */
+    private function syncLinkedDocumentStatus(Question $question, string $status, ?string $notes = null): void
+    {
+        $document = $question->documents()->latest()->first();
+
+        if (! $document) {
+            return;
+        }
+
+        $document->update([
+            'status'       => $status,
+            'reviewed_by'  => auth()->id(),
+            'reviewed_at'  => now(),
+            'review_notes' => $notes,
+        ]);
+    }
+
+    private function notifyClientOfReturn(Question $question): void
+    {
+        try {
+            $question->application->user->notify(new AssessmentItemReturned($question));
+        } catch (\Exception $e) {
+            Log::error('Failed to send assessment item returned notification: ' . $e->getMessage(), [
+                'question_id' => $question->id,
+            ]);
+        }
     }
 
     // =========================================================================

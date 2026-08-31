@@ -184,11 +184,18 @@ class SettingsController extends Controller
             'is_secret' => false,
             'hint'      => 'Default: https://au-api.basiq.io — only change if Basiq instructs you to use a different endpoint.',
         ],
+        'basiq_webhook_secret' => [
+            'group'     => 'basiq',
+            'label'     => 'Webhook Secret',
+            'type'      => 'password',
+            'is_secret' => true,
+            'hint'      => 'HMAC secret for verifying incoming webhook signatures. Found in your Basiq webhook configuration.',
+        ],
 
         // ── CreditSense ───────────────────────────────────────────────────────
         //
-        // CreditSense v2 uses TWO separate credentials:
-        //   API Key   → UUID included in the request URL path: /v2/{api-key}/endpoint
+        // CreditSense v2.3 uses TWO separate credentials:
+        //   API Key   → UUID included in the request URL path: /v2.3/{api-key}/endpoint
         //   API Token → UUID included in every request body under Settings.API_Token
         //
         // These are distinct values. Do not confuse them with the old client_code field,
@@ -211,7 +218,7 @@ class SettingsController extends Controller
             'label'     => 'API Key (URL)',
             'type'      => 'password',
             'is_secret' => true,
-            'hint'      => 'UUID that identifies your account — forms part of every request URL: /v2/{api-key}/endpoint. Provided by CreditSense when your environment was provisioned.',
+            'hint'      => 'UUID that identifies your account — forms part of every request URL: /v2.3/{api-key}/endpoint. Provided by CreditSense when your environment was provisioned.',
         ],
         'creditsense_api_token' => [
             'group'     => 'creditsense',
@@ -234,12 +241,12 @@ class SettingsController extends Controller
             'is_secret' => false,
             'hint'      => 'Default: https://api.creditsense.com.au — only change if CreditSense instructs otherwise.',
         ],
-        'creditsense_webhook_secret' => [
+        'creditsense_webhook_token' => [
             'group'     => 'creditsense',
-            'label'     => 'Webhook Secret',
+            'label'     => 'Webhook Token',
             'type'      => 'password',
             'is_secret' => true,
-            'hint'      => 'Used to verify the HMAC signature on incoming webhook payloads. Obtain from your CreditSense account manager.',
+            'hint'      => 'Token appended to the webhook URL for verification. Provided by CreditSense.',
         ],
         'creditsense_js_cdn' => [
             'group'     => 'creditsense',

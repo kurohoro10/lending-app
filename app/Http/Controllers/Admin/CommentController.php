@@ -280,6 +280,7 @@ class CommentController extends Controller
         return $request->validate([
             'comment'   => ['required', 'string'],
             'type'      => ['required', 'in:internal,client_visible'],
+            'category'  => ['nullable', 'in:suitability,income,purpose,assessment,credit_rating,default_probability,approval_reason,visa,decline_reason,other'],
             'is_pinned' => ['boolean'],
         ]);
     }
@@ -316,6 +317,7 @@ class CommentController extends Controller
             'user_id'    => auth()->id(),
             'comment'    => $validated['comment'],
             'type'       => $validated['type'],
+            'category'   => $validated['category'] ?? null,
             'is_pinned'  => $validated['is_pinned'] ?? false,
             'ip_address' => $request->ip(),
         ]);

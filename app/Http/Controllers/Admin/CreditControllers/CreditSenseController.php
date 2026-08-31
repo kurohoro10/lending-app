@@ -30,6 +30,8 @@ use App\Models\ActivityLog;
 use App\Services\CreditSenseService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use App\Services\CreditSensePdfParser;
+use Illuminate\Support\Facades\Log;
 
 class CreditSenseController extends Controller
 {
@@ -81,12 +83,12 @@ class CreditSenseController extends Controller
     {
         $this->authorize('update', $application);
 
-        $csAppId = $application->credit_sense_app_id ?? $application->application_number;
+        $csAppId = $application->credit_sense_app_id;
 
         if (blank($csAppId)) {
             return response()->json([
                 'error' => 'No CreditSense App ID is associated with this application. '
-                         . 'The customer may not have completed the bank connection yet.',
+                        . 'The customer may not have completed the bank connection yet.',
             ], 404);
         }
 
@@ -365,13 +367,62 @@ class CreditSenseController extends Controller
      * @param  mixed        $reportData   The raw report payload from the service layer.
      * @return void
      */
-    private function persistReport(Application $application, mixed $reportData): void
+    private function persistReport(Application $application, array $data): void
     {
         $application->update([
-            'credit_sense_report'             => $reportData,
+            'credit_sense_report'             => $data,
             'credit_sense_report_received_at' => now(),
-            'bank_api_provider_name'          => self::PROVIDER_NAME,
         ]);
+
+        $attachment = $data['Response']['attachments'][0] ?? null;
+        if ($attachment && !empty($attachment['content'])) {
+            $decodedJson = json_decode(base64_decode($attachment['content']), true);
+
+            Log::debug('[CreditSense] Report groups catalog', [
+                'report_groups' => $decodedJson['banking']['reportGroups'] ?? 'not found',
+            ]);
+
+            $summary = collect($decodedJson['banking']['transactionGroups'] ?? [])
+                ->filter(fn ($g) => $g['isTopParent'] ?? false)
+                ->map(fn ($g) => [
+                    'reportGroupCode' => $g['reportGroupCode'] ?? null,
+                    'display'         => $g['display']['value'] ?? null,
+                    'directions'      => collect($g['analysis']['summary']['breakdowns'] ?? [])->pluck('direction'),
+                    'ongoing_monthly' => collect($g['analysis']['ongoing']['trend']['amounts'] ?? [])
+                        ->firstWhere('frequencyType', 'P1M')['amount'] ?? null,
+                ])
+                ->values();
+
+            Log::debug('[CreditSense] Top-level transaction group summary', ['groups' => $summary]);
+        }
+
+        // Pass the full response - parser will unwrap Response.attachments
+        $parser = new \App\Services\CreditSenseReportParser($data);
+
+        if (! $parser->isValid()) {
+            $inner  = $data['Response'] ?? $data;
+            $parser = new \App\Services\CreditSenseReportParser($inner);
+        }
+
+        Log::debug('[CreditSense] Parser valid', ['valid' => $parser->isValid()]);
+
+        if ($parser->isValid()) {
+            $parsed = $parser->getExpenseCategories();
+
+            if (! empty($parsed)) {
+                $bySubcategory = collect($parsed)->keyBy('subcategory');
+
+                foreach ($application->livingExpenses as $expense) {
+                    $match = $bySubcategory->get($expense->expense_category);
+
+                    if ($match) {
+                        $expense->update([
+                            'provider_amount' => $match['monthly_amount'],
+                        ]);
+                    }
+                }
+            }
+        }
     }
 
     /**
@@ -389,5 +440,57 @@ class CreditSenseController extends Controller
         $status = $result['code'] === self::ERROR_CODE_INVALID_CREDENTIALS ? 401 : 502;
 
         return response()->json(['error' => $result['error']], $status);
+    }
+
+    public function uploadReport(Request $request, Application $application): JsonResponse
+    {
+        $this->authorize('update', $application);
+
+        $request->validate([
+            'report' => ['required', 'file', 'mimes:pdf', 'max:10240'],
+        ]);
+
+        $path   = $request->file('report')->store('temp/creditsense');
+        $fullPath = \Storage::path($path);
+
+        try {
+            $parser     = new CreditSensePdfParser($fullPath);
+            $categories = $parser->getExpenseCategories();
+
+            if (empty($categories)) {
+                return response()->json([
+                    'error' => 'No expense categories could be extracted. '
+                            . 'Please ensure this is a CreditSense categorised report.',
+                ], 422);
+            }
+
+            $application->update([
+                'credit_sense_report'             => $parser->toReportArray(),
+                'credit_sense_report_received_at' => now(),
+                'credit_sense_completed_at'       => $application->credit_sense_completed_at ?? now(),
+                'bank_api_provider_name'          => 'CreditSense',
+            ]);
+
+            ActivityLog::logActivity(
+                'credit_sense_report_uploaded',
+                'CreditSense PDF report manually uploaded by admin',
+                $application,
+            );
+
+            return response()->json([
+                'success'    => true,
+                'message'    => count($categories) . ' expense categories extracted successfully.',
+                'categories' => $categories,
+            ]);
+        } catch (\Exception $e) {
+            Log::error('[CreditSense] PDF parse error: ' . $e->getMessage());
+
+            return response()->json([
+                'error' => 'Failed to parse PDF: ' . $e->getMessage(),
+            ], 422);
+
+        } finally {
+            \Storage::delete($path);
+        }
     }
 }

@@ -50,11 +50,20 @@ class EmploymentDetailsController extends Controller
                     new LegalWorkingAge($application->personalDetails->date_of_birth),
                 ],
                 'base_income' => 'required|numeric|min:0',
+                'after_tax_income' => 'nullable|numeric|min:0', 
                 'additional_income' => 'nullable|numeric|min:0',
                 'income_frequency' => 'required|in:weekly,fortnightly,monthly,annual',
                 'employer_phone' => 'nullable|string|max:20',
                 'employer_address' => 'nullable|string',
+                'is_current' => 'nullable|boolean',
+                'employment_end_date' => 'nullable|required_if:is_current,false|date|after_or_equal:employment_start_date',
             ]);
+
+            $taxResult = EmploymentDetail::calculateAfterTaxIncomeForFrequency(
+                (float) $validated['base_income'],
+                $validated['income_frequency']
+            );
+            $validated['after_tax_income'] = $taxResult['after_tax_income_per_period'];
 
             $employment = $application->employmentDetails()->create($validated);
 
@@ -110,78 +119,133 @@ class EmploymentDetailsController extends Controller
 
     public function update(Request $request, Application $application, EmploymentDetail $employmentDetail)
     {
-        $this->authorize('update', $application);
+        try {
+            $this->authorize('update', $application);
+    
+            $validated = $request->validate([
+                'employment_type' => 'required|in:payg,self_employed,company_director,contract,casual,retired,unemployed',
+                'employer_business_name' => 'nullable|required_unless:employment_type,retired,unemployed|string|max:255',
+                'abn' => 'nullable|string|max:20',
+                'employment_role' => 'nullable|string|max:255',
+                'position' => 'nullable|string|max:255',
+                'employment_start_date' => 'nullable|date|before_or_equal:today',
+                'base_income' => 'required|numeric|min:0',
+                'after_tax_income' => 'nullable|numeric|min:0', 
+                'additional_income' => 'nullable|numeric|min:0',
+                'income_frequency' => 'required|in:weekly,fortnightly,monthly,annual',
+                'employer_phone' => 'nullable|string|max:20',
+                'employer_address' => 'nullable|string',
+                'is_current' => 'nullable|boolean',
+                'employment_end_date' => 'nullable|required_if:is_current,false|date|after_or_equal:employment_start_date',
+            ]);
+    
+            // Recalculate after_tax_income server-side — never trust the client value
+            $taxResult = EmploymentDetail::calculateAfterTaxIncomeForFrequency(
+                (float) $validated['base_income'],
+                $validated['income_frequency']
+            );
+            $validated['after_tax_income'] = $taxResult['after_tax_income_per_period'];
 
-        $validated = $request->validate([
-            'employment_type' => 'required|in:payg,self_employed,company_director,contract,casual,retired,unemployed',
-            'employer_business_name' => 'nullable|required_unless:employment_type,retired,unemployed|string|max:255',
-            'abn' => 'nullable|string|max:20',
-            'employment_role' => 'nullable|string|max:255',
-            'position' => 'nullable|string|max:255',
-            'employment_start_date' => 'nullable|date|before_or_equal:today',
-            'base_income' => 'required|numeric|min:0',
-            'additional_income' => 'nullable|numeric|min:0',
-            'income_frequency' => 'required|in:weekly,fortnightly,monthly,annual',
-            'employer_phone' => 'nullable|string|max:20',
-            'employer_address' => 'nullable|string',
-        ]);
+            $oldValues = $employmentDetail->toArray();
+            $employmentDetail->update($validated);
+    
+            if ($employmentDetail->employment_start_date) {
+                $employmentDetail->calculateEmploymentLength();
+            }
+    
+            // Calculate annual income for response
+            $employmentDetail->annual_income = $employmentDetail->getAnnualIncome();
+    
+            ActivityLog::logActivity(
+                'updated',
+                'Updated employment details',
+                $employmentDetail,
+                $oldValues,
+                $validated
+            );
+    
+            // Check if the request expects JSON (AJAX request)
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employment details updated successfully.',
+                    'employment' => $employmentDetail,
+                    'type' => 'employment',
+                    'trigger_progress_update' => true
+                ], 200);
+            }
+    
+            return back()->with('success', 'Employment details updated successfully.');
 
-        $oldValues = $employmentDetail->toArray();
-        $employmentDetail->update($validated);
+        } catch (\Throwable $e) {
+            \Log::error('Failed to update employment details', [
+                'employment_id' => $employmentDetail->id ?? null,
+                'application_id' => $application->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString(),
+            ]);
 
-        if ($employmentDetail->employment_start_date) {
-            $employmentDetail->calculateEmploymentLength();
+            $errorMessage = 'Something went wrong while updating employment details. Please try again.';
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                ], 500);
+            }
+
+            return back()->withErrors([
+                'general' => $errorMessage
+            ]);
         }
-
-        // Calculate annual income for response
-        $employmentDetail->annual_income = $employmentDetail->getAnnualIncome();
-
-        ActivityLog::logActivity(
-            'updated',
-            'Updated employment details',
-            $employmentDetail,
-            $oldValues,
-            $validated
-        );
-
-        // Check if the request expects JSON (AJAX request)
-        if ($request->expectsJson() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Employment details updated successfully.',
-                'employment' => $employmentDetail,
-                'type' => 'employment',
-                'trigger_progress_update' => true
-            ], 200);
-        }
-
-        return back()->with('success', 'Employment details updated successfully.');
     }
 
     public function destroy(Request $request, Application $application, EmploymentDetail $employmentDetail)
     {
-        $this->authorize('update', $application);
+        try {
+            $this->authorize('update', $application);
 
-        $employmentId = $employmentDetail->id;
-        $employmentDetail->delete();
+            $employmentId = $employmentDetail->id;
+            $employmentDetail->delete();
 
-        ActivityLog::logActivity(
-            'deleted',
-            'Deleted employment details',
-            $application
-        );
+            ActivityLog::logActivity(
+                'deleted',
+                'Deleted employment details',
+                $application
+            );
 
-        // Check if the request expects JSON (AJAX request)
-        if ($request->expectsJson() || $request->wantsJson()) {
-            return response()->json([
-                'success' => true,
-                'message' => 'Employment details deleted successfully.',
-                'deleted_id' => $employmentId,
-                'type' => 'employment',
-                'trigger_progress_update' => true
-            ], 200);
+            // Check if the request expects JSON (AJAX request)
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Employment details deleted successfully.',
+                    'deleted_id' => $employmentId,
+                    'type' => 'employment',
+                    'trigger_progress_update' => true
+                ], 200);
+            }
+
+            return back()->with('success', 'Employment details deleted successfully.');
+
+        } catch (\Throwable $e) {
+            \Log::error('Failed to delete employment details', [
+                'employment_id' => $employmentDetail->id ?? null,
+                'application_id' => $application->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $errorMessage = 'Something went wrong while deleting employment details. Please try again.';
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $errorMessage,
+                ], 500);
+            }
+
+            return back()->withErrors([
+                'general' => $errorMessage
+            ]);
         }
-
-        return back()->with('success', 'Employment details deleted successfully.');
     }
 }

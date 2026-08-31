@@ -28,6 +28,8 @@ use App\Services\Communication\CommunicationTemplateService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 
 class EmailCommunicationController extends Controller
 {
@@ -86,8 +88,22 @@ class EmailCommunicationController extends Controller
         try {
             $this->dispatchEmailNotification($application, $validated);
             $this->logOutboundCommunication($request, $application, $validated);
+            $this->maybeStampLetterTimestamp($application, $validated['letter_type'] ?? null);
 
-            ActivityLog::logActivity('email_sent', 'Email sent to client', $application);
+            ActivityLog::logActivity(
+                'email_sent',
+                'Email sent to client',
+                $application,
+                null,
+                [
+                    'direction' => 'outbound',
+                    'subject'   => $validated['subject'],
+                    'to'        => $application->user->email,
+                    'excerpt'   => Str::limit($validated['message'], 150),
+                    'status'    => 'sent',
+                    'template'  => $validated['template_label'] ?? null,
+                ]
+            );
 
             return response()->json([
                 'success' => true,
@@ -138,8 +154,16 @@ class EmailCommunicationController extends Controller
      */
     public function incoming(Request $request): JsonResponse
     {
+        Log::debug('SendGrid webhook payload:', $request->all());
+
+        $messageId = $request->input('Message-Id') ?? $request->input('message-id') ?? null;
+        if ($messageId && Communication::where('external_id', $messageId)->exists()) {
+            Log::info('Inbound email: duplicate webhook ignored.', ['message_id' => $messageId]);
+            return response()->json(['success' => true, 'duplicate' => true]);
+        }
+
         $from    = $request->input('from');
-        $to      = $request->input('to');
+        $to      = $request->input('to') ?? $request->input('recipient');
         $subject = $request->input('subject');
 
         $body = $this->extractEmailBody($request);
@@ -175,9 +199,22 @@ class EmailCommunicationController extends Controller
         }
 
         try {
-            $communication = $this->logInboundCommunication($request, $application, $fromEmail, $subject, $body);
+            $communication = $this->logInboundCommunication($request, $application, $fromEmail, $subject, $body, $messageId);
 
-            ActivityLog::logActivity('email_received', 'Inbound email received from client', $application);
+            ActivityLog::logActivity(
+                'email_received',
+                'Inbound email received from client',
+                $application,
+                null,
+                [
+                    'direction' => 'inbound',
+                    'subject'   => $subject,
+                    'from'      => $fromEmail,
+                    'excerpt'   => Str::limit($body, 150),
+                ]
+            );
+
+            $this->forwardToArchive($fromEmail, $subject, $body, $application);
 
             Log::info('Inbound email logged', [
                 'application_id'   => $application->id,
@@ -323,8 +360,11 @@ class EmailCommunicationController extends Controller
     private function validateOutboundEmail(Request $request): array
     {
         return $request->validate([
-            'subject' => 'required|string|max:255',
-            'message' => 'required|string|max:5000',
+            'subject'     => 'required|string|max:255',
+            'message'     => 'required|string|max:5000',
+            'letter_type' => 'nullable|string|in:approval_letter,decline_letter',
+            'template_key'   => 'nullable|string|max:100',
+            'template_label' => 'nullable|string|max:255',
         ]);
     }
 
@@ -368,6 +408,10 @@ class EmailCommunicationController extends Controller
             'status'         => 'sent',
             'sent_at'        => now(),
             'sender_ip'      => $request->ip(),
+            'metadata'       => array_filter([
+                'template_key'   => $validated['template_key']   ?? null,
+                'template_label' => $validated['template_label'] ?? null,
+            ]),
         ]);
     }
 
@@ -470,7 +514,8 @@ class EmailCommunicationController extends Controller
         Application $application,
         string $fromEmail,
         ?string $subject,
-        string $body
+        string $body,
+        ?string $messageId = null
     ): Communication {
         return Communication::create([
             'application_id' => $application->id,
@@ -484,6 +529,7 @@ class EmailCommunicationController extends Controller
             'status'         => 'delivered',
             'delivered_at'   => now(),
             'sender_ip'      => $request->ip(),
+            'external_id'     => $messageId,
         ]);
     }
 
@@ -618,5 +664,71 @@ class EmailCommunicationController extends Controller
             ->whereNull('read_at')
             ->where('direction', 'inbound')
             ->count();
+    }
+
+    // =========================================================================
+    // Private Helpers — Archiving
+    // =========================================================================
+
+    /**
+     * Forward an inbound email to the Yahoo archive mailbox.
+     *
+     * @param  string       $fromEmail    The original sender's email address.
+     * @param  string|null  $subject      The email subject line.
+     * @param  string       $body         The stripped plain-text body.
+     * @param  Application  $application  The associated application.
+     * @return void
+     */
+    private function forwardToArchive(string $fromEmail, ?string $subject, string $body, Application $application): void 
+    {
+        $archiveEmail = config('mail.archive_email');
+
+        if (! $archiveEmail) {
+            return;
+        }
+
+        try {
+            Mail::raw(
+                implode("\n\n", [
+                    'Application: ' . $application->application_number,
+                    'From: ' . $fromEmail,
+                    'Subject: ' . ($subject ?? '(no subject)'),
+                    str_repeat('-', 40),
+                    $body,
+                ]),
+                function ($message) use ($subject, $archiveEmail, $application) {
+                    $message
+                        ->to($archiveEmail)
+                        ->subject('[INBOUND] [' . $application->application_number . '] ' . ($subject ?? '(no subject)'))
+                        ->from(config('mail.from.address'), config('app.name'));
+                }
+            );
+        } catch (\Exception $e) {
+            Log::warning('Failed to forward inbound email to archive.', [
+                'error'          => $e->getMessage(),
+                'application_id' => $application->id,
+            ]);
+        }
+    }
+
+    /**
+     * Stamp the relevant letter timestamp on the application when a typed
+     * letter (approval or decline) is dispatched via the workflow modal.
+     *
+     * @param  Application  $application  The target application.
+     * @param  string|null  $letterType   'approval_letter' | 'decline_letter' | null
+     * @return void
+     */
+    private function maybeStampLetterTimestamp(Application $application, ?string $letterType): void
+    {
+        $column = match ($letterType) {
+            'approval_letter' => 'approval_letter_sent_at',
+            'decline_letter'  => 'decline_letter_sent_at',
+            default           => null,
+        };
+
+        if ($column && is_null($application->{$column})) {
+            $application->update([$column => now()]);
+        }
     }
 }

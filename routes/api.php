@@ -5,7 +5,8 @@ use App\Http\Controllers\Admin\Communication\SmsCommunicationController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\CreditControllers\CreditSenseController;
-use App\Http\Controllers\SuburbSearchController;
+use App\Http\Controllers\Admin\CreditControllers\BasiqController;
+use App\Http\Middleware\VerifyCsrfToken;
 
 Route::get('/user', function (Request $request) {
     return $request->user();
@@ -25,8 +26,9 @@ Route::prefix('webhooks')->group(function () {
 
     Route::post('creditsense', [CreditSenseController::class, 'webhook'])
         ->name('webhooks.creditsense');
+    
+    // NEW: Basiq webhook
+    Route::post('basiq', [BasiqController::class, 'webhook'])
+        ->withoutMiddleware([VerifyCsrfToken::class])
+        ->name('webhooks.basiq');
 });
-
-// Suburb helper
-Route::get('/api/suburbs/search', [SuburbSearchController::class, 'search'])
-    ->name('api.suburbs.search');

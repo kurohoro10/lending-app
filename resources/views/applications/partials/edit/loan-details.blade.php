@@ -56,15 +56,17 @@
 
                     <div class="col-span-2">
                         <label for="loan_purpose" class="block text-sm font-semibold text-gray-700 mb-2">Loan Purpose *</label>
+                        @php $currentLoanPurpose = old('loan_purpose', $application->loan_purpose); @endphp
                         <select name="loan_purpose" id="loan_purpose" required
                                 class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                            <option value="car_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'car_purchase' ? 'selected' : '' }}>Car Purchase</option>
-                            <option value="truck_purchase" {{ old('loan_purpose', $application->loan_purpose) == 'truck_purchase' ? 'selected' : '' }}>Truck Purchase</option>
-                            <option value="caveat_loan" {{ old('loan_purpose', $application->loan_purpose) == 'caveat_loan' ? 'selected' : '' }}>Caveat Loan</option>
-                            <option value="business_expense" {{ old('loan_purpose', $application->loan_purpose) == 'business_expense' ? 'selected' : '' }}>Business Expense</option>
-                            <option value="invoice_finance" {{ old('loan_purpose', $application->loan_purpose) == 'invoice_finance' ? 'selected' : '' }}>Invoice Finance</option>
-                            <option value="business_expansion" {{ old('loan_purpose', $application->loan_purpose) == 'business_expansion' ? 'selected' : '' }}>Business Expansion</option>
-                            <option value="other" {{ old('loan_purpose', $application->loan_purpose) == 'other' ? 'selected' : '' }}>Other</option>
+                            @foreach (\App\Support\LoanPurpose::OPTIONS as $value => $label)
+                                <option value="{{ $value }}" {{ $currentLoanPurpose == $value ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                            @if ($currentLoanPurpose && ! array_key_exists($currentLoanPurpose, \App\Support\LoanPurpose::OPTIONS))
+                                {{-- Preserves a legacy purpose already stored on this application so saving the
+                                     form without touching this field doesn't silently overwrite it. --}}
+                                <option value="{{ $currentLoanPurpose }}" selected>{{ \App\Support\LoanPurpose::label($currentLoanPurpose) }}</option>
+                            @endif
                         </select>
                     </div>
 
@@ -76,22 +78,27 @@
                     </div>
 
                     <div>
-                        <label for="term_months" class="block text-sm font-semibold text-gray-700 mb-2">Loan Term (Months) *</label>
-                        <input type="number" name="term_months" id="term_months" min="1" max="360"
-                                value="{{ old('term_months', $application->term_months) }}"
+                        <label for="term_weeks" class="block text-sm font-semibold text-gray-700 mb-2">Loan Term (Weeks) *</label>
+                        <input type="number" name="term_weeks" id="term_weeks" min="4" max="1560"
+                                value="{{ old('term_weeks', $application->term_weeks) }}"
                                 class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl" required>
                     </div>
 
                     <div>
                         <label for="security_type" class="block text-sm font-semibold text-gray-700 mb-2">Security Type</label>
+                        @php $currentSecurityType = old('security_type', $application->security_type); @endphp
                         <select name="security_type" id="security_type"
                                 class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <option value="">Select security type...</option>
-                            <option value="residential_house" {{ old('security_type', $application->security_type) == 'residential_house' ? 'selected' : '' }}>Residential House</option>
-                            <option value="commerial_house" {{ old('security_type', $application->security_type) == 'commerial_house' ? 'selected' : '' }}>Commercial House</option>
-                            <option value="car" {{ old('security_type', $application->security_type) == 'car' ? 'selected' : '' }}>Car</option>
-                            <option value="truck" {{ old('security_type', $application->security_type) == 'truck' ? 'selected' : '' }}>Truck</option>
-                            <option value="others" {{ old('security_type', $application->security_type) == 'others' ? 'selected' : '' }}>Others</option>
+                            @foreach (\App\Support\SecurityType::EDIT_OPTIONS as $value => $label)
+                                <option value="{{ $value }}" {{ $currentSecurityType == $value ? 'selected' : '' }}>{{ $label }}</option>
+                            @endforeach
+                            @if ($currentSecurityType && ! array_key_exists($currentSecurityType, \App\Support\SecurityType::EDIT_OPTIONS))
+                                {{-- Preserves a legacy/create-form value already stored on this application (e.g. the
+                                     removed 'unsecured' option) so saving the form without touching this field
+                                     doesn't silently blank it out. --}}
+                                <option value="{{ $currentSecurityType }}" selected>{{ \App\Support\SecurityType::label($currentSecurityType) }}</option>
+                            @endif
                         </select>
                     </div>
                 </div>

@@ -57,6 +57,59 @@
                 </div>
             @endif
 
+            {{-- Guarantor Requirement Toggle --}}
+            @if(auth()->user()->hasRole('admin') && $application->status === \App\Models\Application::STATUS_APPROVED)
+                <div class="md:col-span-3 pt-4 border-t border-gray-200 flex items-center justify-between">
+                    <p class="text-sm font-medium text-gray-700">Guarantor Requirement</p>
+
+                    <div class="flex items-center gap-3">
+                        @if($application->requiresGuarantor())
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                                        bg-yellow-100 text-yellow-800">
+                                Guarantor Required
+                            </span>
+                            <form method="POST"
+                                action="{{ route('admin.applications.guarantor-required.toggle', $application) }}"
+                                onsubmit="return confirm('Remove guarantor requirement? Steps 2 & 3 will be removed.')">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="guarantor_required" value="0">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white border border-gray-300
+                                            text-xs font-medium text-gray-700 rounded-md hover:bg-gray-50 transition
+                                            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                    <svg class="w-3.5 h-3.5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                                    </svg>
+                                    Remove Requirement
+                                </button>
+                            </form>
+                        @else
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold
+                                        bg-gray-100 text-gray-600">
+                                No Guarantor Required
+                            </span>
+                            <form method="POST"
+                                action="{{ route('admin.applications.guarantor-required.toggle', $application) }}"
+                                onsubmit="return confirm('Mark guarantor as required? Steps 2 & 3 will be shown.')">
+                                @csrf
+                                @method('PATCH')
+                                <input type="hidden" name="guarantor_required" value="1">
+                                <button type="submit"
+                                        class="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 text-white
+                                            text-xs font-semibold rounded-md hover:bg-indigo-700 transition
+                                            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+                                    </svg>
+                                    Mark as Required
+                                </button>
+                            </form>
+                        @endif
+                    </div>
+                </div>
+            @endif
+
         </div>
     </div>
 </div>

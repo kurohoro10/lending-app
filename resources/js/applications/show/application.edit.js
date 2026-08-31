@@ -469,37 +469,37 @@
         return d;
     }
 
-    function attachEmploymentValidation() {
-        if (!els.dob) return;
+    // function attachEmploymentValidation() {
+    //     if (!els.dob) return;
 
-        els.employmentDates.forEach(input => {
-            input.addEventListener('input', () => {
-                if (!els.dob.value || !input.value) return;
+    //     els.employmentDates.forEach(input => {
+    //         input.addEventListener('input', () => {
+    //             if (!els.dob.value || !input.value) return;
 
-                const legal = legalAgeDate(els.dob.value, state.legalAge);
-                const start = new Date(input.value);
-                const hint = getHint(input);
+    //             const legal = legalAgeDate(els.dob.value, state.legalAge);
+    //             const start = new Date(input.value);
+    //             const hint = getHint(input);
 
-                if (start < legal) {
-                    hint.textContent = `Employment history will be counted from ${legal.toLocaleDateString()}.`;
-                    hint.hidden = false;
-                } else {
-                    hint.hidden = true;
-                }
-            });
-        });
-    }
+    //             if (start < legal) {
+    //                 hint.textContent = `Employment history will be counted from ${legal.toLocaleDateString()}.`;
+    //                 hint.hidden = false;
+    //             } else {
+    //                 hint.hidden = true;
+    //             }
+    //         });
+    //     });
+    // }
 
-    function getHint(input) {
-        let hint = input.nextElementSibling;
-        if (!hint || !hint.classList.contains('employment-hint')) {
-            hint = document.createElement('p');
-            hint.className = 'employment-hint text-xs text-red-600 mt-1';
-            hint.setAttribute('aria-live', 'polite');
-            input.after(hint);
-        }
-        return hint;
-    }
+    // function getHint(input) {
+    //     let hint = input.nextElementSibling;
+    //     if (!hint || !hint.classList.contains('employment-hint')) {
+    //         hint = document.createElement('p');
+    //         hint.className = 'employment-hint text-xs text-red-600 mt-1';
+    //         hint.setAttribute('aria-live', 'polite');
+    //         input.after(hint);
+    //     }
+    //     return hint;
+    // }
 
     function observeFormChanges() {
         const observer = new MutationObserver(() => {
@@ -548,7 +548,7 @@
         renderSubmitSection();
 
         // Now safe to start watching personal details fields
-        attachEmploymentValidation();
+        // attachEmploymentValidation();
         attachPersonalDetailsListeners();
         attachSubmitButtonListener();
         observeFormChanges();

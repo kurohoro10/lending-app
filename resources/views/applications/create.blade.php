@@ -408,7 +408,7 @@
                     @auth
                         Complete the form below to begin your commercial loan application.
                     @else
-                        Create your account and begin your application. The process takes about 10–15 minutes.
+                        Create your account and begin your application. The process takes about 10-15 minutes.
                     @endauth
                 </p>
             </div>
@@ -623,12 +623,9 @@
                                         <select name="loan_purpose" id="loan_purpose" required
                                                 class="form-input form-select @error('loan_purpose') error @enderror">
                                             <option value="">Select purpose...</option>
-                                            <option value="business_expansion" {{ old('loan_purpose') == 'business_expansion' ? 'selected' : '' }}>Business Expansion</option>
-                                            <option value="equipment_purchase" {{ old('loan_purpose') == 'equipment_purchase' ? 'selected' : '' }}>Equipment Purchase</option>
-                                            <option value="working_capital" {{ old('loan_purpose') == 'working_capital' ? 'selected' : '' }}>Working Capital</option>
-                                            <option value="property_purchase" {{ old('loan_purpose') == 'property_purchase' ? 'selected' : '' }}>Property Purchase</option>
-                                            <option value="debt_consolidation" {{ old('loan_purpose') == 'debt_consolidation' ? 'selected' : '' }}>Debt Consolidation</option>
-                                            <option value="other" {{ old('loan_purpose') == 'other' ? 'selected' : '' }}>Other</option>
+                                            @foreach (\App\Support\LoanPurpose::OPTIONS as $value => $label)
+                                                <option value="{{ $value }}" {{ old('loan_purpose') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                            @endforeach
                                         </select>
                                         @error('loan_purpose')
                                             <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
@@ -647,13 +644,13 @@
 
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
                                         <div>
-                                            <label for="term_months" class="form-label">Loan Term <span class="text-indigo-500">*</span></label>
-                                            <input type="number" name="term_months" id="term_months" min="1" max="360"
-                                                value="{{ old('term_months', $calculatorValues['term_months']) }}"
-                                                class="form-input @error('term_months') error @enderror"
+                                            <label for="term_weeks" class="form-label">Loan Term (Weeks) <span class="text-indigo-500">*</span></label>
+                                            <input type="number" name="term_weeks" id="term_weeks" min="4" max="1560"
+                                                value="{{ old('term_weeks', $calculatorValues['term_weeks']) }}"
+                                                class="form-input @error('term_weeks') error @enderror"
                                                 required>
-                                            <p class="mt-1 text-xs text-gray-400">Months — typically 12–360</p>
-                                            @error('term_months')
+                                            <p class="mt-1 text-xs text-gray-400">Weeks — typically 52–1560</p>
+                                            @error('term_weeks')
                                                 <p class="mt-1.5 text-xs text-red-500 flex items-center gap-1">
                                                     <svg class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/></svg>
                                                     {{ $message }}
@@ -666,11 +663,9 @@
                                             <select name="security_type" id="security_type"
                                                     class="form-input form-select">
                                                 <option value="">Select security type...</option>
-                                                <option value="property" {{ old('security_type') == 'property' ? 'selected' : '' }}>Property</option>
-                                                <option value="equipment" {{ old('security_type') == 'equipment' ? 'selected' : '' }}>Equipment</option>
-                                                <option value="vehicle" {{ old('security_type') == 'vehicle' ? 'selected' : '' }}>Vehicle</option>
-                                                <option value="unsecured" {{ old('security_type') == 'unsecured' ? 'selected' : '' }}>Unsecured</option>
-                                                <option value="other" {{ old('security_type') == 'other' ? 'selected' : '' }}>Other</option>
+                                                @foreach (\App\Support\SecurityType::CREATE_OPTIONS as $value => $label)
+                                                    <option value="{{ $value }}" {{ old('security_type') == $value ? 'selected' : '' }}>{{ $label }}</option>
+                                                @endforeach
                                             </select>
                                         </div>
                                     </div>
@@ -688,14 +683,19 @@
                                 </div>
 
                                 <div class="space-y-4">
-                                    <label class="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-all">
-                                        <input id="privacy_consent" name="privacy_consent" type="checkbox" value="1" required
-                                               class="custom-checkbox @error('privacy_consent') error @enderror">
+                                    <label id="privacy_label" class="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 {{ old('privacy_consent') ? 'hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer' : 'opacity-60 cursor-not-allowed' }} transition-all">
+                                        <input id="privacy_consent" name="privacy_consent" type="checkbox" value="1" required 
+                                            {{ old('privacy_consent') ? '' : 'disabled' }} 
+                                            {{ old('privacy_consent') ? 'checked' : '' }}
+                                            class="custom-checkbox @error('privacy_consent') error @enderror">
                                         <div>
-                                            <span class="text-sm font-semibold text-gray-800">I consent to the collection and use of my personal information</span>
+                                            <span class="text-sm font-semibold text-gray-800">Please click the link to read and agree to the Privacy Policy</span>
                                             <p class="text-xs text-gray-500 mt-1">
                                                 I have read and agree to the
-                                                <a href="{{ route('privacy-policy') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-medium underline decoration-dotted">Privacy Policy</a>
+                                                <a id="privacy_link" href="{{ route('privacy-policy') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-medium underline decoration-dotted cursor-pointer">Privacy Policy</a>
+                                                @if(!old('privacy_consent'))
+                                                    <span id="privacy_hint" class="text-indigo-500 ml-1 font-medium text-xs animate-pulse">(Required review)</span>
+                                                @endif 
                                             </p>
                                         </div>
                                     </label>
@@ -706,14 +706,19 @@
                                         </p>
                                     @enderror
 
-                                    <label class="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer transition-all">
-                                        <input id="terms_consent" name="terms_consent" type="checkbox" value="1" required
-                                               class="custom-checkbox @error('terms_consent') error @enderror">
+                                    <label id="terms_label" class="flex items-start gap-3 p-4 rounded-2xl border-2 border-gray-100 {{ old('terms_consent') ? 'hover:border-indigo-200 hover:bg-indigo-50/30 cursor-pointer' : 'opacity-60 cursor-not-allowed' }} transition-all">
+                                        <input id="terms_consent" name="terms_consent" type="checkbox" value="1" required 
+                                            {{ old('terms_consent') ? '' : 'disabled' }} 
+                                            {{ old('terms_consent') ? 'checked' : '' }}
+                                            class="custom-checkbox @error('terms_consent') error @enderror">
                                         <div>
-                                            <span class="text-sm font-semibold text-gray-800">I agree to the Terms and Conditions</span>
+                                            <span class="text-sm font-semibold text-gray-800">Please click the link to read and agree to the Terms and Conditions</span>
                                             <p class="text-xs text-gray-500 mt-1">
                                                 I have read and agree to the
-                                                <a href="{{ route('terms-and-conditions') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-medium underline decoration-dotted">Terms and Conditions</a>
+                                                <a id="terms_link" href="{{ route('terms-and-conditions') }}" target="_blank" class="text-indigo-600 hover:text-indigo-800 font-medium underline decoration-dotted cursor-pointer">Terms and Conditions</a>
+                                                @if(!old('terms_consent'))
+                                                    <span id="terms_hint" class="text-indigo-500 ml-1 font-medium text-xs animate-pulse">(Required review)</span>
+                                                @endif
                                             </p>
                                         </div>
                                     </label>
@@ -794,18 +799,18 @@
                             <div>
                                 <div class="flex justify-between items-center mb-3">
                                     <label class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Loan Term</label>
-                                    <span class="text-lg font-bold text-indigo-600" id="calcLoanTerm">60 months</span>
+                                    <span class="text-lg font-bold text-indigo-600" id="calcLoanTerm">260 weeks</span>
                                 </div>
                                 <div class="py-2 range-wrapper">
                                     <div class="range-background"></div>
                                     <div class="range-fill" id="calcTermFill"></div>
-                                    <input type="range" min="12" max="84"
-                                        value="{{ $calculatorValues['term_months'] }}"
-                                        step="12" id="calcTermSlider" class="w-full">
+                                    <input type="range" min="52" max="260"
+                                        value="{{ $calculatorValues['term_weeks'] }}"
+                                        step="52" id="calcTermSlider" class="w-full">
                                 </div>
                                 <div class="flex justify-between text-xs text-gray-400 mt-2">
-                                    <span>12 months</span>
-                                    <span>84 months</span>
+                                    <span>52 weeks</span>
+                                    <span>260 weeks</span>
                                 </div>
                             </div>
 
@@ -831,8 +836,8 @@
                             <!-- Calculator Results -->
                             <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-5 mt-6">
                                 <div class="flex justify-between items-center mb-3">
-                                    <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Monthly Payment</span>
-                                    <span class="text-2xl font-bold text-indigo-600" id="calcMonthlyPayment">$2,058</span>
+                                    <span class="text-xs font-semibold text-gray-700 uppercase tracking-wide">Weekly Payment</span>
+                                    <span class="text-2xl font-bold text-indigo-600" id="calcMonthlyPayment">$475</span>
                                 </div>
                                 <div class="flex justify-between items-center mb-3">
                                     <span class="text-xs text-gray-600">Total Interest</span>
@@ -849,7 +854,7 @@
                             </button>
 
                             <p class="text-xs text-gray-400 text-center leading-relaxed">
-                                * Rates shown are illustrative. Actual rates may vary based on creditworthiness.
+                                * Normal lending terms and condition apply, subject to normal lending assessment
                             </p>
                         </div>
                     </div>
@@ -914,19 +919,19 @@
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="text-sm text-indigo-100">No hidden fees or charges</span>
+                                <span class="text-sm text-indigo-100">Relationship Lending that cares</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="text-sm text-indigo-100">256-bit bank-level encryption</span>
+                                <span class="text-sm text-indigo-100">Flexible Repayment Term</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
                                     <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                                 </svg>
-                                <span class="text-sm text-indigo-100">Decision within 24-48 hours</span>
+                                <span class="text-sm text-indigo-100">Easy and Fast Approval</span>
                             </div>
                             <div class="flex items-center gap-3">
                                 <svg class="w-5 h-5 text-indigo-200 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
@@ -936,7 +941,7 @@
                             </div>
                         </div>
 
-                        <div class="mt-5 pt-5 border-t border-indigo-500 grid grid-cols-2 gap-3 text-center">
+                        {{-- <div class="mt-5 pt-5 border-t border-indigo-500 grid grid-cols-2 gap-3 text-center">
                             <div>
                                 <div class="text-2xl font-bold">4.9★</div>
                                 <div class="text-xs text-indigo-200">Customer Rating</div>
@@ -945,7 +950,7 @@
                                 <div class="text-2xl font-bold">10K+</div>
                                 <div class="text-xs text-indigo-200">Happy Clients</div>
                             </div>
-                        </div>
+                        </div> --}}
                     </div>
 
                     <!-- Need Help -->
@@ -999,18 +1004,18 @@
             const rateSlider = document.getElementById('calcRateSlider');
 
             const principal  = parseFloat(loanSlider.value);
-            const termMonths = parseInt(termSlider.value);
+            const termWeeks  = parseInt(termSlider.value);
             const annualRate = parseFloat(rateSlider.value);
-            const monthlyRate = annualRate / 100 / 12;
+            const weeklyRate = annualRate / 100 / 52;
 
-            const monthlyPayment  = principal * (monthlyRate * Math.pow(1 + monthlyRate, termMonths)) / (Math.pow(1 + monthlyRate, termMonths) - 1);
-            const totalRepayment  = monthlyPayment * termMonths;
-            const totalInterest   = totalRepayment - principal;
+            const weeklyPayment  = principal * (weeklyRate * Math.pow(1 + weeklyRate, termWeeks)) / (Math.pow(1 + weeklyRate, termWeeks) - 1);
+            const totalRepayment = weeklyPayment * termWeeks;
+            const totalInterest  = totalRepayment - principal;
 
             document.getElementById('calcLoanAmount').textContent    = formatCurrency(principal);
-            document.getElementById('calcLoanTerm').textContent       = termMonths + ' months';
+            document.getElementById('calcLoanTerm').textContent       = termWeeks + ' weeks';
             document.getElementById('calcInterestRate').textContent   = annualRate + '%';
-            document.getElementById('calcMonthlyPayment').textContent = formatCurrency(monthlyPayment);
+            document.getElementById('calcMonthlyPayment').textContent = formatCurrency(weeklyPayment);
             document.getElementById('calcTotalInterest').textContent  = formatCurrency(totalInterest);
             document.getElementById('calcTotalRepayment').textContent = formatCurrency(totalRepayment);
 
@@ -1030,10 +1035,10 @@
             // Update hidden input with raw value for server submission
             document.getElementById('loan_amount').value = rawAmount;
 
-            document.getElementById('term_months').value = document.getElementById('calcTermSlider').value;
+            document.getElementById('term_weeks').value = document.getElementById('calcTermSlider').value;
 
             // Brief flash to confirm the copy
-            ['loan_amount_display', 'term_months'].forEach(id => {
+            ['loan_amount_display', 'term_weeks'].forEach(id => {
                 const el = document.getElementById(id);
                 el.style.borderColor = '#6366F1';
                 el.style.boxShadow   = '0 0 0 4px rgba(99,102,241,0.15)';
@@ -1063,11 +1068,17 @@
                 max: 9_000_000_000,
             });
 
-            // ── Submit button state ──
+            // ── Submit button state & Link Unlocking ──
             const form             = document.querySelector('form');
             const submitBtn        = document.getElementById('submitBtn');
             const privacy          = document.getElementById('privacy_consent');
             const terms            = document.getElementById('terms_consent');
+            const privacyLink      = document.getElementById('privacy_link');
+            const termsLink        = document.getElementById('terms_link');
+            const privacyLabel     = document.getElementById('privacy_label');
+            const termsLabel       = document.getElementById('terms_label');
+            const privacyHint      = document.getElementById('privacy_hint');
+            const termsHint        = document.getElementById('terms_hint');
             const originalBtnHTML  = submitBtn.innerHTML;
 
             function updateSubmitState() {
@@ -1075,6 +1086,26 @@
                 submitBtn.disabled = !enabled;
                 submitBtn.classList.toggle('opacity-50', !enabled);
                 submitBtn.classList.toggle('cursor-not-allowed', !enabled);
+            }
+
+            // Unlock Privacy Checkbox when link is clicked
+            if (privacyLink) {
+                privacyLink.addEventListener('click', function () {
+                    privacy.disabled = false;
+                    privacyLabel.classList.remove('opacity-60', 'cursor-not-allowed');
+                    privacyLabel.classList.add('hover:border-indigo-200', 'hover:bg-indigo-50/30', 'cursor-pointer');
+                    if (privacyHint) privacyHint.remove();
+                });
+            }
+
+            // Unlock Terms Checkbox when link is clicked
+            if (termsLink) {
+                termsLink.addEventListener('click', function () {
+                    terms.disabled = false;
+                    termsLabel.classList.remove('opacity-60', 'cursor-not-allowed');
+                    termsLabel.classList.add('hover:border-indigo-200', 'hover:bg-indigo-50/30', 'cursor-pointer');
+                    if (termsHint) termsHint.remove();
+                });
             }
 
             function showLoadingState() {

@@ -48,7 +48,8 @@ class ApplicationUpdated extends Notification implements ShouldQueue
         }
 
         $message->action('View Application', route('applications.edit', $this->application))
-            ->line('Thank you for keeping your information up to date!');
+            ->line('Thank you for keeping your information up to date!')
+            ->line('Visit us at: ' . config('app.url'));
 
         return $message;
     }

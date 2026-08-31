@@ -60,8 +60,7 @@ class ApplicationPolicy
      */
     public function delete(User $user, Application $application): bool
     {
-        // Only admin or application owner can delete draft applications
-        if ($application->status !== 'draft') {
+        if ($application->status !== Application::STATUS_APPLICATION) {
             return false;
         }
 
@@ -81,13 +80,15 @@ class ApplicationPolicy
      */
     public function assign(User $user, Application $application): bool
     {
-        // Only admins can assign
         if (!$user->hasRole('admin')) {
             return false;
         }
 
-        // Cannot reassign approved or declined applications
-        if (in_array($application->status, ['approved', 'declined'])) {
+        // Cannot reassign settled or declined applications
+        if (in_array($application->status, [
+            Application::STATUS_SETTLED,
+            Application::STATUS_DECLINED,
+        ])) {
             return false;
         }
 

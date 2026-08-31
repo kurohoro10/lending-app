@@ -31,7 +31,8 @@ class ApplicationDeclined extends Notification
             ->line('Reason: ' . $this->reason)
             ->line('You may reapply once you meet our lending criteria.')
             ->action('View Application', route('applications.show', $this->application))
-            ->line('If you have any questions, please contact our support team.');
+            ->line('If you have any questions, please contact our support team.')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toArray($notifiable): array

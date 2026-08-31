@@ -44,10 +44,21 @@
                     <div id="employment-list" data-employment-section class="space-y-3">
                         @foreach($application->employmentDetails as $employment)
                         <div data-employment-card
+                            data-employment-id="{{ $employment->id }}"
+                            data-employment-type="{{ $employment->employment_type }}"
+                            data-employer-name="{{ $employment->employer_business_name }}"
+                            data-abn="{{ $employment->abn }}"
+                            data-employment-role="{{ $employment->employment_role }}"
+                            data-position="{{ $employment->position }}"
+                            data-start-date="{{ optional($employment->employment_start_date)->format('Y-m-d') }}"
                             data-base-income="{{ $employment->base_income }}"
+                            data-after-tax-income="{{ $employment->after_tax_income }}"
                             data-additional-income="{{ $employment->additional_income ?? 0 }}"
                             data-income-frequency="{{ $employment->income_frequency }}"
-                            class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition" data-employment-id="{{ $employment->id }}">
+                            data-employer-phone="{{ $employment->employer_phone }}"
+                            data-is-current="{{ $employment->is_current ? '1' : '0' }}"
+                            data-end-date="{{ optional($employment->employment_end_date)->format('Y-m-d') }}"
+                            class="employment-item p-4 bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl border border-gray-200 hover:shadow-md transition">
                             <div class="flex justify-between items-start">
                                 <div class="flex items-start space-x-4">
                                     <div class="flex-shrink-0">
@@ -70,15 +81,26 @@
                                         </div>
                                     </div>
                                 </div>
-                                <button type="button"
-                                    data-employment-id="{{ $employment->id }}"
-                                    aria-label="Delete employment record {{ $employment->employment_type }}"
+                                <div class="flex items-center gap-2">
+                                    <button type="button"
+                                        data-employment-id="{{ $employment->id }}"
+                                        aria-label="Edit employment record {{ $employment->employment_type }}"
+                                        class="inline-flex items-center px-3 py-2 bg-blue-50 text-blue-700 rounded-lg text-sm font-medium hover:bg-blue-100 transition edit-employment-btn">
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z"/>
+                                        </svg>
+                                        Edit
+                                    </button>
+                                    <button type="button"
+                                        data-employment-id="{{ $employment->id }}"
+                                        aria-label="Delete employment record {{ $employment->employment_type }}"
                                         class="inline-flex items-center px-3 py-2 bg-red-50 text-red-700 rounded-lg text-sm font-medium hover:bg-red-100 transition delete-employment-btn">
-                                    <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
-                                        <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
-                                    </svg>
-                                    Delete
-                                </button>
+                                        <svg class="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 20 20">
+                                            <path fill-rule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clip-rule="evenodd"/>
+                                        </svg>
+                                        Delete
+                                    </button>
+                                </div>
                             </div>
                         </div>
                         @endforeach
@@ -91,7 +113,7 @@
                 @csrf
 
                 <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-xl p-6 border border-indigo-100 mb-6">
-                    <h4 class="text-sm font-semibold text-gray-900 mb-4">Add Employment Details</h4>
+                    <h4 id="employment-form-title" class="text-sm font-semibold text-gray-900 mb-4">Add Employment Details</h4>
 
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div>
@@ -122,15 +144,47 @@
                         </div>
 
                         <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Employment Role</label>
+                            <input type="text"
+                                name="employment_role"
+                                id="employment-role"
+                                class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                            <p id="employment_role-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        </div>
+
+                        <div>
                             <label class="block text-sm font-semibold text-gray-700 mb-2">ABN (if applicable)</label>
                             <input type="text" name="abn" id="abn" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
                             <p id="abn-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
 
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Employment Start Date</label>
-                            <input type="date" name="employment_start_date" id="employment-start-date" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Employment Start Date *</label>
+                            <input type="date" name="employment_start_date" id="employment-start-date" required class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
                             <p id="employment_start_date-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        </div>
+
+                        {{-- Current Position Toggle --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Is this your current position? *</label>
+                            <div class="mt-1 flex items-center space-x-4">
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="is_current" id="is_current_yes" value="1" checked class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                                    <span class="ml-2 text-sm text-gray-700">Yes (Current)</span>
+                                </label>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="radio" name="is_current" id="is_current_no" value="0" class="w-4 h-4 text-indigo-600 border-gray-300 focus:ring-2 focus:ring-indigo-500">
+                                    <span class="ml-2 text-sm text-gray-700">No (Past)</span>
+                                </label>
+                            </div>
+                            <p id="is_current-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        </div>
+
+                        {{-- Employment End Date (conditional) --}}
+                        <div id="employment-end-date-container" class="hidden">
+                            <label for="employment-end-date" class="block text-sm font-semibold text-gray-700 mb-2">Employment End Date <span class="text-red-500" aria-hidden="true">*</span></label>
+                            <input type="date" name="employment_end_date" id="employment-end-date" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
+                            <p id="employment_end_date-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
 
                         <div>
@@ -138,10 +192,22 @@
                             <input type="tel" name="employer_phone" id="employer-phone" class="mt-1 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full py-3 px-4 shadow-sm border-gray-300 rounded-xl">
                             <p id="employer_phone-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
+                        
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Income Frequency *</label>
+                            <select name="income_frequency" id="income-frequency" required class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Select frequency...</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="fortnightly">Fortnightly</option>
+                                <option value="monthly">Monthly</option>
+                                <option value="annual">Annual</option>
+                            </select>
+                            <p id="income_frequency-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        </div>
 
                         {{-- Base Income — display input (text + commas) + hidden raw value for submission --}}
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Base Income *</label>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Base Income Before Tax *</label>
                             <div class="mt-1 relative rounded-xl shadow-sm">
                                 <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
                                     <span class="text-gray-500 text-lg font-semibold">$</span>
@@ -155,6 +221,24 @@
                                 <input type="hidden" name="base_income" id="base-income">
                             </div>
                             <p id="base_income-error" class="mt-2 text-sm text-red-600 hidden"></p>
+                        </div>
+
+                        {{-- Base After Tax Income — display input (text + commas) + hidden raw value for submission --}}
+                        <div>
+                            <label class="block text-sm font-semibold text-gray-700 mb-2">Base Income After Tax</label>
+                            <div class="mt-1 relative rounded-xl shadow-sm">
+                                <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                                    <span class="text-gray-500 text-lg font-semibold">$</span>
+                                </div>
+                                <input type="text"
+                                       id="after-tax-income-display"
+                                       inputmode="decimal"
+                                       placeholder="0.00"
+                                       autocomplete="off"
+                                       class="focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 block w-full pl-10 py-3 px-4 border-gray-300 rounded-xl">
+                                <input type="hidden" name="after_tax_income" id="after-tax-income">
+                            </div>
+                            <p id="after_tax_income-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
 
                         {{-- Additional Income — same pattern --}}
@@ -175,17 +259,6 @@
                             <p id="additional_income-error" class="mt-2 text-sm text-red-600 hidden"></p>
                         </div>
 
-                        <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">Income Frequency *</label>
-                            <select name="income_frequency" id="income-frequency" required class="mt-1 block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-                                <option value="">Select frequency...</option>
-                                <option value="weekly">Weekly</option>
-                                <option value="fortnightly">Fortnightly</option>
-                                <option value="monthly">Monthly</option>
-                                <option value="annual">Annual</option>
-                            </select>
-                            <p id="income_frequency-error" class="mt-2 text-sm text-red-600 hidden"></p>
-                        </div>
                     </div>
                 </div>
 
@@ -221,6 +294,7 @@
 <script>
     Object.assign(window.EMPLOYMENT_CONFIG, {
         deleteRoute: @js(route('applications.employment-details.destroy', [$application, ':id'])),
+        updateRoute: @js(route('applications.employment-details.update', [$application, ':id'])),
         initialAnnualIncome: @js($application->employmentDetails->sum(fn($e) => $e->getAnnualIncome())),
     });
 </script>

@@ -328,10 +328,28 @@
             closeBtn.focus();
         });
         document.body.style.overflow = 'hidden';
+
+        // Seed lastSeen before first poll fires
+        seedLastSeen();
+
         clearUnread(tab);
         startPolling();
     }
 
+    function seedLastSeen() {
+        ['email', 'sms'].forEach(channel => {
+            const scrollEl = document.getElementById(
+                channel === 'email' ? 'email-thread-scroll' : 'sms-thread-scroll'
+            );
+            if (!scrollEl) return;
+            scrollEl.querySelectorAll('[data-comm-id]').forEach(el => {
+                const ts = el.dataset.commCreatedAt;
+                if (ts && (!lastSeen[channel] || ts > lastSeen[channel])) {
+                    lastSeen[channel] = ts;
+                }
+            });
+        });
+    }
     function closePanel() {
         stopPolling();
         offcanvas.classList.add('translate-x-full');
@@ -381,6 +399,16 @@
             if (e.key === 'End')        target = tabList[tabList.length - 1];
             if (target) { e.preventDefault(); target.click(); target.focus(); }
         });
+    });
+
+    // Seed lastSeen from messages already rendered by Blade
+    document.querySelectorAll('#email-thread-scroll [data-comm-id]').forEach(el => {
+        const ts = el.dataset.commCreatedAt;
+        if (ts && (!lastSeen.email || ts > lastSeen.email)) lastSeen.email = ts;
+    });
+    document.querySelectorAll('#sms-thread-scroll [data-comm-id]').forEach(el => {
+        const ts = el.dataset.commCreatedAt;
+        if (ts && (!lastSeen.sms || ts > lastSeen.sms)) lastSeen.sms = ts;
     });
 
     window.CommPanel = { open: openPanel, close: closePanel };

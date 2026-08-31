@@ -330,7 +330,7 @@
         <div class="max-w-5xl mx-auto">
             <div class="pt-8 border-t border-gray-200 text-center">
                 <div class="flex flex-col md:flex-row justify-between items-center text-gray-600 text-sm">
-                    <p class="mb-4 md:mb-0">&copy; {{ date('Y') }} LoanFlow. All rights reserved.</p>
+                    <p class="mb-4 md:mb-0">&copy; {{ date('Y') }} ZYA Capital, Term and Conditions Apply.</p>
                     <div class="flex items-center space-x-6">
                         <a href="{{ route('privacy-policy') }}" class="hover:text-indigo-600 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">Privacy Policy</a>
                         <a href="{{ route('terms-and-conditions') }}" class="hover:text-indigo-600 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">Terms of Service</a>

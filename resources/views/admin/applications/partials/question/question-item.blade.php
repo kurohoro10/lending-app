@@ -2,39 +2,71 @@
     resources/views/admin/applications/partials/question/question-item.blade.php
 
     Variables:
-        $question  — App\Models\Question (with askedBy, answeredBy loaded)
+        $question  — App\Models\Question (with askedBy, answeredBy, documents loaded)
 --}}
 @php
+    use App\Models\Question;
+
     $isNew        = $question->status === 'answered' && !$question->read_at;
     $isPending    = $question->status === 'pending';
     $isAnswered   = $question->status === 'answered';
 
+    $isChecklistItem   = $question->isChecklistItem();
+    $reviewStatus       = $question->review_status;
+    $isAwaitingReview   = $reviewStatus === Question::REVIEW_AWAITING_REVIEW;
+    $isApproved         = $reviewStatus === Question::REVIEW_APPROVED;
+    $isReturned         = $reviewStatus === Question::REVIEW_RETURNED;
+
+    // Single status badge — freeform questions keep their exact original
+    // three-state look (pending/new-answer/answered); checklist items add
+    // two more terminal-or-looping states on top without touching those.
+    $statusBadge = match(true) {
+        $isApproved => ['label' => 'Approved', 'class' => 'bg-green-100 text-green-800'],
+        $isReturned => ['label' => 'Returned', 'class' => 'bg-red-100 text-red-700'],
+        $isPending  => ['label' => 'Pending', 'class' => 'bg-yellow-100 text-yellow-800'],
+        $isNew      => ['label' => 'New Answer', 'class' => 'bg-green-100 text-green-800'],
+        $isAnswered && $isChecklistItem => ['label' => 'Awaiting Review', 'class' => 'bg-gray-100 text-gray-600'],
+        default     => ['label' => 'Answered', 'class' => 'bg-gray-100 text-gray-600'],
+    };
+
     $cardBorder = match(true) {
+        $isReturned => 'border-red-300 bg-red-50',
+        $isApproved => 'border-green-300 bg-green-50',
         $isNew      => 'border-green-300 bg-green-50',
         $isPending  => 'border-yellow-300 bg-yellow-50',
         default     => 'border-gray-200 bg-white',
     };
 
-    $docCategories = [
-        'id'          => 'Identification',
-        'income'      => 'Income Documentation',
-        'bank'        => 'Bank Statements',
-        'assets'      => 'Asset Documentation',
-        'liabilities' => 'Liability Documentation',
-        'employment'  => 'Employment / Business Verification',
-        'other'       => 'Other Documents',
-    ];
+    $docCategories = \App\Models\Document::getDocumentCategories();
 
     $isBankConnect = $question->doc_category_hint === 'bank_connect';
+    $itemType      = $question->checklistItemType(); // null for freeform questions
+    $expectsUpload = in_array($itemType, ['upload', 'upload_comment'], true);
 
-    // Warn admin if this is a bank_connect question but CreditSense isn't configured
-    $csNotConfigured = $isBankConnect && $isPending
-        && blank(\App\Models\Setting::where('key', 'creditsense_store_code')->value('value'));
+    // Warn admin if this is a bank_connect question but the ACTIVE provider isn't configured
+    $activeBankProvider = \App\Models\Setting::where('key', 'active_bank_provider')->value('value') ?? 'basiq';
+
+    $bankProviderLabel = match($activeBankProvider) {
+        'basiq'       => 'Basiq',
+        'creditsense' => 'CreditSense',
+        default       => 'Bank connection',
+    };
+
+    $bankProviderNotConfigured = match($activeBankProvider) {
+        'basiq'       => blank(\App\Models\Setting::where('key', 'basiq_api_key')->value('value')),
+        'creditsense' => blank(\App\Models\Setting::where('key', 'creditsense_store_code')->value('value')),
+        default       => false, // manual document upload — no external credentials required
+    };
+
+    $csNotConfigured = $isBankConnect && $isPending && $bankProviderNotConfigured;
+
+    $linkedDocs = $question->documents->sortBy('version');
 @endphp
 
 <div id="question-card-{{ $question->id }}"
      class="border rounded-lg p-4 transition-all {{ $cardBorder }}"
      role="listitem"
+     data-review-status="{{ $reviewStatus }}"
      aria-label="Question: {{ Str::limit($question->question, 80) }}">
 
     <div class="flex justify-between items-start">
@@ -42,19 +74,14 @@
 
             {{-- Badges row --}}
             <div class="flex flex-wrap items-center gap-2 mb-2">
-                @if($isPending)
-                    <span class="px-2 py-0.5 text-xs rounded-full bg-yellow-100 text-yellow-800 font-medium">
-                        Pending
-                    </span>
-                @elseif($isNew)
-                    <span class="px-2 py-0.5 text-xs rounded-full bg-green-100 text-green-800 font-medium"
-                          data-new-badge
-                          aria-label="New answer — unread">
-                        New Answer
-                    </span>
-                @else
-                    <span class="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 font-medium">
-                        Answered
+                <span class="px-2 py-0.5 text-xs rounded-full {{ $statusBadge['class'] }} font-medium"
+                      @if($isNew) data-new-badge aria-label="New answer — unread" @endif>
+                    {{ $statusBadge['label'] }}
+                </span>
+
+                @if($isChecklistItem)
+                    <span class="px-2 py-0.5 text-xs rounded-full bg-purple-100 text-purple-700 font-medium">
+                        Assessment Checklist
                     </span>
                 @endif
 
@@ -68,14 +95,14 @@
                 @if($isBankConnect)
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
                                  bg-blue-100 text-blue-700 font-medium"
-                          aria-label="CreditSense bank connection requested">
+                          aria-label="{{ $bankProviderLabel }} bank connection requested">
                         <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                   d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"/>
                         </svg>
                         Bank Connection
                     </span>
-                @elseif($question->doc_category_hint && isset($docCategories[$question->doc_category_hint]))
+                @elseif($expectsUpload && isset($docCategories[$question->doc_category_hint]))
                     <span class="inline-flex items-center gap-1 px-2 py-0.5 text-xs rounded-full
                                  bg-indigo-100 text-indigo-700 font-medium"
                           aria-label="Document requested: {{ $docCategories[$question->doc_category_hint] }}">
@@ -92,19 +119,19 @@
             </div>
 
             @if($csNotConfigured)
-            {{-- Admin warning: CreditSense not configured in Settings --}}
+            {{-- Admin warning: active bank provider not configured in Settings --}}
             <div class="mt-2 flex items-start gap-2 px-3 py-2 rounded-lg border border-amber-300 bg-amber-50"
                  role="alert">
                 <svg class="w-4 h-4 text-amber-500 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
                     <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd"/>
                 </svg>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold text-amber-800">CreditSense not configured</p>
+                    <p class="text-xs font-semibold text-amber-800">{{ $bankProviderLabel }} not configured</p>
                     <p class="text-xs text-amber-700 mt-0.5">
-                        The client will not be able to connect their bank account until CreditSense credentials are saved in
-                        <a href="{{ route('admin.settings.index') }}#creditsense"
+                        The client will not be able to connect their bank account until {{ $bankProviderLabel }} credentials are saved in
+                        <a href="{{ route('admin.settings.index') }}#bankpanel-{{ $activeBankProvider }}"
                            class="underline hover:text-amber-900 focus:outline-none focus:ring-1 focus:ring-amber-500 rounded">
-                            Settings → CreditSense
+                            Settings → {{ $bankProviderLabel }}
                         </a>.
                     </p>
                 </div>
@@ -127,12 +154,40 @@
                         {{ $question->answered_at->format('d M Y, g:ia') }}
                     </time>
                 @endif
+                @if($question->reviewed_at)
+                    &bull; Reviewed
+                    <time datetime="{{ $question->reviewed_at->toIso8601String() }}">
+                        {{ $question->reviewed_at->format('d M Y, g:ia') }}
+                    </time>
+                    by {{ $question->reviewedBy->name ?? 'Unknown' }}
+                @endif
             </p>
         </div>
 
         {{-- Action buttons --}}
         <div class="flex items-center gap-2 flex-shrink-0">
-            @if($isNew)
+            @if($isAwaitingReview)
+                <button type="button"
+                        data-action="approve-question"
+                        data-question-id="{{ $question->id }}"
+                        class="text-xs text-green-700 border border-green-300 rounded px-2 py-1
+                               hover:bg-green-100 transition
+                               focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-1"
+                        aria-label="Approve item: '{{ Str::limit($question->question, 40) }}'">
+                    Approve
+                </button>
+                <button type="button"
+                        data-action="toggle-return-panel"
+                        data-question-id="{{ $question->id }}"
+                        aria-expanded="false"
+                        aria-controls="return-panel-{{ $question->id }}"
+                        class="text-xs text-red-700 border border-red-300 rounded px-2 py-1
+                               hover:bg-red-100 transition
+                               focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-1"
+                        aria-label="Return item: '{{ Str::limit($question->question, 40) }}'">
+                    Return
+                </button>
+            @elseif($isNew)
                 <button type="button"
                         data-action="mark-as-read"
                         data-question-id="{{ $question->id }}"
@@ -157,39 +212,73 @@
         </div>
     </div>
 
-    {{-- Answer panel --}}
-    <div class="mt-3 p-3 bg-white rounded border
-                {{ $isNew ? 'border-green-200' : 'border-gray-200' }}">
-        @if($isAnswered)
-            <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $question->answer }}</p>
+    {{-- Return note panel (hidden by default) — same review-note pattern as
+         the generic document review panel in documents.blade.php --}}
+    @if($isAwaitingReview)
+    <div id="return-panel-{{ $question->id }}" class="hidden mt-3 p-3 bg-red-50 border border-red-200 rounded-lg">
+        <label for="return-notes-{{ $question->id }}" class="block text-xs font-semibold text-red-800 mb-1">
+            Reason for returning this item (required — the client will see this)
+        </label>
+        <textarea id="return-notes-{{ $question->id }}"
+                  rows="2"
+                  maxlength="1000"
+                  class="w-full text-sm border-red-300 rounded-md focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="e.g. The uploaded document is illegible, please re-upload a clearer copy."></textarea>
+        <p class="return-error hidden mt-1 text-xs text-red-600" role="alert"></p>
+        <div class="mt-2 flex justify-end gap-2">
+            <button type="button"
+                    data-action="cancel-return"
+                    data-question-id="{{ $question->id }}"
+                    class="text-xs text-gray-600 px-2 py-1 hover:text-gray-800">
+                Cancel
+            </button>
+            <button type="button"
+                    data-action="confirm-return"
+                    data-question-id="{{ $question->id }}"
+                    class="text-xs text-white bg-red-600 hover:bg-red-700 rounded px-3 py-1 font-medium">
+                Confirm Return
+            </button>
+        </div>
+    </div>
+    @endif
 
-            @if($question->doc_category_hint)
-                {{-- Show any documents the client uploaded linked to this question --}}
-                @php
-                    $linkedDocs = $question->application->documents
-                        ->where('document_category', $question->doc_category_hint)
-                        ->where('created_at', '>=', $question->asked_at);
-                @endphp
-                @if($linkedDocs->isNotEmpty())
-                    <div class="mt-3 pt-3 border-t border-gray-100">
-                        <p class="text-xs font-semibold text-gray-500 mb-2">Uploaded document(s):</p>
-                        <ul class="space-y-1" aria-label="Documents uploaded in response">
-                            @foreach($linkedDocs as $doc)
-                                <li class="flex items-center gap-2 text-xs text-gray-700">
-                                    <svg class="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                                        <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
-                                    </svg>
-                                    <a href="{{ route('documents.download', $doc) }}"
-                                       class="text-indigo-600 hover:underline focus:outline-none focus:underline"
-                                       aria-label="Download {{ $doc->original_filename }}">
-                                        {{ $doc->original_filename }}
-                                    </a>
-                                    <span class="text-gray-400">({{ $doc->file_size_human }})</span>
-                                </li>
-                            @endforeach
-                        </ul>
-                    </div>
-                @endif
+    {{-- Answer / review panel --}}
+    <div class="mt-3 p-3 bg-white rounded border
+                {{ $isNew || $isReturned ? 'border-green-200' : 'border-gray-200' }}">
+        @if($isReturned && $question->review_notes)
+            <div class="mb-2 pb-2 border-b border-red-100">
+                <p class="text-xs font-semibold text-red-700">Returned — reason given to client:</p>
+                <p class="text-xs text-red-600 mt-0.5 whitespace-pre-wrap">{{ $question->review_notes }}</p>
+            </div>
+        @endif
+
+        @if($isAnswered)
+            @if($question->answer)
+                <p class="text-sm text-gray-800 whitespace-pre-wrap">{{ $question->answer }}</p>
+            @endif
+
+            @if($linkedDocs->isNotEmpty())
+                <div class="mt-3 pt-3 border-t border-gray-100">
+                    <p class="text-xs font-semibold text-gray-500 mb-2">Uploaded document(s):</p>
+                    <ul class="space-y-1" aria-label="Documents uploaded in response">
+                        @foreach($linkedDocs as $doc)
+                            <li class="flex items-center gap-2 text-xs text-gray-700">
+                                <svg class="w-3.5 h-3.5 text-indigo-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                    <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                </svg>
+                                <a href="{{ route('documents.download', $doc) }}"
+                                   class="text-indigo-600 hover:underline focus:outline-none focus:underline"
+                                   aria-label="Download {{ $doc->original_filename }}">
+                                    {{ $doc->original_filename }}
+                                </a>
+                                <span class="text-gray-400">({{ $doc->file_size_human }})</span>
+                                @if($doc->version > 1)
+                                    <span class="px-1.5 py-0.5 rounded bg-gray-100 text-gray-500">v{{ $doc->version }}</span>
+                                @endif
+                            </li>
+                        @endforeach
+                    </ul>
+                </div>
             @endif
         @else
             <p class="text-sm text-gray-500 italic">Waiting for client's response…</p>

@@ -1,12 +1,14 @@
 {{-- resources/views/applications/partials/show/status-overview.blade.php --}}
+@php use App\Models\Application; @endphp
 @php
     $statusConfig = [
-        'draft'                      => ['color' => 'gray',   'label' => 'Draft'],
-        'submitted'                  => ['color' => 'blue',   'label' => 'Submitted'],
-        'under_review'               => ['color' => 'yellow', 'label' => 'Under Review'],
-        'additional_info_required'   => ['color' => 'orange', 'label' => 'Additional Info Required'],
-        'approved'                   => ['color' => 'green',  'label' => 'Approved'],
-        'declined'                   => ['color' => 'red',    'label' => 'Declined'],
+        Application::STATUS_APPLICATION => ['color' => 'blue',   'label' => 'Application'],
+        Application::STATUS_WIP         => ['color' => 'yellow', 'label' => 'Work in Progress'],
+        Application::STATUS_OUTDOC      => ['color' => 'orange', 'label' => 'Outstanding Document'],
+        Application::STATUS_APPROVED    => ['color' => 'purple', 'label' => 'Approved'],
+        Application::STATUS_SETTLED     => ['color' => 'green',  'label' => 'Settled'],
+        Application::STATUS_DECLINED    => ['color' => 'red',    'label' => 'Declined'],
+        Application::STATUS_DEFERRED    => ['color' => 'gray',   'label' => 'Deferred'],
     ];
     $sc    = $statusConfig[$application->status] ?? ['color' => 'gray', 'label' => ucwords(str_replace('_', ' ', $application->status))];
     $color = $sc['color'];
@@ -72,8 +74,8 @@
             <div>
                 <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Term</dt>
                 <dd class="mt-2 text-2xl font-bold text-gray-900">
-                    {{ $application->term_months }}
-                    <span class="text-sm font-normal text-gray-500">months</span>
+                    {{ $application->term_weeks }}
+                    <span class="text-sm font-normal text-gray-500">weeks</span>
                 </dd>
             </div>
 

@@ -10,6 +10,8 @@ namespace App\Services;
 
 use Twilio\Rest\Client;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
+use App\Models\ActivityLog;
 use App\Models\Communication;
 use App\Models\Application;
 use App\Models\Setting;
@@ -23,10 +25,10 @@ class TwilioService
 
     public function __construct()
     {
-        if (!app()->environment('production')) {
-            Log::info('Twilio disabled (non-production environment).');
-            return;
-        }
+        // if (!app()->environment('production')) {
+        //     Log::info('Twilio disabled (non-production environment).');
+        //     return;
+        // }
 
         $sid   = Setting::get('twilio_sid')        ?: config('services.twilio.sid');
         $token = Setting::get('twilio_auth_token') ?: config('services.twilio.auth_token');
@@ -172,6 +174,25 @@ class TwilioService
 
         if ($application) {
             $this->logCommunication($application, $type, 'inbound', $cleanFrom, $body, $messageSid, 'delivered');
+
+            // handleIncoming() is the actual entry point for inbound SMS/WhatsApp —
+            // SmsCommunicationController::incoming() only delegates here and never
+            // sees $application/$cleanFrom/$body itself, so this is the only place
+            // this data is available to log against.
+            ActivityLog::logActivity(
+                'sms_received',
+                $type === 'whatsapp'
+                    ? "Incoming WhatsApp message from {$cleanFrom}"
+                    : "Incoming SMS from {$cleanFrom}",
+                $application,
+                null,
+                [
+                    'direction' => 'inbound',
+                    'from'      => $cleanFrom,
+                    'channel'   => $type,
+                    'excerpt'   => $body ? Str::limit($body, 150) : null,
+                ]
+            );
         }
 
         Log::info("Incoming {$type} from {$cleanFrom}: {$body}");
@@ -191,8 +212,14 @@ class TwilioService
      */
     protected function findApplicationByPhone(string $phone): ?Application
     {
-        return Application::whereHas('personalDetails', function ($query) use ($phone) {
-            $query->where('mobile_phone', $phone);
+        // Twilio sends E.164, strip the + for comparison
+        $normalized = ltrim($phone, '+');
+
+        return Application::whereHas('personalDetails', function ($query) use ($normalized) {
+            $query->whereRaw(
+                "REPLACE(mobile_phone, '+', '') = ?",
+                [$normalized]
+            );
         })->latest()->first();
     }
 }

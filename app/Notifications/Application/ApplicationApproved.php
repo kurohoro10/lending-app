@@ -35,7 +35,8 @@ class ApplicationApproved extends Notification
             ->line('3. Funds will be disbursed upon completion')
             ->action('View Application', route('applications.show', $this->application))
             ->line('Our team will contact you shortly to finalize the details.')
-            ->line('Thank you for choosing us for your financing needs!');
+            ->line('Thank you for choosing us for your financing needs!')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toArray($notifiable): array

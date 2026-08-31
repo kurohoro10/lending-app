@@ -33,7 +33,8 @@ class ApplicationAdditionalInfoRequired extends Notification
             ->line('**Application Number:** ' . $this->application->application_number)
             ->line('Please log in to your account to view what information is required and provide the necessary details.')
             ->action('Update Application', route('applications.show', $this->application))
-            ->line('If you have any questions, please reply to this email or contact our support team.');
+            ->line('If you have any questions, please reply to this email or contact our support team.')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toArray($notifiable): array

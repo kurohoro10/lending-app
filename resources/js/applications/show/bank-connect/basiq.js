@@ -16,15 +16,15 @@
 
     // ── DOM refs ──────────────────────────────────────────────────────────
     const accordionBtn   = document.getElementById('bank-statements-btn');
-    const launchBtn      = document.getElementById('launch-basiq-btn');
+    const launchBtn      = document.getElementById('launch-bank-connect-btn');
     const reconnBtn      = document.getElementById('reconnect-bank-btn');
-    const launcher       = document.getElementById('basiq-launcher');
-    const wrapper        = document.getElementById('basiq-wrapper');
-    const errorBox       = document.getElementById('basiq-error');
-    const errorMsg       = document.getElementById('basiq-error-message');
-    const btnIcon        = document.getElementById('basiq-btn-icon');
-    const btnSpinner     = document.getElementById('basiq-btn-spinner');
-    const btnLabel       = document.getElementById('basiq-btn-label');
+    const launcher       = document.getElementById('bank-connect-launcher');
+    const wrapper        = document.getElementById('bank-connect-wrapper');
+    const errorBox       = document.getElementById('bank-connect-error');
+    const errorMsg       = document.getElementById('bank-connect-error-message');
+    const btnIcon        = document.getElementById('bank-connect-btn-icon');
+    const btnSpinner     = document.getElementById('bank-connect-btn-spinner');
+    const btnLabel       = document.getElementById('bank-connect-btn-label');
     let messageHandler   = null;
 
     // ── Accordion toggle ──────────────────────────────────────────────────
@@ -82,7 +82,7 @@
      * Idempotent — the server returns the existing user ID if already created.
      */
     async function createBasiqUser() {
-        const { userRoute, csrfToken } = window.BASIQ ?? {};
+        const { userRoute, csrfToken } = window.BANK_CONNECT ?? {};
 
         const res = await fetch(userRoute, {
             method: 'POST',
@@ -123,61 +123,27 @@
      * Basiq UI SDK docs: https://api.basiq.io/docs/ui-sdk
      */
     async function loadAndInitSdk() {
-        const { authLinkRoute, csrfToken } = window.BASIQ ?? {};
+        const { authLinkRoute, csrfToken } = window.BANK_CONNECT ?? {};
 
-        const res = await fetch(authLinkRoute, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-TOKEN': csrfToken ?? '',
-            },
-        });
+        try {
+            const res = await fetch(authLinkRoute, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken ?? '',
+                },
+            });
 
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error ?? 'Failed to create auth link.');
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error ?? 'Failed to create auth link.');
 
-        const loadingEl  = document.getElementById('basiq-loading');
-        const container  = document.getElementById('basiq-ui-container');
+            // Instead of embedding in iframe, redirect the entire page
+            window.location.href = data.url;
 
-        // Prevent duplicate iframes
-        container.innerHTML = '';
-
-        // Build the iframe
-        const iframe = document.createElement('iframe');
-        iframe.src    = data.url;          // "https://connect.basiq.io/63448be4"
-        iframe.title  = 'Connect your bank account';   // accessibility
-        iframe.setAttribute('aria-label', 'Basiq bank connection');
-        iframe.style.cssText = 'width:100%;height:600px;border:none;';
-
-        // Accessible loading state
-        loadingEl?.setAttribute('aria-busy', 'true');
-
-        iframe.onload = () => {
-            loadingEl?.classList.add('hidden');
-            loadingEl?.removeAttribute('aria-busy');
-            container?.classList.remove('hidden');
-            container?.focus();
+        } catch (err) {
+            showError(err.message ?? 'Unable to start bank connection. Please try again.');
             setLaunchLoading(false);
-        };
-
-        container?.appendChild(iframe);
-
-        // Listen for postMessage events from the Basiq UI
-        messageHandler = (event) => {
-            if (event.origin !== 'https://connect.basiq.io') return;
-
-            if (event.data?.action === 'success') {
-                handleBasiqSuccess();
-            }
-
-            if (event.data?.action === 'close') {
-                launcher?.classList.remove('hidden');
-                wrapper?.classList.add('hidden');
-                setLaunchLoading(false);
-            }
-        };
-
-        window.addEventListener('message', messageHandler, { once: true });
+        }
     }
 
     /**
@@ -185,7 +151,7 @@
      * Notifies the server to record completion, then updates the UI.
      */
     async function handleBasiqSuccess() {
-        const { completeRoute, csrfToken } = window.BASIQ ?? {};
+        const { completeRoute, csrfToken } = window.BANK_CONNECT ?? {};
 
         try {
             const res  = await fetch(completeRoute, {

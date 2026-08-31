@@ -11,10 +11,10 @@ use Illuminate\Support\Facades\Log;
 /**
  * CreditSenseService
  *
- * Single source of truth for all CreditSense REST API v2 interactions.
+ * Single source of truth for all CreditSense REST API v2.3 interactions.
  *
  * Authentication uses two separate credentials:
- *   - API Key   → UUID included in the request URL path: /v2/{api-key}/endpoint
+ *   - API Key   → UUID included in the request URL path: /v2.3/{api-key}/endpoint
  *   - API Token → UUID included in every request body under Settings.API_Token
  *
  * All public API methods return a normalised result array:
@@ -29,7 +29,7 @@ use Illuminate\Support\Facades\Log;
  * Controllers translate these result arrays into HTTP responses — this class
  * is deliberately HTTP-response-free.
  *
- * @see https://api.creditsense.com.au/v2
+ * @see https://api.creditsense.com.au/v2.3
  */
 class CreditSenseService
 {
@@ -119,7 +119,7 @@ class CreditSenseService
         $key  = $apiKey  ?? $this->apiKey();
         $base = $baseUrl ? rtrim($baseUrl, '/') : $this->baseUrl();
 
-        return "{$base}/v2/{$key}/{$endpoint}";
+        return "{$base}/v2.3/{$key}/{$endpoint}";
     }
 
     /**
@@ -268,7 +268,7 @@ class CreditSenseService
         $maskedKey = substr($apiKey, 0, 8) . '***';
 
         Log::debug('[CreditSense] Test connection', [
-            'endpoint' => "{$baseUrl}/v2/{$maskedKey}/app/search",
+            'endpoint' => "{$baseUrl}/v2.3/{$maskedKey}/app/search",
         ]);
 
         try {
@@ -313,7 +313,7 @@ class CreditSenseService
     /**
      * Download a full CreditSense report for a given CS App ID.
      *
-     * Uses POST /v2/{api-key}/report/download
+     * Uses POST /v2.3/{api-key}/report/download
      *
      * @param  int|string  $csAppId   The numeric CreditSense App ID (not your internal app_ref)
      * @param  array       $formats   Report formats to request; default ['json']
@@ -333,6 +333,7 @@ class CreditSenseService
                     'Payload'  => [
                         'App_ID'            => (int) $csAppId,
                         'CS_Report_Formats' => $formats,
+                        'CS_Report_Code'    => 'detailed_affordability_lixi2',
                     ],
                 ]);
 
@@ -343,6 +344,7 @@ class CreditSenseService
                     'cs_app_id' => $csAppId,
                     'status'    => $response->status(),
                     'body'      => $body,
+                    'raw_body'  => $response->body(),
                 ]);
 
                 return $this->failFromBody($body, $response);
@@ -365,7 +367,7 @@ class CreditSenseService
      * Create a quicklink token for a customer to complete CreditSense on their
      * own device.
      *
-     * Uses POST /v2/{api-key}/quicklinks/create
+     * Uses POST /v2.3/{api-key}/quicklinks/create
      *
      * On success, returns:
      *   data['token'] — e.g. 'fun6'
@@ -443,7 +445,7 @@ class CreditSenseService
     /**
      * Send an existing quicklink to a customer via SMS.
      *
-     * Uses POST /v2/{api-key}/quicklinks/sms
+     * Uses POST /v2.3/{api-key}/quicklinks/sms
      * Required payload: Token, Name, Mobile
      */
     public function sendQuicklinkSms(string $token, string $name, string $mobile): array
@@ -485,7 +487,7 @@ class CreditSenseService
     /**
      * Send an existing quicklink to a customer via email.
      *
-     * Uses POST /v2/{api-key}/quicklinks/email
+     * Uses POST /v2.3/{api-key}/quicklinks/email
      * Required payload: Token, Name, Email
      */
     public function sendQuicklinkEmail(string $token, string $name, string $email): array
@@ -529,7 +531,7 @@ class CreditSenseService
     /**
      * Poll CreditSense for the current status of an application.
      *
-     * Uses POST /v2/{api-key}/app/search
+     * Uses POST /v2.3/{api-key}/app/search
      *
      * On success, returns:
      *   data['applications'] — array of matching CS application objects

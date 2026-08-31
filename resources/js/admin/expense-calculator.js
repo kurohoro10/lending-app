@@ -85,6 +85,8 @@
         saveBtn.classList.add('hidden');
         tbody.innerHTML = '';
         clearStatus();
+        saveBtn.disabled = false;
+        spinner.classList.add('hidden');
 
         // Derive the data route from the save route (swap /verify → /data)
         const dataRoute = form.dataset.saveRoute.replace('/verify', '/data');
@@ -132,8 +134,10 @@
 
         // ── Build lookup of previously verified amounts ────────────────────
         const previouslyVerified = {};
+        const previousNotes = {};
         (data.verified_expenses || []).forEach(v => {
             previouslyVerified[v.description] = v.verified_amount;
+            if (v.note) previousNotes[v.description] = v.note;
         });
 
         // ── Track which Basiq categories are matched to a client expense ──
@@ -146,9 +150,9 @@
         // ── Render one row per client expense ─────────────────────────────
         (data.client_expenses || []).forEach((exp, idx) => {
             if (exp.basiq_label) matchedBasiqLabels.add(exp.basiq_label);
-
             const prevVerified = previouslyVerified[exp.description] ?? exp.basiq_amount ?? exp.amount;
-            addRow(idx, exp.description, exp.amount, exp.basiq_amount, prevVerified);
+            const prevNote     = previousNotes[exp.description] ?? '';
+            addRow(idx, exp.description, exp.amount, exp.basiq_amount, prevVerified, prevNote);
         });
 
         // If no rows at all, start with one blank row
@@ -198,7 +202,7 @@
 
     // ── Row management ───────────────────────────────────────────────────────
 
-    function addRow(idx, description = '', clientMonthly = 0, basiqAmount = null, verifiedAmount = null) {
+    function addRow(idx, description = '', clientMonthly = 0, basiqAmount = null, verifiedAmount = null, note = '') {
         const tr = document.createElement('tr');
         tr.className = 'group hover:bg-gray-50 transition-colors';
 
@@ -245,7 +249,22 @@
                 <input type="hidden" name="expenses[${idx}][basiq_amount]" value="${basiqMonthly}">
             `;
         } else {
-            tdBasiq.innerHTML = '<span class="text-gray-300 text-xs">—</span>';
+            tdBasiq.classList.add('text-right');
+            const manualVal = basiqAmount !== null && basiqAmount !== undefined && basiqAmount !== ''
+                ? parseFloat(basiqAmount) : '';
+            tdBasiq.innerHTML = `
+                <input type="number"
+                       name="expenses[${idx}][basiq_amount]"
+                       min="0"
+                       step="0.01"
+                       value="${manualVal}"
+                       placeholder="0.00"
+                       aria-label="Manual provider amount row ${idx + 1}"
+                       class="basiq-manual-input w-full border border-emerald-300 bg-emerald-50 rounded-md
+                              px-2 py-1.5 text-sm text-right font-medium text-emerald-700
+                              placeholder-emerald-300 tabular-nums
+                              focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 focus:outline-none">
+            `;
         }
 
         // Verified amount (editable)
@@ -280,7 +299,7 @@
                       class="comment-input w-full border border-amber-200 bg-amber-50 rounded-md
                              px-2 py-1.5 text-sm text-gray-700 resize-none
                              focus:ring-2 focus:ring-amber-400 focus:border-amber-400 focus:outline-none
-                             placeholder-amber-300"></textarea>
+                             placeholder-amber-300">${escHtml(note)}</textarea>
         `;
 
         tr.appendChild(tdDesc);
@@ -312,6 +331,8 @@
     function bindRowListeners(tr, tdAnnual) {
         const verifiedInput = tr.querySelector('.verified-input');
         const commentInput  = tr.querySelector('.comment-input');
+        const basiqManual = tr.querySelector('.basiq-manual-input');
+        basiqManual?.addEventListener('input', () => recalcTotals());
 
         verifiedInput.addEventListener('input', () => {
             const val = parseFloat(verifiedInput.value) || 0;
@@ -389,7 +410,7 @@
                 amount:          parseFloat(amount),
                 frequency:       freq ?? 'monthly',
                 verified_amount: parseFloat(verified),
-                basiq_amount:    basiq !== undefined ? parseFloat(basiq) : null,
+                basiq_amount: (basiq !== undefined && basiq !== '') ? parseFloat(basiq) : null,
             });
 
             if (comment) {

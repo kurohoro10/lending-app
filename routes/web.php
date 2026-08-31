@@ -1,9 +1,16 @@
 <?php
 
 use App\Http\Controllers\ApplicationController;
+use App\Http\Controllers\DirectorExpenseController;
+use App\Http\Controllers\Auth\EmailTwoFactorChallengeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', fn () => view('welcome'))->name('welcome');
+
+// Resend the email OTP code while a login is mid two-factor challenge.
+Route::post('two-factor-challenge/resend-email-code', [EmailTwoFactorChallengeController::class, 'resend'])
+    ->middleware(['web', 'throttle:email-otp-resend'])
+    ->name('two-factor.email.resend');
 
 Route::get('apply',  [ApplicationController::class, 'create'])->name('applications.create');
 Route::post('apply', [ApplicationController::class, 'store'])->name('applications.store');
@@ -19,3 +26,12 @@ Route::middleware(['auth:sanctum', config('jetstream.auth_session'), 'verified',
     ->prefix('admin')
     ->name('admin.')
     ->group(base_path('routes/admin/adminRoutes.php'));
+
+Route::get('/director-expenses/{application}/{director}',
+    [DirectorExpenseController::class, 'show'])
+    ->name('director.expenses.show')
+    ->middleware('signed');
+
+Route::post('/director-expenses/{application}/{director}',
+    [DirectorExpenseController::class, 'store'])
+    ->name('director.expenses.store');

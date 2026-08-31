@@ -29,6 +29,8 @@
                                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Type</th>
                                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Description</th>
                                 <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Property Use</th>
+                                <th scope="col" class="px-4 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Owned</th>
+                                <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Ownership %</th>
                                 <th scope="col" class="px-4 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Value</th>
                             </tr>
                         </thead>
@@ -48,6 +50,10 @@
                                             —
                                         @endif
                                     </td>
+                                    <td class="px-4 py-3 text-gray-600">{{ $asset->is_owned ? 'Yes' : 'No' }}</td>
+                                    <td class="px-4 py-3 text-right text-gray-600">
+                                        {{ $asset->ownership_percentage !== null ? $asset->ownership_percentage . '%' : '100%' }}
+                                    </td>
                                     <td class="px-4 py-3 text-right font-semibold text-gray-900">
                                         ${{ number_format($asset->estimated_value, 2) }}
                                     </td>
@@ -56,7 +62,7 @@
                         </tbody>
                         <tfoot class="bg-gray-50 border-t border-gray-200">
                             <tr>
-                                <td colspan="3" class="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
+                                <td colspan="5" class="px-4 py-3 text-sm font-semibold text-gray-700">Total</td>
                                 <td class="px-4 py-3 text-right font-bold text-emerald-700">
                                     ${{ number_format($assets->sum('estimated_value'), 2) }}
                                 </td>

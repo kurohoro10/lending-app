@@ -23,11 +23,19 @@ class Task extends Model
         'completed_at',
         'completed_by',
         'completion_notes',
+        'sent_to_client',
+        'sent_to_client_at',
+        'client_response',
+        'client_responded_at',
+        'response_token',
     ];
 
     protected $casts = [
         'due_date' => 'date',
         'completed_at' => 'datetime',
+        'sent_to_client'       => 'boolean',
+        'sent_to_client_at'    => 'datetime',
+        'client_responded_at'  => 'datetime',
     ];
 
     public function application(): BelongsTo
@@ -85,6 +93,30 @@ class Task extends Model
             'completed_at' => now(),
             'completed_by' => auth()->id(),
             'completion_notes' => $notes,
+        ]);
+    }
+
+    public function generateResponseToken(): string
+    {
+        $token = \Str::random(64);
+        $this->update(['response_token' => $token]);
+        return $token;
+    }
+
+    public function markSentToClient(): void
+    {
+        $this->update([
+            'sent_to_client'    => true,
+            'sent_to_client_at' => now(),
+        ]);
+    }
+
+    public function recordClientResponse(string $response): void
+    {
+        $this->update([
+            'client_response'      => $response,
+            'client_responded_at'  => now(),
+            'status'               => 'in_progress',
         ]);
     }
 }

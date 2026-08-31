@@ -36,6 +36,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Str;
 
 class SmsCommunicationController extends Controller
 {
@@ -100,9 +101,27 @@ class SmsCommunicationController extends Controller
         }
 
         try {
-            $this->dispatchSmsNotification($application, $validated['message']);
+            $result = $this->dispatchSmsNotification($application, $validated['message']);
 
-            ActivityLog::logActivity('sms_sent', 'SMS sent to client', $application);
+            // TwilioService::sendSMS() only returns a SID/status on success
+            // (['success' => false, ...] when Twilio is disabled or the API
+            // call fails, and either way sendSMS() never throws — it catches
+            // internally). Only surface these fields when they're real.
+            $sent = $result['success'] ?? false;
+
+            ActivityLog::logActivity(
+                'sms_sent',
+                'SMS sent to client',
+                $application,
+                null,
+                array_filter([
+                    'direction'   => 'outbound',
+                    'to'          => $application->personalDetails->mobile_phone,
+                    'excerpt'     => Str::limit($validated['message'], 150),
+                    'status'      => $sent ? ($result['status'] ?? 'sent') : 'sent',
+                    'message_sid' => $sent ? ($result['message_sid'] ?? null) : null,
+                ], fn ($value) => ! is_null($value))
+            );
 
             return response()->json([
                 'success' => true,
@@ -346,11 +365,11 @@ class SmsCommunicationController extends Controller
      *
      * @param  Application  $application  The target application.
      * @param  string       $message      The SMS body text to send.
-     * @return void
+     * @return array  MessagingService::send()'s result (message SID / initial status).
      */
-    private function dispatchSmsNotification(Application $application, string $message): void
+    private function dispatchSmsNotification(Application $application, string $message): array
     {
-        app(MessagingService::class)->send(
+        return app(MessagingService::class)->send(
             $application->personalDetails->mobile_phone,
             $message,
             $application

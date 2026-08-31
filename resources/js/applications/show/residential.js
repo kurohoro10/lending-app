@@ -112,136 +112,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     calculateCoverageFromDOM();
 
-    // ── Suburb typeahead ──────────────────────────────────────────────────────
-    const suburbInput    = document.getElementById('suburb-typeahead');
-    const suburbHidden   = document.getElementById('suburb-hidden');
-    const stateHidden    = document.getElementById('state-hidden');
-    const stateDisplay   = document.getElementById('state-display');
+    // ── Manual address fields ───────────────────────────────────────────────
+    const suburbInput   = document.getElementById('suburb-input');
+    const stateSelect    = document.getElementById('state-select');
     const postcodeInput  = document.getElementById('postcode-input');
-    const suggestionList = document.getElementById('suburb-suggestions');
-
-    const SEARCH_URL     = window.RESIDENTIAL_CONFIG?.suburbSearchUrl;
-
-    let searchTimer      = null;
-    let selectedFromList = false;   // tracks whether user picked from suggestions
-
-    function clearSuburbSelection() {
-        suburbHidden.value = '';
-        stateHidden.value  = '';
-        stateDisplay.textContent = 'Auto-filled from suburb';
-        stateDisplay.classList.remove('text-gray-900', 'font-semibold');
-        stateDisplay.classList.add('text-gray-400');
-        selectedFromList = false;
-    }
-
-    function applySuburbSelection(entry) {
-        suburbInput.value  = entry.suburb;
-        suburbHidden.value = entry.suburb;
-        stateHidden.value  = entry.state;
-        stateDisplay.textContent = `${entry.state} — ${fullStateName(entry.state)}`;
-        stateDisplay.classList.remove('text-gray-400');
-        stateDisplay.classList.add('text-gray-900', 'font-semibold');
-
-        // Auto-fill postcode only if it hasn't been manually edited
-        postcodeInput.value = entry.postcode;
-        validatePostcode();     // clear any prior error
-
-        hideSuggestions();
-        selectedFromList = true;
-        showFieldError('suburb-error', '');
-    }
-
-    function fullStateName(code) {
-        const map = {
-            NSW: 'New South Wales', VIC: 'Victoria', QLD: 'Queensland',
-            SA: 'South Australia', WA: 'Western Australia', TAS: 'Tasmania',
-            NT: 'Northern Territory', ACT: 'Australian Capital Territory',
-        };
-        return map[code] ?? code;
-    }
-
-    function showSuggestions(items) {
-        suggestionList.innerHTML = '';
-        if (!items.length) {
-            suggestionList.innerHTML = `<li class="px-4 py-3 text-sm text-gray-400 italic">No suburbs found.</li>`;
-        } else {
-            items.forEach(entry => {
-                const li = document.createElement('li');
-                li.setAttribute('role', 'option');
-                li.className = 'flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-indigo-50 transition';
-                li.innerHTML = `
-                    <span class="text-sm font-medium text-gray-900">${escHtml(entry.suburb)}</span>
-                    <span class="text-xs text-gray-400 tabular-nums ml-3">${escHtml(entry.state)} &nbsp;${escHtml(entry.postcode)}</span>`;
-                li.addEventListener('mousedown', e => {
-                    e.preventDefault();    // prevent blur firing before click
-                    applySuburbSelection(entry);
-                });
-                suggestionList.appendChild(li);
-            });
-        }
-        suggestionList.classList.remove('hidden');
-        suburbInput.setAttribute('aria-expanded', 'true');
-    }
-
-    function hideSuggestions() {
-        suggestionList.classList.add('hidden');
-        suggestionList.innerHTML = '';
-        suburbInput.setAttribute('aria-expanded', 'false');
-    }
-
-    async function fetchSuggestions(query) {
-        if (!SEARCH_URL || query.length < 2) { hideSuggestions(); return; }
-        try {
-            const url = `${SEARCH_URL}?q=${encodeURIComponent(query)}&limit=8`;
-            const res  = await fetch(url, { headers: { 'Accept': 'application/json' } });
-            const data = await res.json();
-            if (res.ok && data.results) showSuggestions(data.results);
-        } catch {
-            hideSuggestions();
-        }
-    }
-
-    suburbInput?.addEventListener('input', () => {
-        selectedFromList = false;
-        clearSuburbSelection();
-
-        clearTimeout(searchTimer);
-        const q = suburbInput.value.trim();
-        if (q.length < 2) { hideSuggestions(); return; }
-        searchTimer = setTimeout(() => fetchSuggestions(q), 200);
-    });
-
-    suburbInput?.addEventListener('blur', () => {
-        // Small delay so mousedown on a suggestion fires first
-        setTimeout(hideSuggestions, 150);
-
-        // If user typed but never picked, invalidate so they can't submit free-text
-        if (suburbInput.value && !selectedFromList) {
-            suburbHidden.value = '';
-            stateHidden.value  = '';
-        }
-    });
-
-    suburbInput?.addEventListener('keydown', e => {
-        const items = suggestionList.querySelectorAll('li[role="option"]');
-        if (!items.length) return;
-
-        if (e.key === 'ArrowDown') {
-            e.preventDefault();
-            items[0]?.focus();
-        }
-        if (e.key === 'Escape') hideSuggestions();
-    });
-
-    // Arrow-key navigation within the list
-    suggestionList?.addEventListener('keydown', e => {
-        const items = [...suggestionList.querySelectorAll('li[role="option"]')];
-        const idx   = items.indexOf(document.activeElement);
-        if (e.key === 'ArrowDown') { e.preventDefault(); items[idx + 1]?.focus(); }
-        if (e.key === 'ArrowUp')   { e.preventDefault(); idx <= 0 ? suburbInput.focus() : items[idx - 1]?.focus(); }
-        if (e.key === 'Escape')    { hideSuggestions(); suburbInput.focus(); }
-        if (e.key === 'Enter' && items[idx]) { e.preventDefault(); items[idx].dispatchEvent(new MouseEvent('mousedown')); }
-    });
 
     // ── Postcode real-time validation ─────────────────────────────────────────
     function validatePostcode() {
@@ -334,9 +208,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function validateForm() {
         let valid = true;
 
-        if (!suburbHidden.value) {
-            showFieldError('suburb-error', 'Please select a suburb from the suggestions list.');
-            suburbInput.classList.add('border-red-500');
+        if (!suburbInput?.value.trim()) {
+            showFieldError('suburb-error', 'Please enter a suburb.');
+            suburbInput?.classList.add('border-red-500');
+            valid = false;
+        }
+
+        if (!stateSelect?.value) {
+            showFieldError('state-error', 'Please select a state.');
+            stateSelect?.classList.add('border-red-500');
             valid = false;
         }
 
@@ -418,13 +298,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function resetForm() {
         form.reset();
-        // Clear typeahead state
-        suburbHidden.value = '';
-        stateHidden.value  = '';
-        stateDisplay.textContent = 'Auto-filled from suburb';
-        stateDisplay.classList.remove('text-gray-900', 'font-semibold');
-        stateDisplay.classList.add('text-gray-400');
-        selectedFromList = false;
     }
 
     // ── Delete ────────────────────────────────────────────────────────────────

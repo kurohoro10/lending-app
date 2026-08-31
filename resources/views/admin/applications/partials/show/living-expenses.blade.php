@@ -1,4 +1,5 @@
 {{-- resources/views/admin/applications/partials/show/living-expenses.blade.php --}}
+
 @php
     $activeProvider    = \App\Models\Setting::where('key', 'active_bank_provider')->value('value') ?? 'basiq';
     $providerLabel     = match($activeProvider) {
@@ -21,6 +22,54 @@
     <div class="p-6">
         <div class="flex items-center justify-between mb-4">
             <h3 class="text-lg font-medium text-gray-900">Living Expenses</h3>
+
+            <div x-data="{ uploading: false, message: null, isError: false }">
+
+                <label class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-gray-300
+                            rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50
+                            cursor-pointer focus-within:ring-2 focus-within:ring-indigo-500 transition">
+                    <svg class="w-4 h-4 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12"/>
+                    </svg>
+                    <span x-text="uploading ? 'Parsing…' : 'Upload CreditSense PDF'"></span>
+
+                    <input type="file"
+                        accept=".pdf"
+                        class="hidden"
+                        :disabled="uploading"
+                        @change="
+                            uploading = true;
+                            message   = null;
+                            const fd  = new FormData();
+                            fd.append('report', $event.target.files[0]);
+                            fd.append('_token', '{{ csrf_token() }}');
+                            fetch('{{ route('admin.creditsense.uploadReport', $application) }}', {
+                                method: 'POST',
+                                body: fd,
+                            })
+                            .then(r => r.json())
+                            .then(d => {
+                                uploading = false;
+                                isError   = !d.success;
+                                message   = d.message ?? d.error;
+                                if (d.success) setTimeout(() => location.reload(), 1500);
+                            })
+                            .catch(() => {
+                                uploading = false;
+                                isError   = true;
+                                message   = 'Upload failed. Please try again.';
+                            });
+                        ">
+                </label>
+
+                <p x-show="message"
+                x-text="message"
+                :class="isError ? 'text-red-600' : 'text-green-600'"
+                class="mt-1 text-xs"
+                aria-live="polite"></p>
+
+            </div>
 
             <div class="flex items-center gap-3">
                 {{-- Bank report status indicator --}}
@@ -82,21 +131,59 @@
                         // Resolve bank amount from the active provider's report
                         $basiqAmount = null;
                         if ($bankReport) {
-                            $report = is_array($bankReport)
-                                ? $bankReport
-                                : json_decode($bankReport, true);
-                            $rows = data_get($report, 'data.expenses.monthly',
-                                    data_get($report, 'categories', []));
-                            foreach ($rows as $row) {
-                                $label = $row['category'] ?? $row['name'] ?? '';
-                                if (
-                                    strtolower(str_replace([' ', '-'], '_', $label)) ===
-                                    strtolower(str_replace([' ', '-'], '_', $expenseName))
-                                ) {
-                                    $basiqAmount = $row['value'] ?? $row['monthly_amount'] ?? null;
-                                    break;
+                            if ($activeProvider === 'creditsense') {
+                                $parser = new \App\Services\CreditSenseReportParser($bankReport);
+                                $csCategories = $parser->getExpenseCategories();
+
+                                // Map client expense_category to CreditSense category label
+                                $categoryMap = [
+                                    'housing'    => 'Housing and Utilities',
+                                    'internet'   => 'Internet Telephone and Pay TV',
+                                    'groceries'  => 'Groceries',
+                                    'recreation' => 'Recreation and Entertainment',
+                                    'clothing'   => 'Clothing and Personal Care',
+                                    'medical'    => 'Medical and Health',
+                                    'transport'  => 'Transport',
+                                    'education'  => 'Education and Childcare',
+                                    'insurance'  => 'Insurance',
+                                    'atm'        => 'ATM',
+                                    'debt'       => 'Loans',
+                                    'transfer'    => 'Transfers',
+                                    'dishonours'  => 'Dishonours',
+                                    'other'      => 'Other Expenses',
+                                ];
+
+                                $clientCategory = $expense->expense_category ?? '';
+                                $csLabel = $categoryMap[$clientCategory] ?? null;
+
+                                if ($csLabel) {
+                                    foreach ($csCategories as $csRow) {
+                                        if (strtolower($csRow['label']) === strtolower($csLabel)) {
+                                            $basiqAmount = $csRow['monthly_amount'];
+                                            break;
+                                        }
+                                    }
+                                }
+                            } else {
+                                // Basiq mapping
+                                $report = is_array($bankReport) ? $bankReport : json_decode($bankReport, true);
+                                $rows = data_get($report, 'data.expenses.monthly',
+                                        data_get($report, 'categories', []));
+                                foreach ($rows as $row) {
+                                    $label = $row['category'] ?? $row['name'] ?? '';
+                                    if (
+                                        strtolower(str_replace([' ', '-'], '_', $label)) ===
+                                        strtolower(str_replace([' ', '-'], '_', $expenseName))
+                                    ) {
+                                        $basiqAmount = $row['value'] ?? $row['monthly_amount'] ?? null;
+                                        break;
+                                    }
                                 }
                             }
+                        }
+
+                        if ($basiqAmount === null && $expense->provider_amount !== null) {
+                            $basiqAmount = (float) $expense->provider_amount;
                         }
 
                         $clientAmount   = $expense->amount ?? $expense->client_declared_amount ?? 0;

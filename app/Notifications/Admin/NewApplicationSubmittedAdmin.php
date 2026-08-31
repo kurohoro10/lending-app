@@ -38,7 +38,7 @@ class NewApplicationSubmittedAdmin extends Notification implements ShouldQueue
             ->line('Email: **' . $applicant->email . '**')
             ->line('Loan Amount: **$' . number_format($this->application->loan_amount, 2) . '**')
             ->line('Term: **' . $this->application->term_months . ' months**')
-            ->line('Purpose: **' . ucfirst(str_replace('_', ' ', $this->application->loan_purpose)) . '**')
+            ->line('Purpose: **' . \App\Support\LoanPurpose::label($this->application->loan_purpose) . '**')
             ->line('Submitted: **' . $this->application->submitted_at->format('d M Y, g:i A') . '**')
             ->action('Review Application', route('applications.show', $this->application))
             ->line('Please review this application at your earliest convenience.');

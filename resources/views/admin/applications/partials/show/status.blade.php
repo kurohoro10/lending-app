@@ -1,5 +1,7 @@
 {{-- resources/views/admin/applications/partials/show/status.blade.php --}}
-
+@php
+    use App\Models\Application;
+@endphp
 <form method="POST"
         action="{{ route('admin.applications.updateStatus', $application) }}"
         class="flex items-end gap-2"
@@ -11,17 +13,14 @@
         <label for="status-select" class="block text-sm font-medium text-gray-700">
             Change Status
         </label>
-        <select id="status-select"
-                name="status"
-                required
-                class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm
-                        focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
-            <option value="submitted"                {{ $application->status === 'submitted'                ? 'selected' : '' }}>Submitted</option>
-            <option value="under_review"             {{ $application->status === 'under_review'             ? 'selected' : '' }}>Under Review</option>
-            <option value="additional_info_required" {{ $application->status === 'additional_info_required' ? 'selected' : '' }}>Additional Info Required</option>
-            <option value="approved"                 {{ $application->status === 'approved'                 ? 'selected' : '' }}>Approved</option>
-            <option value="declined"                 {{ $application->status === 'declined'                 ? 'selected' : '' }}>Declined</option>
-        </select>
+        <select id="status-select" name="status" required class="mt-1 block w-full py-2 px-3 border border-gray-300 bg-white rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm">
+        @foreach(Application::VALID_STATUSES as $status)
+            <option value="{{ $status }}" 
+                    {{ $application->status === $status ? 'selected' : '' }}>
+                {{ Application::statusLabel($status) }}
+            </option>
+        @endforeach
+    </select>
     </div>
 
 

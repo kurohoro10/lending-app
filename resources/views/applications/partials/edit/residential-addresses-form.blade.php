@@ -122,52 +122,45 @@
                             <p id="street_address-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
 
-                        {{-- ── Suburb Typeahead ──────────────────────────── --}}
+                        {{-- Suburb --}}
                         <div class="md:col-span-2">
-                            <label for="suburb-typeahead"
+                            <label for="suburb-input"
                                    class="block text-sm font-semibold text-gray-700 mb-2">
                                 Suburb <span class="text-red-600" aria-hidden="true">*</span>
                             </label>
-                            <div class="relative">
-                                <input type="text"
-                                       id="suburb-typeahead"
-                                       autocomplete="off"
-                                       aria-autocomplete="list"
-                                       aria-controls="suburb-suggestions"
-                                       aria-describedby="suburb-typeahead-hint suburb-error"
-                                       placeholder="Start typing a suburb…"
-                                       class="block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
-                                              focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
-
-                                {{-- Hidden inputs that carry the actual submitted values --}}
-                                <input type="hidden" name="suburb"   id="suburb-hidden">
-                                <input type="hidden" name="state"    id="state-hidden">
-
-                                {{-- Suggestions dropdown --}}
-                                <ul id="suburb-suggestions"
-                                    role="listbox"
-                                    aria-label="Suburb suggestions"
-                                    class="hidden absolute z-30 w-full mt-1 bg-white border border-gray-200
-                                           rounded-xl shadow-lg max-h-56 overflow-y-auto divide-y divide-gray-100">
-                                </ul>
-                            </div>
-                            <p id="suburb-typeahead-hint" class="mt-1 text-xs text-gray-400">
-                                Type at least 2 characters to see suggestions.
-                            </p>
-                            <p id="suburb-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
+                            <input type="text"
+                                   name="suburb"
+                                   id="suburb-input"
+                                   required
+                                   aria-describedby="suburb-error"
+                                   placeholder="Enter suburb"
+                                   class="block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                          focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                            <p id="suburb-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
 
-                        {{-- State (auto-filled, read-only display) --}}
+                        {{-- State --}}
                         <div>
-                            <label class="block text-sm font-semibold text-gray-700 mb-2">
-                                State
+                            <label for="state-select"
+                                   class="block text-sm font-semibold text-gray-700 mb-2">
+                                State <span class="text-red-600" aria-hidden="true">*</span>
                             </label>
-                            <div id="state-display"
-                                 class="block w-full py-3 px-4 border border-gray-200 bg-gray-50
-                                        rounded-xl text-gray-500 text-sm select-none"
-                                 aria-live="polite">
-                                Auto-filled from suburb
-                            </div>
+                            <select name="state"
+                                    id="state-select"
+                                    required
+                                    aria-describedby="state-error"
+                                    class="block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
+                                           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
+                                <option value="">Select state…</option>
+                                <option value="NSW">NSW</option>
+                                <option value="VIC">VIC</option>
+                                <option value="TAS">TAS</option>
+                                <option value="WA">WA</option>
+                                <option value="ACT">ACT (Canberra)</option>
+                                <option value="SA">SA</option>
+                                <option value="QLD">QLD (Queensland)</option>
+                            </select>
+                            <p id="state-error" class="mt-2 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
 
                         {{-- Postcode --}}
@@ -188,7 +181,7 @@
                                    class="block w-full py-3 px-4 border border-gray-300 bg-white rounded-xl shadow-sm
                                           focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500">
                             <p id="postcode-hint" class="mt-1 text-xs text-gray-400">
-                                Auto-filled from suburb — edit if needed.
+                                Enter the postcode manually.
                             </p>
                             <p id="postcode-error" class="mt-1 text-sm text-red-600 hidden" role="alert"></p>
                         </div>
@@ -260,7 +253,6 @@
 <script>
 window.RESIDENTIAL_CONFIG = Object.assign(window.RESIDENTIAL_CONFIG ?? {}, {
     applicationId: @js($application->id),
-    suburbSearchUrl: @js(route('api.suburbs.search')),
     deleteRoute: @js(route('applications.residential-addresses.destroy', [$application, ':id']))
 });
 </script>

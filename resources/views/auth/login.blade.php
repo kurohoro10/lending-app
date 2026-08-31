@@ -149,7 +149,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-900">Privacy First</h3>
+                                <h3 class="font-semibold text-gray-900">ZYA Capital We close the Gap </h3>
                                 <p class="text-sm text-gray-600">Your information stays confidential</p>
                             </div>
                         </div>
@@ -161,7 +161,7 @@
                                 </svg>
                             </div>
                             <div>
-                                <h3 class="font-semibold text-gray-900">24/7 Support</h3>
+                                <h3 class="font-semibold text-gray-900">Lender that understand your needs</h3>
                                 <p class="text-sm text-gray-600">We're here to help anytime</p>
                             </div>
                         </div>

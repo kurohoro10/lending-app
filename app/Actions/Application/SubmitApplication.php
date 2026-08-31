@@ -44,12 +44,12 @@ class SubmitApplication
             $declineCheck = AutoDeclineService::checkDeclineCriteria($application);
 
             if ($declineCheck['should_decline']) {
-                $this->autoDecline($application, $declineCheck['reason']);
+                $this->autoDefer($application, $declineCheck['reason']);
                 return;
             }
 
             $application->update([
-                'status'        => 'submitted',
+                'status'        => 'application',
                 'submitted_at'  => now(),
                 'submission_ip' => request()->ip(),
                 'return_reason' => null,
@@ -73,23 +73,23 @@ class SubmitApplication
     }
 
     /**
-     * Transition the application to a declined state automatically.
+     * Transition the application to a deferred state automatically.
      *
-     * @param Application $application The application instance to decline.
-     * @param string      $reason      The reason for the automatic decline.
+     * @param Application $application The application instance to defer.
+     * @param string      $reason      The reason for the automatic deferral.
      * @return void
      */
-    protected function autoDecline(Application $application, string $reason): void
+    protected function autoDefer(Application $application, string $reason): void
     {
         $application->update([
-            'status'       => 'declined',
-            'submitted_at' => now(),
-            'submission_ip'=> request()->ip(),
+            'status'        => Application::STATUS_DEFERRED,
+            'submitted_at'  => now(),
+            'submission_ip' => request()->ip(),
         ]);
 
         ActivityLog::logActivity(
-            'auto_declined',
-            'Application auto-declined',
+            'auto_deferred',
+            $reason,
             $application
         );
 
@@ -103,16 +103,15 @@ class SubmitApplication
 
         $application->comments()->create([
             'user_id'           => $systemUser->id,
-            'comment'           => 'AUTO-DECLINE: ' . $reason,
+            'comment'           => 'AUTO-DEFERRED: ' . $reason,
             'is_internal'       => true,
             'is_client_visible' => false,
             'commenter_ip'      => request()->ip(),
         ]);
 
-        // Reload before sending notifications
         $application->load('personalDetails', 'user');
 
         app(ApplicationNotificationService::class)
-            ->handleDeclined($application, $reason);
+            ->handleDeferred($application, $reason);
     }
 }

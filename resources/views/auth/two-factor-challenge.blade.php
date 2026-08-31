@@ -153,54 +153,103 @@
                         <span class="bg-gradient-to-r from-indigo-600 to-purple-600 bg-clip-text text-transparent">Authentication</span>
                     </h1>
 
-                    <p class="text-xl text-gray-600 mb-8 leading-relaxed" x-show="!recovery">
-                        Enter the 6-digit code from your authenticator app to securely access your account.
-                    </p>
+                    @if ($challengedUserUsesEmail)
+                        <p class="text-xl text-gray-600 mb-8 leading-relaxed" x-show="!recovery">
+                            Enter the 6-digit code we emailed you to securely access your account.
+                        </p>
+                    @else
+                        <p class="text-xl text-gray-600 mb-8 leading-relaxed" x-show="!recovery">
+                            Enter the 6-digit code from your authenticator app to securely access your account.
+                        </p>
+                    @endif
 
                     <p class="text-xl text-gray-600 mb-8 leading-relaxed" x-cloak x-show="recovery">
                         Enter one of your emergency recovery codes to access your account.
                     </p>
 
-                    <!-- Authentication App Info -->
-                    <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100 mb-6" x-show="!recovery">
-                        <h3 class="font-bold text-gray-900 mb-6 flex items-center">
-                            <svg class="w-6 h-6 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
-                            </svg>
-                            How to use your authenticator:
-                        </h3>
-                        <div class="space-y-4">
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
-                                    1
+                    @if ($challengedUserUsesEmail)
+                        <!-- Email OTP Info -->
+                        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100 mb-6" x-show="!recovery">
+                            <h3 class="font-bold text-gray-900 mb-6 flex items-center">
+                                <svg class="w-6 h-6 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                                </svg>
+                                How to use your email code:
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
+                                        1
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 mb-1">Check your inbox</h4>
+                                        <p class="text-sm text-gray-600">We sent a code to {{ $challengedUserEmail }}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Open your app</h4>
-                                    <p class="text-sm text-gray-600">Launch your authenticator application</p>
-                                </div>
-                            </div>
 
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
-                                    2
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
+                                        2
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 mb-1">Find the code</h4>
+                                        <p class="text-sm text-gray-600">Look for "Your login verification code"</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Find LoanFlow</h4>
-                                    <p class="text-sm text-gray-600">Look for the LoanFlow account entry</p>
-                                </div>
-                            </div>
 
-                            <div class="flex items-start">
-                                <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
-                                    3
-                                </div>
-                                <div>
-                                    <h4 class="font-semibold text-gray-900 mb-1">Enter the code</h4>
-                                    <p class="text-sm text-gray-600">Type the 6-digit code displayed</p>
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
+                                        3
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 mb-1">Enter the code</h4>
+                                        <p class="text-sm text-gray-600">Type the 6-digit code before it expires</p>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
+                    @else
+                        <!-- Authentication App Info -->
+                        <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-8 border border-indigo-100 mb-6" x-show="!recovery">
+                            <h3 class="font-bold text-gray-900 mb-6 flex items-center">
+                                <svg class="w-6 h-6 text-indigo-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"/>
+                                </svg>
+                                How to use your authenticator:
+                            </h3>
+                            <div class="space-y-4">
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
+                                        1
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 mb-1">Open your app</h4>
+                                        <p class="text-sm text-gray-600">Launch your authenticator application</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
+                                        2
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 mb-1">Find LoanFlow</h4>
+                                        <p class="text-sm text-gray-600">Look for the LoanFlow account entry</p>
+                                    </div>
+                                </div>
+
+                                <div class="flex items-start">
+                                    <div class="flex-shrink-0 w-8 h-8 bg-indigo-600 text-white rounded-full flex items-center justify-center font-bold text-sm mr-4">
+                                        3
+                                    </div>
+                                    <div>
+                                        <h4 class="font-semibold text-gray-900 mb-1">Enter the code</h4>
+                                        <p class="text-sm text-gray-600">Type the 6-digit code displayed</p>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    @endif
 
                     <!-- Recovery Code Info -->
                     <div class="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-2xl p-8 border border-yellow-100 mb-6" x-cloak x-show="recovery">
@@ -242,24 +291,51 @@
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"/>
                                 </svg>
                             </div>
-                            <h2 class="text-3xl font-bold text-gray-900 mb-2" x-show="!recovery">Enter Authentication Code</h2>
-                            <h2 class="text-3xl font-bold text-gray-900 mb-2" x-cloak x-show="recovery">Enter Recovery Code</h2>
-                            <p class="text-gray-600" x-show="!recovery">From your authenticator app</p>
+                            @if ($challengedUserUsesEmail)
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2" x-show="!recovery">Enter Email Code</h2>
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2" x-cloak x-show="recovery">Enter Recovery Code</h2>
+                                <p class="text-gray-600" x-show="!recovery">Sent to {{ $challengedUserEmail }}</p>
+                            @else
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2" x-show="!recovery">Enter Authentication Code</h2>
+                                <h2 class="text-3xl font-bold text-gray-900 mb-2" x-cloak x-show="recovery">Enter Recovery Code</h2>
+                                <p class="text-gray-600" x-show="!recovery">From your authenticator app</p>
+                            @endif
                             <p class="text-gray-600" x-cloak x-show="recovery">Use one of your backup codes</p>
                         </div>
 
+                        <!-- Status message (e.g. "a new code has been sent") -->
+                        @if (session('status'))
+                            <div class="mb-6 bg-green-50 border border-green-200 rounded-xl p-4" role="status">
+                                <p class="text-sm text-green-900">{{ session('status') }}</p>
+                            </div>
+                        @endif
+
                         <!-- Instructions -->
-                        <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4" x-show="!recovery">
-                            <div class="flex items-start">
-                                <svg class="w-5 h-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
-                                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
-                                </svg>
-                                <div class="text-sm text-blue-900">
-                                    <p class="font-semibold mb-1">Open your authenticator app</p>
-                                    <p>Enter the 6-digit code shown for your LoanFlow account. The code refreshes every 30 seconds.</p>
+                        @if ($challengedUserUsesEmail)
+                            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4" x-show="!recovery">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="text-sm text-blue-900">
+                                        <p class="font-semibold mb-1">Check your email</p>
+                                        <p>Enter the 6-digit code we sent to {{ $challengedUserEmail }}. Didn't get it? Use the resend button below.</p>
+                                    </div>
                                 </div>
                             </div>
-                        </div>
+                        @else
+                            <div class="mb-6 bg-blue-50 border border-blue-200 rounded-xl p-4" x-show="!recovery">
+                                <div class="flex items-start">
+                                    <svg class="w-5 h-5 text-blue-500 mr-3 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                        <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                                    </svg>
+                                    <div class="text-sm text-blue-900">
+                                        <p class="font-semibold mb-1">Open your authenticator app</p>
+                                        <p>Enter the 6-digit code shown for your LoanFlow account. The code refreshes every 30 seconds.</p>
+                                    </div>
+                                </div>
+                            </div>
+                        @endif
 
                         <div class="mb-6 bg-yellow-50 border border-yellow-200 rounded-xl p-4" x-cloak x-show="recovery">
                             <div class="flex items-start">
@@ -316,7 +392,11 @@
                                     class="code-input block w-full px-4 py-4 border border-gray-300 rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition"
                                     placeholder="000000"
                                 >
-                                <p id="code-hint" class="mt-2 text-xs text-gray-500 text-center">Enter the code from your authenticator app</p>
+                                @if ($challengedUserUsesEmail)
+                                    <p id="code-hint" class="mt-2 text-xs text-gray-500 text-center">Enter the code we emailed you</p>
+                                @else
+                                    <p id="code-hint" class="mt-2 text-xs text-gray-500 text-center">Enter the code from your authenticator app</p>
+                                @endif
                             </div>
 
                             <!-- Recovery Code Field -->
@@ -375,6 +455,18 @@
                             </div>
                         </form>
 
+                        @if ($challengedUserUsesEmail)
+                            <form method="POST" action="{{ route('two-factor.email.resend') }}" class="text-center mt-4" x-show="!recovery">
+                                @csrf
+                                <button
+                                    type="submit"
+                                    class="text-sm text-indigo-600 hover:text-indigo-700 font-medium underline focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1"
+                                >
+                                    Resend code
+                                </button>
+                            </form>
+                        @endif
+
                         <!-- Additional Help -->
                         <div class="mt-6 pt-6 border-t border-gray-200">
                             <div class="text-center text-sm text-gray-600">
@@ -395,7 +487,7 @@
         <div class="max-w-5xl mx-auto">
             <div class="pt-8 border-t border-gray-200 text-center">
                 <div class="flex flex-col md:flex-row justify-between items-center text-gray-600 text-sm">
-                    <p class="mb-4 md:mb-0">&copy; {{ date('Y') }} LoanFlow. All rights reserved.</p>
+                    <p class="mb-4 md:mb-0">&copy; {{ date('Y') }} ZYA Capital, Term and Conditions Apply.</p>
                     <div class="flex items-center space-x-6">
                         <a href="#" class="hover:text-indigo-600 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">Privacy Policy</a>
                         <a href="#" class="hover:text-indigo-600 transition focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded px-2 py-1">Terms of Service</a>

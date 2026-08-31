@@ -38,6 +38,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'password',
         'failed_login_attempts',  // lockout tracking
         'locked_at',              // lockout tracking
+        'two_factor_method',      // 'app' | 'email'
     ];
 
     /**
@@ -50,6 +51,7 @@ class User extends Authenticatable implements MustVerifyEmail
         'remember_token',
         'two_factor_recovery_codes',
         'two_factor_secret',
+        'email_otp_code',
     ];
 
     /**
@@ -70,9 +72,11 @@ class User extends Authenticatable implements MustVerifyEmail
     protected function casts(): array
     {
         return [
-            'email_verified_at'      => 'datetime',
-            'locked_at'              => 'datetime',   // lockout tracking
-            'password'               => 'hashed',
+            'email_verified_at'          => 'datetime',
+            'locked_at'                  => 'datetime',   // lockout tracking
+            'password'                   => 'hashed',
+            'email_two_factor_confirmed_at' => 'datetime',
+            'email_otp_expires_at'          => 'datetime',
         ];
     }
 
@@ -139,6 +143,22 @@ class User extends Authenticatable implements MustVerifyEmail
     public function isSystem(): bool
     {
         return $this->hasRole('system');
+    }
+
+    /**
+     * Whether Authenticator App (TOTP) is this user's confirmed 2FA method.
+     */
+    public function usesAppTwoFactor(): bool
+    {
+        return ! empty($this->two_factor_secret) && ! is_null($this->two_factor_confirmed_at);
+    }
+
+    /**
+     * Whether Email OTP is this user's confirmed 2FA method.
+     */
+    public function usesEmailTwoFactor(): bool
+    {
+        return $this->two_factor_method === 'email' && ! is_null($this->email_two_factor_confirmed_at);
     }
 
     /**

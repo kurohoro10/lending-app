@@ -1,6 +1,8 @@
 {{-- resources/views/admin/applications/partials/show/assignedTo.blade.php --}}
+@php use App\Models\Application; @endphp
+
 @if(auth()->user()->hasRole('admin'))
-    @if(in_array($application->status, ['approved', 'declined']))
+    @if($application->isLocked())
         {{-- Show read-only for approved/declined --}}
         <div class="flex items-end">
             <div class="relative">
@@ -34,8 +36,8 @@
             <div>
                 <label for="assigned-select" class="block text-sm font-medium text-gray-700">
                     Assign To
-                    @if($application->status === 'submitted')
-                        <span class="text-xs text-indigo-600 font-normal">(will change status to "Under Review")</span>
+                    @if($application->status === Application::STATUS_APPLICATION)
+                        <span class="text-xs text-indigo-600 font-normal">(will change status to "Assessment")</span>
                     @endif
                 </label>
                 <select id="assigned-select"

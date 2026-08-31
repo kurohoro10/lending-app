@@ -190,6 +190,17 @@
             case '3':
                 // appId is the CreditSense numeric App_ID — store it if needed
                 // for later use in fetchReport. You can POST it to your server here.
+                if (appId && cfg.saveAppIdRoute) {
+                    fetch(cfg.saveAppIdRoute, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': cfg.csrfToken,
+                            'Accept': 'application/json',
+                        },
+                        body: JSON.stringify({ app_id: appId }),
+                    }).catch(() => {}); // fire and forget
+                }
                 break;
 
             // Success — customer completed the journey

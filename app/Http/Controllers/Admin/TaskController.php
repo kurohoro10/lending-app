@@ -43,6 +43,8 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Support\Str;
+use App\Notifications\Admin\TaskEmailNotification;
 
 class TaskController extends Controller
 {
@@ -121,9 +123,9 @@ class TaskController extends Controller
      * @bodyParam string task_type   required  Task type — one of the TASK_TYPES values.
      * @bodyParam string title       required  Task title (max 255 chars).
      * @bodyParam string description nullable  Optional task description.
-     * @bodyParam string priority    required  Priority level — low | medium | high | urgent.
-     * @bodyParam int    assigned_to required  ID of the user to assign the task to.
-     * @bodyParam date   due_date    nullable  Optional due date (must be after today).
+     *
+     * Priority is fixed to `medium` and assigned_to is set automatically to the
+     * creating admin/assessor — neither is collected from the request payload.
      */
     public function store(Request $request, Application $application): RedirectResponse
     {
@@ -246,6 +248,49 @@ class TaskController extends Controller
         return back()->with('success', 'Task deleted successfully.');
     }
 
+    public function sendToClient(Request $request, Task $task): RedirectResponse
+    {
+        // Generate a unique response token
+        $token = $task->generateResponseToken();
+
+        // Build the response URL
+        $responseUrl = route('tasks.respond.show', $task) . '?token=' . $token;
+
+        // Send email to client
+        $task->application->user->notify(
+            new TaskEmailNotification($task, $responseUrl)
+        );
+
+        // Log the communication
+        \App\Models\Communication::create([
+            'application_id' => $task->application_id,
+            'user_id'        => auth()->id(),
+            'type'           => 'email_out',
+            'direction'      => 'outbound',
+            'from_address'   => config('mail.from.address'),
+            'to_address'     => $task->application->user->email,
+            'subject'        => 'Task: ' . $task->title,
+            'body'           => trim("You have a task: {$task->title}" . ($task->description ? "\n\n{$task->description}" : '')),
+            'metadata'       => [
+                'template_key'   => 'task_type_' . $task->task_type,
+                'template_label' => Str::headline($task->task_type),
+            ],
+            'status'         => 'sent',
+            'sent_at'        => now(),
+            'sender_ip'      => $request->ip(),
+        ]);
+
+        $task->markSentToClient();
+
+        ActivityLog::logActivity(
+            'task_sent',
+            "Task sent to client: {$task->title}",
+            $task
+        );
+
+        return back()->with('success', 'Task sent to client successfully.');
+    }
+
     // =========================================================================
     // Private Helpers — Index
     // =========================================================================
@@ -299,9 +344,6 @@ class TaskController extends Controller
             'task_type'   => ['required', 'in:' . implode(',', self::TASK_TYPES)],
             'title'       => ['required', 'string', 'max:255'],
             'description' => ['nullable', 'string'],
-            'priority'    => ['required', 'in:' . implode(',', self::PRIORITIES)],
-            'assigned_to' => ['required', 'exists:users,id'],
-            'due_date'    => ['nullable', 'date', 'after:today'],
         ]);
     }
 
@@ -341,9 +383,8 @@ class TaskController extends Controller
             'task_type'   => $validated['task_type'],
             'title'       => $validated['title'],
             'description' => $validated['description'] ?? null,
-            'priority'    => $validated['priority'],
-            'assigned_to' => $validated['assigned_to'],
-            'due_date'    => $validated['due_date'] ?? null,
+            'priority'    => 'medium',
+            'assigned_to' => auth()->id(),
         ]);
     }
 

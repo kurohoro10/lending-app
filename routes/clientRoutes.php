@@ -8,6 +8,10 @@ use App\Http\Controllers\EmploymentDetailsController;
 use App\Http\Controllers\LivingExpenseController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\QuestionController;
+use App\Http\Controllers\GuarantorFormController;
+use App\Http\Controllers\BusinessDeclarationController;
+use App\Http\Controllers\LoanDeedController;
+use App\Http\Controllers\DocumentSigningController;
 use App\Http\Controllers\DeclarationController;
 use App\Http\Controllers\CreditControllers\BasiqController;
 use App\Http\Controllers\CreditControllers\CreditSenseController;
@@ -16,6 +20,7 @@ use App\Http\Controllers\BorrowerDirectorController;
 use App\Http\Controllers\DirectorAssetsLiabilitiesController;
 use App\Http\Controllers\CompanyAssetsLiabilitiesController;
 use App\Http\Controllers\AccountantDetailController;
+use App\Http\Controllers\TaskResponseController;
 
 // Dashboard - Redirect based on role
 Route::get('/dashboard', function () {
@@ -39,8 +44,11 @@ Route::prefix('applications/{application}/basiq')->name('basiq.')->group(functio
     Route::post('user',         [BasiqController::class, 'createUser'])->name('user');
     Route::post('client-token', [BasiqController::class, 'createClientToken'])->name('client-token');
     Route::post('complete',     [BasiqController::class, 'complete'])->name('complete');
-    Route::post('auth-link', [BasiqController::class, 'createAuthLink'])
-    ->name('auth-link');
+    Route::post('auth-link',    [BasiqController::class, 'createAuthLink'])->name('auth-link');
+    Route::get('complete',      [BasiqController::class, 'completeRedirect'])->name('complete-redirect');
+    
+    // NEW: For polling in question context
+    Route::get('check-completion', [BasiqController::class, 'checkCompletion'])->name('check-completion');
 });
 
 // Personal Details
@@ -92,10 +100,48 @@ Route::get('applications/{application}/declarations',  [DeclarationController::c
 Route::post('applications/{application}/declarations', [DeclarationController::class, 'store'])
     ->name('applications.declarations.store');
 
+// Guarantor Form
+Route::get('/applications/{application}/guarantor-form',       [GuarantorFormController::class, 'show'])
+    ->name('applications.guarantor-form.client.show')
+    ->middleware('signed');
+
+Route::post('/applications/{application}/guarantor-form/sign', [GuarantorFormController::class, 'sign'])
+    ->name('applications.guarantor-form.sign');
+
+Route::get('/applications/{application}/business-declaration',
+    [BusinessDeclarationController::class, 'show'])
+    ->name('applications.business-declaration.show')
+    ->middleware('signed');
+
+Route::post('/applications/{application}/business-declaration/sign',
+    [BusinessDeclarationController::class, 'sign'])
+    ->name('applications.business-declaration.sign');
+
+// Loan Deed
+Route::get('/applications/{application}/loan-deed',       [LoanDeedController::class, 'show'])
+    ->name('applications.loan-deed.client.show')
+    ->middleware('signed');
+
+Route::post('/applications/{application}/loan-deed/sign', [LoanDeedController::class, 'sign'])
+    ->name('applications.loan-deed.sign');
+
+// Document Signing
+Route::get('/applications/{application}/document-signing', [DocumentSigningController::class, 'show'])
+    ->name('applications.document-signing.client.show')
+    ->middleware('signed');
+
+Route::get('/applications/{application}/document-signing/file', [DocumentSigningController::class, 'streamFile'])
+    ->name('applications.document-signing.client.file')
+    ->middleware('signed');
+
+Route::post('/applications/{application}/document-signing/sign', [DocumentSigningController::class, 'sign'])
+    ->name('applications.document-signing.sign');
+
 // CreditSense Bank Statement Connection
 Route::prefix('applications/{application}/creditsense')->name('creditsense.')->group(function () {
     Route::get('config',    [CreditSenseController::class, 'iframeConfig'])->name('config');
     Route::post('complete', [CreditSenseController::class, 'complete'])->name('complete');
+    Route::post('save-app-id', [CreditSenseController::class, 'saveAppId'])->name('saveAppId');
 });
 
 // Borrower
@@ -115,10 +161,12 @@ Route::prefix('applications/{application}')->name('applications.')->group(functi
 
     // Assets
     Route::post('director-assets',          [DirectorAssetsLiabilitiesController::class, 'storeAsset'])->name('assets.store');
+    Route::patch('director-assets/{asset}', [DirectorAssetsLiabilitiesController::class, 'updateAsset'])->name('assets.update'); 
     Route::delete('director-assets/{asset}',[DirectorAssetsLiabilitiesController::class, 'destroyAsset'])->name('assets.destroy');
 
     // Liabilities
     Route::post('director-liabilities',                  [DirectorAssetsLiabilitiesController::class, 'storeLiability'])->name('liabilities.store');
+    Route::patch('director-liabilities/{liability}',     [DirectorAssetsLiabilitiesController::class, 'updateLiability'])->name('liabilities.update'); 
     Route::delete('director-liabilities/{liability}',    [DirectorAssetsLiabilitiesController::class, 'destroyLiability'])->name('liabilities.destroy');
 });
 
@@ -133,8 +181,17 @@ Route::prefix('applications/{application}')->name('applications.')->group(functi
     Route::delete('company-liabilities/{liability}',[CompanyAssetsLiabilitiesController::class, 'destroyLiability'])->name('company-liabilities.destroy');
 });
 
+Route::get('applications/{application}/download-confirmation',
+    [ApplicationController::class, 'downloadConfirmation']
+)->name('applications.download-confirmation');
+
 // Accountant Details
 Route::post(
     'applications/{application}/accountant-details',
     [AccountantDetailController::class, 'store']
 )->name('applications.accountant-details.store');
+
+Route::get('tasks/{task}/respond',  [TaskResponseController::class, 'show'])
+    ->name('tasks.respond.show');
+Route::post('tasks/{task}/respond', [TaskResponseController::class, 'store'])
+    ->name('tasks.respond.store');

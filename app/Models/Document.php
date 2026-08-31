@@ -14,6 +14,7 @@ class Document extends Model
 
     protected $fillable = [
         'application_id',
+        'question_id',
         'uploaded_by',
         'document_category',
         'document_type',
@@ -41,6 +42,11 @@ class Document extends Model
     public function application(): BelongsTo
     {
         return $this->belongsTo(Application::class);
+    }
+
+    public function question(): BelongsTo
+    {
+        return $this->belongsTo(Question::class);
     }
 
     public function uploadedBy(): BelongsTo
@@ -88,7 +94,7 @@ class Document extends Model
 
     public static function getDocumentCategories(): array
     {
-        return [
+        return array_merge([
             'id' => 'Identification',
             'income' => 'Income Documentation',
             'bank' => 'Bank Statements',
@@ -96,6 +102,28 @@ class Document extends Model
             'liabilities' => 'Liability Documentation',
             'employment' => 'Employment Verification',
             'other' => 'Other Documents',
+        ], self::getAssessmentChecklistCategories());
+    }
+
+    /**
+     * Document categories specific to the assessment checklist's upload
+     * items. Kept separate from the original 7 generic categories so the
+     * two lists can evolve independently.
+     */
+    public static function getAssessmentChecklistCategories(): array
+    {
+        return [
+            'payslips' => 'Payslips',
+            'vehicle_registration' => 'Vehicle Registration',
+            'dealer_contract' => 'Dealer Contract / Invoice',
+            'insurance_certificate' => 'Insurance Certificate',
+            'council_rates' => 'Council Rates Notice',
+            'lease_agreement' => 'Lease Agreement / Proof of Address',
+            'photo_id_selfie' => 'Photo Holding Licence',
+            'passport' => 'Passport',
+            'birth_certificate' => 'Birth Certificate',
+            'drivers_licence' => 'Driver Licence',
+            'visa' => 'Visa',
         ];
     }
 

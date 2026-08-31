@@ -77,12 +77,42 @@ document.addEventListener('DOMContentLoaded', () => {
 
     dobInput?.addEventListener('input', () => clearFieldError('date_of_birth'));
 
+    // ── Phone number: combine country + number into E.164 ─────────────────────
+    const phoneCountrySelect = document.getElementById('phone_country');
+    const phoneNumberInput    = document.getElementById('mobile_phone');
+    const countryPrefixSpan   = document.getElementById('phone-prefix');
+
+    const countryPrefixes = {
+        'AU': '61',
+        'NZ': '64',
+        'US': '1',
+        'GB': '44',
+        'CA': '1',
+    };
+
+    // Update prefix display when country changes
+    phoneCountrySelect?.addEventListener('change', () => {
+        const prefix = countryPrefixes[phoneCountrySelect.value] || '61';
+        if (countryPrefixSpan) countryPrefixSpan.textContent = '+' + prefix;
+    });
+
     // ── Form submit ───────────────────────────────────────────────────────────
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
         clearAllErrors();
 
         if (!validateAge()) return;
+
+        // ── Build Form Data safely without breaking UI input state ──────────────
+        const formData = new FormData(form);
+        
+        if (phoneNumberInput?.value && phoneCountrySelect?.value) {
+            const prefix = countryPrefixes[phoneCountrySelect.value] || '61';
+            const digits = phoneNumberInput.value.replace(/\D/g, ''); // Extract only numbers
+            
+            // Format payload value into global standard E.164 format
+            formData.set('mobile_phone', '+' + prefix + digits);
+        }
 
         // ── Loading state ─────────────────────────────────────────────────
         submitBtn.disabled = true;
@@ -99,7 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.content,
                     'Accept':       'application/json',
                 },
-                body: new FormData(form),
+                body: formData, // Send the modified formData object here
             });
 
             const data = await res.json();

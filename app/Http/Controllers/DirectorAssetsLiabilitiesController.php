@@ -23,14 +23,19 @@ class DirectorAssetsLiabilitiesController extends Controller
         try {
 
             $validated = $request->validate([
-                'asset_type'      => 'required|in:house,bank,super,vehicle,other',
-                'description'     => 'nullable|string|max:255',
-                'property_use'    => 'nullable|in:main_residence,rental,na',
-                'estimated_value' => 'required|numeric|min:0',
+                'asset_type'           => 'required|in:house,bank,super,vehicle,other',
+                'description'          => 'nullable|string|max:255',
+                'property_use'         => 'nullable|in:main_residence,rental,na',
+                'estimated_value'      => 'required|numeric|min:0',
+                'is_owned'             => 'required|boolean',
+                'ownership_percentage' => 'nullable|numeric|min:0|max:100',
+                'comment'              => 'nullable|string|max:1000',
+                'name'                 => 'nullable|string|max:255',
             ]);
 
             $validated['application_id'] = $application->id;
             $validated['property_use']   = $validated['property_use'] ?? 'na';
+            $validated['ownership_percentage'] = $validated['ownership_percentage'] ?? 100;
 
             $asset = DirectorAsset::create($validated);
 
@@ -102,6 +107,9 @@ class DirectorAssetsLiabilitiesController extends Controller
                 'lender_name'         => 'nullable|string|max:255',
                 'credit_limit'        => 'nullable|required_if:liability_type,credit_card|numeric|min:0',
                 'outstanding_balance' => 'required|numeric|min:0',
+                'monthly_repayment'   => 'nullable|numeric|min:0',
+                'comment'             => 'nullable|string|max:1000',
+                'name'                => 'nullable|string|max:255',
             ], [
                 'credit_limit.required_if' => 'Credit limit is required for credit cards.',
             ]);
@@ -172,12 +180,16 @@ class DirectorAssetsLiabilitiesController extends Controller
     private function formatAsset(DirectorAsset $a): array
     {
         return [
-            'id'               => $a->id,
-            'asset_type'       => $a->asset_type,
-            'asset_type_label' => $a->asset_type_label,
-            'description'      => $a->description,
-            'property_use'     => $a->property_use,
-            'estimated_value'  => $a->estimated_value,
+            'id'                   => $a->id,
+            'asset_type'           => $a->asset_type,
+            'asset_type_label'     => $a->asset_type_label,
+            'name'                 => $a->name,
+            'description'          => $a->description,
+            'property_use'         => $a->property_use,
+            'estimated_value'      => $a->estimated_value,
+            'is_owned'             => $a->is_owned,
+            'ownership_percentage' => $a->ownership_percentage,
+            'comment'              => $a->comment,
         ];
     }
 
@@ -187,9 +199,111 @@ class DirectorAssetsLiabilitiesController extends Controller
             'id'                    => $l->id,
             'liability_type'        => $l->liability_type,
             'liability_type_label'  => $l->liability_type_label,
+            'name'                  => $l->name,
             'lender_name'           => $l->lender_name,
             'credit_limit'          => $l->credit_limit,
             'outstanding_balance'   => $l->outstanding_balance,
+            'monthly_repayment'     => $l->monthly_repayment,
+            'comment'               => $l->comment,
         ];
+    }
+
+    public function updateAsset(Request $request, Application $application, DirectorAsset $asset)
+    {
+        try {
+            abort_if($asset->application_id !== $application->id, 403);
+
+            $validated = $request->validate([
+                'asset_type'           => 'required|in:house,bank,super,vehicle,other',
+                'description'          => 'nullable|string|max:255',
+                'property_use'         => 'nullable|in:main_residence,rental,na',
+                'estimated_value'      => 'required|numeric|min:0',
+                'is_owned'             => 'required|boolean',
+                'ownership_percentage' => 'nullable|numeric|min:0|max:100',
+                'comment'              => 'nullable|string|max:1000',
+                'name'                 => 'nullable|string|max:255',
+            ]);
+
+            $oldValues = $asset->toArray();
+            $asset->update($validated);
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Asset updated.',
+                    'asset'   => $this->formatAsset($asset),
+                ]);
+            }
+
+            return back()->with('success', 'Asset updated successfully.');
+
+        } catch (\Throwable $e) {
+
+            Log::error('Failed to update director asset', [
+                'asset_id' => $asset->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $message = 'Unable to update asset. Please try again.';
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 500);
+            }
+
+            return back()->withErrors(['asset' => $message]);
+        }
+    }
+
+    public function updateLiability(Request $request, Application $application, DirectorLiability $liability)
+    {
+        try {
+            abort_if($liability->application_id !== $application->id, 403);
+
+            $validated = $request->validate([
+                'liability_type'      => 'required|in:credit_card,home_loan,car_loan,other',
+                'lender_name'         => 'nullable|string|max:255',
+                'credit_limit'        => 'nullable|required_if:liability_type,credit_card|numeric|min:0',
+                'outstanding_balance' => 'required|numeric|min:0',
+                'monthly_repayment'   => 'nullable|numeric|min:0',
+                'comment'             => 'nullable|string|max:1000',
+                'name'                => 'nullable|string|max:255',
+            ], [
+                'credit_limit.required_if' => 'Credit limit is required for credit cards.',
+            ]);
+
+            $oldValues = $liability->toArray();
+            $liability->update($validated);
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success'   => true,
+                    'message'   => 'Liability updated.',
+                    'liability' => $this->formatLiability($liability),
+                ]);
+            }
+
+            return back()->with('success', 'Liability updated successfully.');
+
+        } catch (\Throwable $e) {
+
+            Log::error('Failed to update director liability', [
+                'liability_id' => $liability->id ?? null,
+                'error' => $e->getMessage(),
+            ]);
+
+            $message = 'Unable to update liability. Please try again.';
+
+            if ($request->expectsJson() || $request->wantsJson()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => $message,
+                ], 500);
+            }
+
+            return back()->withErrors(['liability' => $message]);
+        }
     }
 }

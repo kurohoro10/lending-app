@@ -19,7 +19,7 @@
  *
  * Returnable application statuses:
  *  - `submitted`    — application awaiting initial review
- *  - `under_review` — application currently being assessed
+ *  - `wip` — application currently being assessed
  *
  * @author  Your Name <you@example.com>
  * @since   1.0.0
@@ -47,7 +47,7 @@ class CommunicationController extends Controller
      *
      * @var string[]
      */
-    private const RETURNABLE_STATUSES = ['submitted', 'under_review'];
+    private const RETURNABLE_STATUSES = Application::RETURNABLE_STATUSES;
 
     /**
      * Inbound communication type identifiers mapped to each channel.
@@ -111,7 +111,7 @@ class CommunicationController extends Controller
     /**
      * Return an application to the client for amendments.
      *
-     * Only applications in `submitted` or `under_review` status may be returned.
+     * Only applications in `submitted` or `wip` status may be returned.
      * Within a single transaction: updates the application status, logs the
      * activity, and creates a client-visible comment with the return reason.
      *
@@ -224,7 +224,7 @@ class CommunicationController extends Controller
     private function applyReturnToClient(Request $request, Application $application, array $validated): void
     {
         $application->update([
-            'status'        => 'additional_info_required',
+            'status'        => 'outstanding_document',
             'return_reason' => $validated['return_reason'],
             'returned_at'   => now(),
             'returned_by'   => auth()->id(),

@@ -16,6 +16,7 @@ class Comment extends Model
         'user_id',
         'comment',
         'type',
+        'category',
         'is_pinned',
         'ip_address',
     ];

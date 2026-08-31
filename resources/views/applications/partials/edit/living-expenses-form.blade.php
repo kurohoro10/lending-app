@@ -2,15 +2,20 @@
 
 @php
     $standardCategories = [
-        'housing'     => ['label' => 'Rent / Mortgage',        'icon' => '🏠'],
-        'utilities'   => ['label' => 'Utilities',              'icon' => '💡'],
-        'food'        => ['label' => 'Food & Groceries',       'icon' => '🛒'],
-        'transport'   => ['label' => 'Transport',              'icon' => '🚗'],
-        'insurance'   => ['label' => 'Insurance',              'icon' => '🛡️'],
-        'education'   => ['label' => 'Education / Childcare',  'icon' => '🎓'],
-        'healthcare'  => ['label' => 'Healthcare',             'icon' => '🏥'],
-        'personal'    => ['label' => 'Personal & Discretionary','icon' => '👤'],
-        'debt'        => ['label' => 'Debt Repayments',        'icon' => '💳'],
+        'housing'     => ['label' => 'Housing and Utilities',         'icon' => '🏠'],
+        'internet'    => ['label' => 'Internet Telephone and Pay TV', 'icon' => '📱'],
+        'groceries'   => ['label' => 'Groceries',                     'icon' => '🛒'],
+        'recreation'  => ['label' => 'Recreation and Entertainment',  'icon' => '🎭'],
+        'clothing'    => ['label' => 'Clothing and Personal Care',    'icon' => '👔'],
+        'medical'     => ['label' => 'Medical and Health',            'icon' => '🏥'],
+        'transport'   => ['label' => 'Transport',                     'icon' => '🚗'],
+        'education'   => ['label' => 'Education and Childcare',       'icon' => '🎓'],
+        'insurance'   => ['label' => 'Insurance',                     'icon' => '🛡️'],
+        'atm'         => ['label' => 'ATM',                           'icon' => '📠'],
+        'debt'        => ['label' => 'Loans',                         'icon' => '💳'],
+        'transfer'    => ['label' => 'Transfers',                     'icon' => '📤'],
+        'dishonours'  => ['label' => 'Dishonours',                    'icon' => '⚠️'],
+        'other'       => ['label' => 'Other Expenses',                'icon' => '💰'],
     ];
 
     // Index existing expenses by category for pre-population
@@ -73,11 +78,11 @@
                     aria-label="Income and expenses summary">
 
                     <div class="bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl px-4 py-3 text-center">
-                        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-1">Total Annual Income</p>
+                        <p class="text-xs font-semibold text-indigo-500 uppercase tracking-wide mb-1">Total Monthly Income</p>
                         <p id="expense-summary-annual-income"
                         class="text-lg font-bold text-indigo-700 tabular-nums"
                         aria-live="polite"
-                        aria-label="Total annual income">$0.00</p>
+                        aria-label="Total monthly income">$0.00</p>
                     </div>
 
                     <div class="bg-gradient-to-br from-red-50 to-rose-50 border border-red-200 rounded-xl px-4 py-3 text-center">
@@ -264,6 +269,7 @@
     Object.assign(window.EXPENSES_CONFIG ?? (window.EXPENSES_CONFIG = {}), {
         applicationId: @js($application->id),
         storeRoute: @js(route('applications.living-expenses.store', $application)),
-        initialAnnualIncome: @js($application->employmentDetails->sum(fn($e) => $e->getAnnualIncome())),
+        initialAnnualIncome: @js($application->employmentDetails->sum(fn($e) => $e->getDisplayAnnualIncome())),
+        initialLoanRepayment: @js($application->directorLiabilities->sum('monthly_repayment')),
     });
 </script>

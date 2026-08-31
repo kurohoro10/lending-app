@@ -15,7 +15,7 @@
             <div>
                 <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Purpose</dt>
                 <dd class="mt-1 text-sm font-medium text-gray-900">
-                    {{ ucwords(str_replace('_', ' ', $application->loan_purpose)) }}
+                    {{ \App\Support\LoanPurpose::label($application->loan_purpose) }}
                 </dd>
             </div>
 
@@ -23,7 +23,7 @@
                 <div>
                     <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Security</dt>
                     <dd class="mt-1 text-sm font-medium text-gray-900">
-                        {{ ucwords($application->security_type) }}
+                        {{ \App\Support\SecurityType::label($application->security_type) }}
                     </dd>
                 </div>
             @endif

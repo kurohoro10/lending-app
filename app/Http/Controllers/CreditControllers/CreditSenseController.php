@@ -127,6 +127,7 @@ class CreditSenseController extends Controller
             'app_ref'           => $application->application_number,
             'provider'          => self::PROVIDER_NAME,
             'already_completed' => (bool) $application->credit_sense_completed_at,
+            'save_app_id_route' => route('creditsense.saveAppId', $application),
         ]);
     }
 
@@ -207,9 +208,11 @@ class CreditSenseController extends Controller
      */
     public function webhook(Request $request): JsonResponse
     {
-        if (! $this->verifyWebhookSignature($request)) {
-            Log::warning('[CreditSense] Webhook signature mismatch.');
-            return response()->json(['error' => 'Invalid signature.'], 401);
+        $expectedToken = Setting::where('key', 'creditsense_webhook_token')->value('value');
+
+        if ($expectedToken && $request->query('token') !== $expectedToken) {
+            Log::warning('[CreditSense] Webhook token mismatch.');
+            return response()->json(['error' => 'Unauthorized.'], 401);
         }
 
         $payload = $request->all();
@@ -328,5 +331,47 @@ class CreditSenseController extends Controller
             'bank_api_provider_name'          => self::PROVIDER_NAME,
             'credit_sense_completed_at'       => $application->credit_sense_completed_at ?? now(),
         ]);
+    }
+
+
+    public function saveAppId(Request $request, Application $application): JsonResponse
+    {
+        $this->authorize('connectBank', $application);
+        
+        $validated = $request->validate(['app_id' => ['required']]);
+        
+        $application->update(['credit_sense_app_id' => $validated['app_id']]);
+        
+        Log::info('[CreditSense] App ID saved', [
+            'application_id' => $application->id,
+            'cs_app_id'      => $validated['app_id'],
+        ]);
+        
+        return response()->json(['success' => true]);
+    }
+
+    public function debugReset(Application $application): JsonResponse
+    {
+        if (! config('app.debug')) {
+            return response()->json(['error' => 'Not available in production.'], 403);
+        }
+
+        $this->authorize('update', $application);
+
+        $application->update([
+            'credit_sense_app_id'             => null,
+            'credit_sense_completed_at'       => null,
+            'credit_sense_report'             => null,
+            'credit_sense_report_received_at' => null,
+            'bank_api_provider_name'          => null,
+        ]);
+
+        ActivityLog::logActivity(
+            'credit_sense_debug_reset',
+            'CreditSense fields cleared via debug panel',
+            $application,
+        );
+
+        return response()->json(['success' => true, 'message' => 'CreditSense fields cleared.']);
     }
 }

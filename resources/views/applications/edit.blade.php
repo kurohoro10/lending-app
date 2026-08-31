@@ -74,7 +74,7 @@
                 @csrf
                 <!-- Hidden inputs -->
                 <input type="hidden" name="signature" id="signature-data">
-                <input type="hidden" name="signature_type" id="signature-type" value="typed">
+                <input type="hidden" name="signature_type" id="signature-type" value="drawn">
 
                 <!-- Electronic Signature Section -->
                 @include('applications.partials.edit.e-signature', ['application' => $application])

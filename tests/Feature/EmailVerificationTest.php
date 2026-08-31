@@ -18,12 +18,13 @@ test('email verification screen can be rendered', function () {
     return ! Features::enabled(Features::emailVerification());
 }, 'Email verification not enabled.');
 
-test('email can be verified', function () {
+test('client email can be verified and redirects them to login after logout', function () {
     Event::fake(Verified::class);
 
     $user = User::factory()->create([
         'email_verified_at' => null,
     ]);
+    $user->assignRole('client');
 
     $verificationUrl = URL::temporarySignedRoute(
         'verification.verify',
@@ -36,7 +37,8 @@ test('email can be verified', function () {
     Event::assertDispatched(Verified::class);
 
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
-    $response->assertRedirect(route('dashboard', absolute: false).'?verified=1');
+    $response->assertRedirect(route('login', absolute: false));
+    $response->assertSessionHas('status', 'Your email has been verified successfully. Please log in to continue.');
 })->skip(function () {
     return ! Features::enabled(Features::emailVerification());
 }, 'Email verification not enabled.');

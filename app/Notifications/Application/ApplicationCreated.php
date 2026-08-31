@@ -36,7 +36,8 @@ class ApplicationCreated extends Notification implements ShouldQueue
             ->line('Term: **' . $this->application->term_months . ' months**')
             ->action('Complete Your Application', route('applications.edit', $this->application))
             ->line('Please complete all required sections to submit your application for review.')
-            ->line('If you have any questions, please don\'t hesitate to contact our support team.');
+            ->line('If you have any questions, please don\'t hesitate to contact our support team.')
+            ->line('Visit us at: ' . config('app.url'));
     }
 
     public function toDatabase($notifiable)

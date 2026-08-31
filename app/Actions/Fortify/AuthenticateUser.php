@@ -73,7 +73,8 @@ class AuthenticateUser
                 throw ValidationException::withMessages([
                     Fortify::username() => [
                         'These credentials do not match our records. '
-                        . "{$remaining} attempt(s) remaining before your account is locked.",
+                        // . "{$remaining} attempt(s) remaining before your account is locked.",
+                        . "Please check your login details or forgot your password and try again.",
                     ],
                 ]);
             }
@@ -108,7 +109,8 @@ class AuthenticateUser
 
         $user->update([
             'failed_login_attempts' => $attempts,
-            'locked_at'             => $attempts >= self::MAX_ATTEMPTS ? now() : null,
+            // 'locked_at'             => $attempts >= self::MAX_ATTEMPTS ? now() : null,
+            'locked_at'             => null,
         ]);
     }
 }

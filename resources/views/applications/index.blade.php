@@ -92,8 +92,8 @@
                                                 $statusColors = [
                                                     'draft' => 'gray',
                                                     'submitted' => 'blue',
-                                                    'under_review' => 'yellow',
-                                                    'additional_info_required' => 'orange',
+                                                    'wip' => 'yellow',
+                                                    'outstanding_document' => 'orange',
                                                     'approved' => 'green',
                                                     'declined' => 'red',
                                                 ];

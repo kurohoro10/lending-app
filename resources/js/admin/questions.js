@@ -197,13 +197,22 @@
         clearFieldError(questionError, questionInput);
     }
 
-    // ── Delegated: delete + mark-as-read ─────────────────────────────────────
+    // ── Delegated: delete + mark-as-read + approve/return ────────────────────
 
     list.addEventListener('click', e => {
-        const del  = e.target.closest('[data-action="delete-question"]');
-        const read = e.target.closest('[data-action="mark-as-read"]');
-        if (del)  deleteQuestion(del.dataset.questionId);
-        if (read) markAsRead(read.dataset.questionId);
+        const del      = e.target.closest('[data-action="delete-question"]');
+        const read     = e.target.closest('[data-action="mark-as-read"]');
+        const approve  = e.target.closest('[data-action="approve-question"]');
+        const toggleR  = e.target.closest('[data-action="toggle-return-panel"]');
+        const cancelR  = e.target.closest('[data-action="cancel-return"]');
+        const confirmR = e.target.closest('[data-action="confirm-return"]');
+
+        if (del)      deleteQuestion(del.dataset.questionId);
+        if (read)     markAsRead(read.dataset.questionId);
+        if (approve)  approveQuestion(approve.dataset.questionId);
+        if (toggleR)  toggleReturnPanel(toggleR.dataset.questionId, toggleR);
+        if (cancelR)  toggleReturnPanel(cancelR.dataset.questionId, null, false);
+        if (confirmR) confirmReturn(confirmR.dataset.questionId);
     });
 
     // ── Delete ────────────────────────────────────────────────────────────────
@@ -269,6 +278,92 @@
             }
         } catch {
             showToast('Failed to mark as read.', 'error');
+        }
+    }
+
+    // ── Approve / Return (assessment checklist review) ──────────────────────
+    // Both reload on success — the badge/border/action-button/document-status
+    // changes are numerous enough that re-rendering server-side (same
+    // approach as the approval-decline-modal) is simpler and less
+    // duplicative than hand-patching every affected element client-side.
+
+    async function approveQuestion(id) {
+        const card = document.getElementById(`question-card-${id}`);
+        card?.setAttribute('aria-busy', 'true');
+
+        try {
+            const res  = await fetch(`/admin/questions/${id}/approve`, {
+                method: 'PATCH',
+                headers: { 'X-CSRF-TOKEN': csrf(), 'Accept': 'application/json' },
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showToast(data.message, 'success');
+                window.location.reload();
+            } else {
+                card?.removeAttribute('aria-busy');
+                showToast(data.message || 'Failed to approve.', 'error');
+            }
+        } catch {
+            card?.removeAttribute('aria-busy');
+            showToast('A network error occurred. Please try again.', 'error');
+        }
+    }
+
+    function toggleReturnPanel(id, triggerBtn, forceOpen = null) {
+        const panel = document.getElementById(`return-panel-${id}`);
+        if (!panel) return;
+
+        const shouldOpen = forceOpen ?? panel.classList.contains('hidden');
+        panel.classList.toggle('hidden', !shouldOpen);
+
+        const toggleBtn = triggerBtn
+            ?? document.querySelector(`[data-action="toggle-return-panel"][data-question-id="${id}"]`);
+        toggleBtn?.setAttribute('aria-expanded', String(shouldOpen));
+
+        if (shouldOpen) {
+            panel.querySelector('textarea')?.focus();
+        } else {
+            const textarea = panel.querySelector('textarea');
+            const error    = panel.querySelector('.return-error');
+            if (textarea) textarea.value = '';
+            error?.classList.add('hidden');
+        }
+    }
+
+    async function confirmReturn(id) {
+        const panel    = document.getElementById(`return-panel-${id}`);
+        const textarea = panel?.querySelector('textarea');
+        const errorEl   = panel?.querySelector('.return-error');
+        const notes     = textarea?.value.trim();
+
+        if (!notes) {
+            if (errorEl) { errorEl.textContent = 'Please explain why this item is being returned.'; errorEl.classList.remove('hidden'); }
+            textarea?.focus();
+            return;
+        }
+
+        try {
+            const res  = await fetch(`/admin/questions/${id}/return`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': csrf(),
+                    'Accept': 'application/json',
+                },
+                body: JSON.stringify({ review_notes: notes }),
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                showToast(data.message, 'success');
+                window.location.reload();
+            } else {
+                if (errorEl) { errorEl.textContent = data.message || 'Failed to return item.'; errorEl.classList.remove('hidden'); }
+            }
+        } catch {
+            if (errorEl) { errorEl.textContent = 'A network error occurred. Please try again.'; errorEl.classList.remove('hidden'); }
         }
     }
 

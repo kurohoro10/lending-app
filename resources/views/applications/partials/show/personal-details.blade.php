@@ -16,16 +16,23 @@
 
             <div>
                 <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Full Name</dt>
-                <dd class="mt-1 text-sm font-medium text-gray-900">{{ $pd->full_name }}</dd>
+                <dd class="mt-1 text-sm font-medium text-gray-900">
+                    {{ trim(collect([
+                        $pd->user->first_name,
+                        $pd->user->middle_name ?? null,
+                        $pd->user->last_name,
+                        $pd->user->name_extension ?? null,
+                    ])->filter()->implode(' ')) }}
+                </dd>
             </div>
 
             <div>
                 <dt class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Email</dt>
                 <dd class="mt-1 text-sm font-medium text-gray-900">
-                    <a href="mailto:{{ $pd->email }}"
+                    <a href="mailto:{{ $pd->user->email }}"
                        class="text-indigo-600 hover:text-indigo-800 hover:underline
                               focus:outline-none focus:ring-2 focus:ring-indigo-500 rounded">
-                        {{ $pd->email }}
+                        {{ $pd->user->email }}
                     </a>
                 </dd>
             </div>

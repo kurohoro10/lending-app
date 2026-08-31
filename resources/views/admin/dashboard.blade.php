@@ -1,4 +1,7 @@
 {{-- resources/views/admin/dashboard.blade.php --}}
+@php
+use App\Models\Application;
+@endphp
 <x-app-layout>
     <x-slot name="header">
         <h2 class="font-semibold text-xl text-gray-800 leading-tight">
@@ -17,14 +20,17 @@
             {{-- ── Statistics Cards ──────────────────────────────────────────── --}}
             @php
                 $statCards = [
-                    ['key' => 'total_applications',       'label' => 'Total',         'color' => 'indigo', 'icon' => 'M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z', 'route' => route('admin.applications.index')],
-                    ['key' => 'draft',                    'label' => 'Draft',         'color' => 'gray',   'icon' => 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z'],
-                    ['key' => 'submitted',                'label' => 'Submitted',     'color' => 'blue',   'icon' => 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2'],
-                    ['key' => 'under_review',             'label' => 'Under Review',  'color' => 'yellow', 'icon' => 'M15 12a3 3 0 11-6 0 3 3 0 016 0zM2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z'],
-                    ['key' => 'additional_info_required', 'label' => 'Info Required', 'color' => 'orange', 'icon' => 'M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z'],
-                    ['key' => 'approved',                 'label' => 'Approved',      'color' => 'green',  'icon' => 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z'],
-                    ['key' => 'declined',                 'label' => 'Declined',      'color' => 'red',    'icon' => 'M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z'],
+                    ['key' => 'total_applications', 'label' => 'Total', 'color' => 'indigo', 'icon' => '...', 'route' => route('admin.applications.index')],
                 ];
+
+                foreach (Application::VALID_STATUSES as $status) {
+                    $statCards[] = [
+                        'key'   => $status,
+                        'label' => Application::statusLabel($status),
+                        'color' => explode('-', $statusColors[$status] ?? 'gray')[1] ?? 'gray',
+                        'icon'  => '...'
+                    ];
+                }
 
                 // Task cards — shown conditionally per role
                 if (auth()->user()->hasRole('admin')) {
@@ -40,51 +46,71 @@
                 $linkCls  = ['indigo' => 'text-indigo-600 hover:text-indigo-800', 'gray' => 'text-gray-500 hover:text-gray-700', 'blue' => 'text-blue-600 hover:text-blue-800', 'yellow' => 'text-yellow-600 hover:text-yellow-800', 'orange' => 'text-orange-600 hover:text-orange-800', 'green' => 'text-green-600 hover:text-green-800', 'red' => 'text-red-600 hover:text-red-800', 'violet' => 'text-violet-600 hover:text-violet-800'];
             @endphp
 
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
-                @foreach($statCards as $card)
-                    @php
-                        $isTaskCard = in_array($card['key'], ['my_tasks', 'all_tasks', 'overdue_tasks']);
-                        $isOverdue  = $card['key'] === 'overdue_tasks';
-                        $count      = $stats[$card['key']] ?? 0;
-                    @endphp
-                    <div class="bg-white overflow-hidden shadow rounded-lg {{ $isOverdue && $count > 0 ? 'ring-2 ring-red-300' : '' }}"
-                        @if($isOverdue && $count > 0) aria-label="{{ $count }} overdue task(s) require attention" @endif>
-                        <div class="p-5">
-                            <div class="flex items-center">
-                                <div class="flex-shrink-0 {{ $iconBg[$card['color']] }} rounded-md p-3 relative">
-                                    <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" aria-hidden="true">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="{{ $card['icon'] }}"/>
-                                    </svg>
-                                    {{-- Pulse dot for overdue with items --}}
-                                    @if($isOverdue && $count > 0)
-                                        <span class="absolute -top-1 -right-1 flex h-3 w-3" aria-hidden="true">
-                                            <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                                            <span class="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
-                                        </span>
-                                    @endif
-                                </div>
-                                <div class="ml-5 w-0 flex-1">
-                                    <dt class="text-sm font-medium text-gray-500 truncate">{{ $card['label'] }}</dt>
-                                    <dd class="flex items-baseline gap-1">
-                                        <span class="text-lg font-semibold {{ $isOverdue && $count > 0 ? 'text-red-600' : 'text-gray-900' }}">
-                                            {{ $count }}
-                                        </span>
-                                        @if($isTaskCard && !$isOverdue && $count > 0)
-                                            <span class="text-xs text-gray-400 font-normal">pending</span>
-                                        @endif
-                                    </dd>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="{{ $footerBg[$card['color']] }} px-5 py-2">
-                            <a href="{{ $card['route'] ?? route('admin.applications.index', ['status' => $card['key']]) }}"
-                            class="text-xs font-medium {{ $linkCls[$card['color']] }} focus:outline-none focus:underline">
-                                View →
-                            </a>
-                        </div>
-                    </div>
-                @endforeach
+            {{-- ── Charts Section ──────────────────────────────────────── --}}
+
+            {{-- Metric summary cards --}}
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                <div class="bg-gray-50 rounded-lg px-4 py-3">
+                    <p class="text-xs text-gray-500 mb-1">Total applications</p>
+                    <p class="text-2xl font-medium text-gray-900" id="m-total">—</p>
+                    <p class="text-xs text-gray-400 mt-0.5">all statuses</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg px-4 py-3">
+                    <p class="text-xs text-gray-500 mb-1">Settled</p>
+                    <p class="text-2xl font-medium text-green-600" id="m-settled">—</p>
+                    <p class="text-xs text-gray-400 mt-0.5" id="m-settled-pct">of total</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg px-4 py-3">
+                    <p class="text-xs text-gray-500 mb-1">Avg loan amount</p>
+                    <p class="text-2xl font-medium text-gray-900" id="m-avg">—</p>
+                    <p class="text-xs text-gray-400 mt-0.5">requested</p>
+                </div>
+                <div class="bg-gray-50 rounded-lg px-4 py-3">
+                    <p class="text-xs text-gray-500 mb-1">Pending review</p>
+                    <p class="text-2xl font-medium text-yellow-600" id="m-pending">—</p>
+                    <p class="text-xs text-gray-400 mt-0.5">submitted + wip</p>
+                </div>
             </div>
+
+            {{-- Charts 2×2 grid --}}
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                {{-- Loan Purpose --}}
+                <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+                    <p class="text-sm font-medium text-gray-900 mb-0.5">Loan purpose</p>
+                    <p class="text-xs text-gray-400 mb-3">Distribution of application intent</p>
+                    <div id="legend-purpose" class="flex flex-wrap gap-2.5 mb-3"></div>
+                    <div class="relative h-48"><canvas id="purposeChart"></canvas></div>
+                </div>
+
+                {{-- Status Breakdown --}}
+                <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+                    <p class="text-sm font-medium text-gray-900 mb-0.5">Application status</p>
+                    <p class="text-xs text-gray-400 mb-3">Count by current stage</p>
+                    <div id="legend-status" class="flex flex-wrap gap-2.5 mb-3"></div>
+                    <div class="relative h-48"><canvas id="statusChart"></canvas></div>
+                </div>
+
+                {{-- Loan Amount Distribution --}}
+                <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+                    <p class="text-sm font-medium text-gray-900 mb-0.5">Loan amount ranges</p>
+                    <p class="text-xs text-gray-400 mb-3">Number of applications per band</p>
+                    <div class="relative h-48"><canvas id="amountChart"></canvas></div>
+                </div>
+
+                {{-- Applications Trend --}}
+                <div class="bg-white overflow-hidden shadow rounded-lg p-5">
+                    <p class="text-sm font-medium text-gray-900 mb-0.5">Daily applications</p>
+                    <p class="text-xs text-gray-400 mb-3">Submissions over the last 30 days</p>
+                    <div class="relative h-48"><canvas id="trendChart"></canvas></div>
+                </div>
+
+            </div>
+
+            {{-- Pass chart data to JavaScript --}}
+            <script>
+                window.dashboardChartData = @json($chartData);
+            </script>
 
             {{-- ── My Tasks (assessors only) ──────────────────────────────── --}}
             @if(auth()->user()->isAssessor() && count($myTasks) > 0)
@@ -148,8 +174,37 @@
                             <tbody class="bg-white divide-y divide-gray-200">
                                 @foreach($recentApplications as $application)
                                     @php
-                                        $statusColors = ['draft' => 'gray', 'submitted' => 'blue', 'under_review' => 'yellow', 'additional_info_required' => 'orange', 'approved' => 'green', 'declined' => 'red'];
-                                        $statusLabels = ['draft' => 'Draft', 'submitted' => 'Submitted', 'under_review' => 'Review', 'additional_info_required' => 'Info Req.', 'approved' => 'Approved', 'declined' => 'Declined'];
+                                    
+                                        $statusColors = [
+                                            Application::STATUS_APPLICATION => 'blue',
+                                            Application::STATUS_WIP         => 'yellow',
+                                            Application::STATUS_OUTDOC      => 'orange',
+                                            Application::STATUS_APPROVED    => 'purple',
+                                            Application::STATUS_SETTLED     => 'green',
+                                            Application::STATUS_DECLINED    => 'red',
+                                            Application::STATUS_DEFERRED    => 'gray',
+                                        ];
+
+                                        $statusLabels = [
+                                            Application::STATUS_APPLICATION => 'Application',
+                                            Application::STATUS_WIP         => 'Work in Progress',
+                                            Application::STATUS_OUTDOC      => 'Outstanding Document',
+                                            Application::STATUS_APPROVED    => 'Approved',
+                                            Application::STATUS_SETTLED     => 'Settled',
+                                            Application::STATUS_DECLINED    => 'Declined',
+                                            Application::STATUS_DEFERRED    => 'Deferred',
+                                        ];
+
+                                        $statusBgColors = [
+                                            'blue'   => 'bg-blue-50',
+                                            'yellow' => 'bg-yellow-50',
+                                            'orange' => 'bg-orange-50',
+                                            'purple' => 'bg-purple-50',
+                                            'green'  => 'bg-green-50',
+                                            'red'    => 'bg-red-50',
+                                            'gray'   => 'bg-gray-50',
+                                        ];
+
                                         $color  = $statusColors[$application->status] ?? 'gray';
                                         $label  = $statusLabels[$application->status] ?? ucwords(str_replace('_', ' ', $application->status));
                                         $qCount = $application->questions_count ?? 0;

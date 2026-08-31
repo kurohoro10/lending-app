@@ -25,6 +25,46 @@
              aria-atomic="true"
              tabindex="-1"></div>
 
+        @php
+            $checklistProgress = $application->assessmentChecklistProgress();
+        @endphp
+
+        {{-- Assessment progress indicator — only meaningful once a checklist exists --}}
+        @if($checklistProgress['total'] > 0)
+        <div id="assessment-progress" class="mb-5" data-total="{{ $checklistProgress['total'] }}" data-completed="{{ $checklistProgress['completed'] }}">
+            <div class="flex items-center justify-between mb-1.5">
+                <p class="text-sm font-semibold text-gray-700">Assessment progress</p>
+                <p class="text-sm text-gray-500">
+                    <span id="assessment-progress-count">{{ $checklistProgress['completed'] }}</span> of {{ $checklistProgress['total'] }} items completed
+                </p>
+            </div>
+            <div class="h-2 bg-gray-100 rounded-full overflow-hidden"
+                 role="progressbar"
+                 aria-valuemin="0"
+                 aria-valuemax="{{ $checklistProgress['total'] }}"
+                 aria-valuenow="{{ $checklistProgress['completed'] }}"
+                 aria-label="Assessment checklist progress">
+                <div id="assessment-progress-bar"
+                     class="h-full bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full transition-all duration-500"
+                     style="width: {{ $checklistProgress['total'] > 0 ? round(($checklistProgress['completed'] / $checklistProgress['total']) * 100) : 0 }}%"></div>
+            </div>
+        </div>
+
+        {{-- Informational-only notices — never a checklist item, no action required --}}
+        @if(count(config('assessment_checklist.notices', [])) > 0)
+        <div class="mb-5 space-y-2">
+            @foreach(config('assessment_checklist.notices') as $notice)
+            <div class="flex items-start gap-2 px-3 py-2 rounded-lg bg-blue-50 border border-blue-100">
+                <svg class="w-4 h-4 text-blue-400 flex-shrink-0 mt-0.5" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"/>
+                </svg>
+                <p class="text-xs text-blue-800">{{ $notice['text'] }}</p>
+            </div>
+            @endforeach
+        </div>
+        @endif
+        @endif
+
         <ol class="space-y-4" aria-labelledby="client-qa-heading">
             @foreach($application->questions->sortBy('created_at') as $question)
             @php
@@ -32,37 +72,77 @@
                 $isAnswered     = $question->status === 'answered';
                 $hint           = $question->doc_category_hint ?? '';
                 $isBankConnect  = $hint === 'bank_connect';
-                $requiresDoc    = filled($hint) && !$isBankConnect;
 
-                $docCategoryLabels = [
-                    'id'          => 'Identification',
-                    'income'      => 'Income Documentation',
-                    'bank'        => 'Bank Statements',
-                    'assets'      => 'Asset Documentation',
-                    'liabilities' => 'Liability Documentation',
-                    'employment'  => 'Employment / Business Verification',
-                    'other'       => 'Other Documents',
-                ];
-                $docLabel = $requiresDoc ? ($docCategoryLabels[$hint] ?? ucfirst($hint)) : null;
+                $isChecklistItem = $question->isChecklistItem();
+                $reviewStatus     = $question->review_status;
+                $isReturned       = $reviewStatus === \App\Models\Question::REVIEW_RETURNED;
+                $isApproved       = $reviewStatus === \App\Models\Question::REVIEW_APPROVED;
+                $isAwaitingReview = $reviewStatus === \App\Models\Question::REVIEW_AWAITING_REVIEW;
+
+                // Client needs to act when it's never been answered, or was returned.
+                $showForm = $isPending || $isReturned;
+
+                $itemType = $question->checklistItemType(); // null for freeform questions
+                $requiresDoc = $isBankConnect
+                    ? false
+                    : ($isChecklistItem
+                        ? in_array($itemType, ['upload', 'upload_comment'], true)
+                        : filled($hint));
+                // File-only checklist items (e.g. Passport) don't expect typed text.
+                $answerRequired = $itemType !== 'upload';
+
+                // Get active bank provider (defaults to creditsense if not set)
+                $activeProvider = \App\Models\Setting::get('active_bank_provider', 'creditsense');
+
+                // Completion state must follow whichever provider is actually active —
+                // Basiq writes bank_api_completed_at, CreditSense writes credit_sense_completed_at.
+                $bankConnectedAt = match($activeProvider) {
+                    'creditsense' => $application->credit_sense_completed_at,
+                    default       => $application->bank_api_completed_at,
+                };
+                $bankConnected = $bankConnectedAt !== null;
+
+                $docCategoryLabels = \App\Models\Document::getDocumentCategories();
+                $docLabel = $requiresDoc ? ($docCategoryLabels[$hint] ?? ucfirst(str_replace('_', ' ', $hint))) : null;
+
+                $cardTone = match(true) {
+                    $isReturned => 'bg-red-50 border-red-200',
+                    $isPending  => 'bg-amber-50 border-amber-200',
+                    default     => 'bg-gray-50 border-gray-200',
+                };
+
+                $iconTone = match(true) {
+                    $isReturned => ['bg-red-100', 'text-red-600'],
+                    $isPending  => ['bg-amber-100', 'text-amber-600'],
+                    default     => ['bg-gray-200', 'text-gray-500'],
+                };
+
+                $statusBadge = match(true) {
+                    $isApproved       => ['label' => 'Approved', 'class' => 'bg-green-100 text-green-700'],
+                    $isReturned       => ['label' => 'Returned', 'class' => 'bg-red-100 text-red-700'],
+                    $isPending        => ['label' => 'Pending', 'class' => 'bg-amber-100 text-amber-700'],
+                    $isAwaitingReview => ['label' => 'Awaiting Review', 'class' => 'bg-gray-100 text-gray-600'],
+                    default           => ['label' => 'Answered', 'class' => 'bg-green-100 text-green-700'],
+                };
             @endphp
 
-            <li class="question-card rounded-xl border p-4 transition-colors
-                        {{ $isPending ? 'bg-amber-50 border-amber-200' : 'bg-gray-50 border-gray-200' }}"
-                id="client-question-card-{{ $question->id }}"
-                data-question-id="{{ $question->id }}"
-                data-status="{{ $question->status }}"
-                data-doc-category="{{ $hint }}"
-                data-bank-connect="{{ $isBankConnect ? 'true' : 'false' }}"
-                data-upload-route="{{ route('applications.documents.store', $application) }}"
-                data-answer-route="/questions/{{ $question->id }}/answer">
+            <li class="question-card rounded-xl border p-4 transition-colors {{ $cardTone }}"
+            id="client-question-card-{{ $question->id }}"
+            data-question-id="{{ $question->id }}"
+            data-status="{{ $question->status }}"
+            data-review-status="{{ $reviewStatus }}"
+            data-doc-category="{{ $hint }}"
+            data-bank-connect="{{ $isBankConnect ? 'true' : 'false' }}"
+            data-bank-provider="{{ $isBankConnect ? $activeProvider : '' }}"
+            data-upload-route="{{ route('applications.documents.store', $application) }}"
+            data-answer-route="/questions/{{ $question->id }}/answer">
 
                 {{-- Question header --}}
                 <div class="flex items-start justify-between gap-3 mb-3">
                     <div class="flex items-start gap-3 flex-1 min-w-0">
-                        <div class="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0
-                                    {{ $isPending ? 'bg-amber-100' : 'bg-gray-200' }}"
+                        <div class="h-8 w-8 rounded-full flex items-center justify-center flex-shrink-0 {{ $iconTone[0] }}"
                              aria-hidden="true">
-                            <svg class="h-4 w-4 {{ $isPending ? 'text-amber-600' : 'text-gray-500' }}"
+                            <svg class="h-4 w-4 {{ $iconTone[1] }}"
                                  fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                                       d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
@@ -90,14 +170,20 @@
                         </div>
                     </div>
 
-                    <span class="question-status flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold
-                                 {{ $isPending ? 'bg-amber-100 text-amber-700' : 'bg-green-100 text-green-700' }}"
-                          aria-label="Status: {{ $isPending ? 'Pending your response' : 'Answered' }}">
-                        {{ $isPending ? 'Pending' : 'Answered' }}
+                    <span class="question-status flex-shrink-0 px-2.5 py-0.5 rounded-full text-xs font-semibold {{ $statusBadge['class'] }}"
+                          aria-label="Status: {{ $statusBadge['label'] }}">
+                        {{ $statusBadge['label'] }}
                     </span>
                 </div>
 
-                @if($isPending)
+                @if($isReturned && $question->review_notes)
+                <div class="mb-3 px-3 py-2 rounded-lg bg-red-50 border border-red-200">
+                    <p class="text-xs font-semibold text-red-700">This item was returned — please review and resubmit:</p>
+                    <p class="text-xs text-red-600 mt-0.5 whitespace-pre-wrap">{{ $question->review_notes }}</p>
+                </div>
+                @endif
+
+                @if($showForm)
                     {{-- ── Answer form ─────────────────────────────────────── --}}
                     <div class="answer-form space-y-3">
 
@@ -109,7 +195,7 @@
                              data-config-route="{{ route('creditsense.config', $application) }}"
                              data-complete-route="{{ route('creditsense.complete', $application) }}">
 
-                            @if($application->credit_sense_completed_at)
+                            @if($bankConnected)
                             {{-- Already connected — show confirmation --}}
                             <div class="flex items-center gap-3 px-3 py-2.5 rounded-xl border border-green-200 bg-green-50"
                                  role="status">
@@ -120,8 +206,8 @@
                                     <p class="text-xs font-semibold text-green-800">Bank account already connected</p>
                                     <p class="text-xs text-green-600">
                                         Connected
-                                        <time datetime="{{ $application->credit_sense_completed_at->toIso8601String() }}">
-                                            {{ $application->credit_sense_completed_at->format('d M Y, g:ia') }}
+                                        <time datetime="{{ $bankConnectedAt->toIso8601String() }}">
+                                            {{ $bankConnectedAt->format('d M Y, g:ia') }}
                                         </time>
                                     </p>
                                 </div>
@@ -212,9 +298,10 @@
                                              px-3 py-2 resize-none
                                              focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
                                       rows="3"
-                                      placeholder="Type your answer here… (Ctrl+Enter to submit)"
-                                      aria-required="{{ $question->is_mandatory ? 'true' : 'false' }}"
-                                      data-question-id="{{ $question->id }}"></textarea>
+                                      placeholder="{{ $answerRequired ? 'Type your answer here… (Ctrl+Enter to submit)' : 'Optional comment… (Ctrl+Enter to submit)' }}"
+                                      aria-required="{{ $answerRequired ? 'true' : 'false' }}"
+                                      data-question-id="{{ $question->id }}"
+                                      data-answer-required="{{ $answerRequired ? 'true' : 'false' }}"></textarea>
                             <p class="answer-error hidden mt-1 text-xs text-red-600" role="alert" aria-live="polite"></p>
                         </div>
 
@@ -312,6 +399,7 @@
                                            focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-1"
                                     data-question-id="{{ $question->id }}"
                                     data-requires-doc="{{ $requiresDoc ? 'true' : 'false' }}"
+                                    data-answer-required="{{ $answerRequired ? 'true' : 'false' }}"
                                     data-doc-category="{{ $hint }}"
                                     aria-label="Submit answer for: {{ Str::limit($question->question, 60) }}">
                                 <span class="btn-text">Submit Answer</span>
@@ -335,11 +423,11 @@
                         </svg>
                         <div>
                             <p class="text-xs font-semibold text-green-800">Bank account connected</p>
-                            @if($application->credit_sense_completed_at)
+                            @if($bankConnectedAt)
                             <p class="text-xs text-green-600">
                                 Completed
-                                <time datetime="{{ $application->credit_sense_completed_at->toIso8601String() }}">
-                                    {{ $application->credit_sense_completed_at->format('d M Y, g:ia') }}
+                                <time datetime="{{ $bankConnectedAt->toIso8601String() }}">
+                                    {{ $bankConnectedAt->format('d M Y, g:ia') }}
                                 </time>
                             </p>
                             @endif
@@ -347,7 +435,21 @@
                     </div>
                     @else
                     <div class="answer-display mt-1 p-3 bg-white rounded-xl border border-gray-200">
-                        <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $question->answer }}</p>
+                        @if($question->answer)
+                            <p class="text-sm text-gray-700 whitespace-pre-wrap">{{ $question->answer }}</p>
+                        @endif
+                        @if($question->documents->isNotEmpty())
+                            <ul class="{{ $question->answer ? 'mt-2 pt-2 border-t border-gray-100' : '' }} space-y-1">
+                                @foreach($question->documents->sortBy('version') as $doc)
+                                    <li class="flex items-center gap-1.5 text-xs text-gray-600">
+                                        <svg class="w-3.5 h-3.5 text-indigo-400 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20" aria-hidden="true">
+                                            <path fill-rule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4z" clip-rule="evenodd"/>
+                                        </svg>
+                                        {{ $doc->original_filename }}
+                                    </li>
+                                @endforeach
+                            </ul>
+                        @endif
                     </div>
                     @endif
                 @endif

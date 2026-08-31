@@ -32,6 +32,29 @@
                         </label>
                     </div>
                 </fieldset>
+                
+                {{-- Comment category --}}
+                <div>
+                    <label for="comment-category" class="block text-sm font-medium text-gray-700 mb-1">
+                        Category <span class="text-gray-400 font-normal">(optional)</span>
+                    </label>
+                    <select id="comment-category"
+                            name="category"
+                            class="mt-1 block w-full pl-3 pr-10 py-2 text-sm border-gray-300 focus:outline-none
+                                focus:ring-indigo-500 focus:border-indigo-500 rounded-md">
+                        <option value="">— Select category —</option>
+                        <option value="suitability">Suitability</option>
+                        <option value="income">Income</option>
+                        <option value="purpose">Purpose</option>
+                        <option value="assessment">Assessment</option>
+                        <option value="credit_rating">Credit Rating</option>
+                        <option value="default_probability">Default Probability</option>
+                        <option value="approval_reason">Approval Reason</option>
+                        <option value="visa">Visa</option>
+                        <option value="decline_reason">Decline Reason</option>
+                        <option value="other">Other</option>
+                    </select>
+                </div>
 
                 {{-- Textarea --}}
                 <div>

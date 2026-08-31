@@ -155,15 +155,17 @@
             position: relative;
         }
 
-        .progress-step::after {
-            content: '';
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            width: 100%;
-            height: 2px;
-            background: #E5E7EB;
-            z-index: -1;
+        @media (min-width: 768px) {
+            .progress-step::after {
+                content: '';
+                position: absolute;
+                top: 20px;
+                left: 50%;
+                width: 100%;
+                height: 2px;
+                background: #E5E7EB;
+                z-index: -1;
+            }
         }
 
         .progress-step:last-child::after {
@@ -218,7 +220,7 @@
                     </h1>
 
                     <p class="text-xl text-gray-600 mb-8 leading-relaxed">
-                        Access capital in as little as 24 hours. Simple application, transparent terms, and personalized service every step of the way.
+                        ZYA Capital, lender that put you as the priority, and bring that solution which will bring you from A to Z. Simple, transparent, and fast. Come and talk to us
                     </p>
 
                     <div class="flex flex-col sm:flex-row gap-4 mb-8">
@@ -242,19 +244,7 @@
                             <svg class="w-6 h-6 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
                                 <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
                             </svg>
-                            <span class="text-sm font-medium text-gray-700">No Hidden Fees</span>
-                        </div>
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-sm font-medium text-gray-700">Bank-Level Security</span>
-                        </div>
-                        <div class="flex items-center">
-                            <svg class="w-6 h-6 text-green-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
-                                <path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd"/>
-                            </svg>
-                            <span class="text-sm font-medium text-gray-700">24/7 Support</span>
+                            <span class="text-sm font-medium text-gray-700">When Bank Says No, We Say Yes</span>
                         </div>
                     </div>
                 </div>
@@ -273,16 +263,16 @@
                         <div>
                             <div class="flex justify-between items-center mb-4">
                                 <label class="text-sm font-semibold text-gray-700">Loan Amount</label>
-                                <span class="text-2xl font-bold text-indigo-600" id="loanAmount">$100,000</span>
+                                <span class="text-2xl font-bold text-indigo-600" id="loanAmount">$20,000</span>
                             </div>
                             <div class="py-2 range-wrapper">
                                 <div class="range-background"></div>
                                 <div class="range-fill" id="loanFill"></div>
-                                <input type="range" min="10000" max="1000000" value="100000" step="10000" id="loanSlider" class="w-full">
+                                <input type="range" min="3000" max="150000" value="20000" step="1000" id="loanSlider" class="w-full">
                             </div>
                             <div class="flex justify-between text-xs text-gray-500 mt-2">
-                                <span>$10K</span>
-                                <span>$1M</span>
+                                <span>$3K</span>
+                                <span>$150K</span>
                             </div>
                         </div>
 
@@ -290,16 +280,16 @@
                         <div>
                             <div class="flex justify-between items-center mb-4">
                                 <label class="text-sm font-semibold text-gray-700">Loan Term</label>
-                                <span class="text-xl font-bold text-indigo-600" id="loanTerm">36 months</span>
+                                <span class="text-xl font-bold text-indigo-600" id="loanTerm">12 months</span>
                             </div>
                             <div class="py-2 range-wrapper">
                                 <div class="range-background"></div>
                                 <div class="range-fill" id="termFill"></div>
-                                <input type="range" min="12" max="84" value="36" step="12" id="termSlider" class="w-full">
+                                <input type="range" min="3" max="60" value="12" step="1" id="termSlider" class="w-full">
                             </div>
                             <div class="flex justify-between text-xs text-gray-500 mt-2">
-                                <span>12 months</span>
-                                <span>84 months</span>
+                                <span>3 months</span>
+                                <span>60 months</span>
                             </div>
                         </div>
 
@@ -324,15 +314,15 @@
                         <div class="bg-gradient-to-br from-indigo-50 to-purple-50 rounded-2xl p-6 mt-6">
                             <div class="flex justify-between items-center mb-4">
                                 <span class="text-gray-700 font-medium">Monthly Payment</span>
-                                <span class="text-3xl font-bold text-indigo-600" id="monthlyPayment">$3,133</span>
+                                <span class="text-3xl font-bold text-indigo-600" id="monthlyPayment">$1,853</span>
                             </div>
                             <div class="flex justify-between items-center mb-4">
                                 <span class="text-gray-700 font-medium">Total Interest</span>
-                                <span class="text-xl font-semibold text-gray-900" id="totalInterest">$12,788</span>
+                                <span class="text-xl font-semibold text-gray-900" id="totalInterest">$2,233</span>
                             </div>
                             <div class="flex justify-between items-center">
                                 <span class="text-gray-700 font-medium">Total Repayment</span>
-                                <span class="text-xl font-semibold text-gray-900" id="totalRepayment">$112,788</span>
+                                <span class="text-xl font-semibold text-gray-900" id="totalRepayment">$22,233</span>
                             </div>
                         </div>
 
@@ -341,7 +331,7 @@
                         </button>
 
                         <p class="text-xs text-gray-500 text-center">
-                            * Rates shown are illustrative. Actual rates may vary based on creditworthiness.
+                            * Normal lending terms and condition apply, subject to normal lending assessment
                         </p>
                     </div>
                 </div>
@@ -477,8 +467,8 @@
             <!-- Footer -->
             <div class="mt-16 pt-8 border-t border-gray-200 text-center">
                 <div class="flex flex-col md:flex-row justify-between items-center text-gray-600">
-                    <p class="mb-4 md:mb-0">Commercial Loan CRM v1.0 - Powered by Innovation</p>
-                    <p class="text-sm">Laravel v{{ Illuminate\Foundation\Application::VERSION }} (PHP v{{ PHP_VERSION }})</p>
+                    <p class="mb-4 md:mb-0">Simple Loan V1 - Powered by WisTec</p>
+                    {{-- <p class="text-sm">Laravel v{{ Illuminate\Foundation\Application::VERSION }} (PHP v{{ PHP_VERSION }})</p> --}}
                 </div>
             </div>
         </div>
